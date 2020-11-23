@@ -1,5 +1,5 @@
 ---
-# Source: aws-ebs-csi-driver/templates/node.yaml
+# Source: powervs-csi-driver/templates/node.yaml
 # Node Service
 kind: DaemonSet
 apiVersion: apps/v1
@@ -7,17 +7,17 @@ metadata:
   name: ebs-csi-node
   namespace: kube-system
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: powervs-csi-driver
 spec:
   selector:
     matchLabels:
       app: ebs-csi-node
-      app.kubernetes.io/name: aws-ebs-csi-driver
+      app.kubernetes.io/name: powervs-csi-driver
   template:
     metadata:
       labels:
         app: ebs-csi-node
-        app.kubernetes.io/name: aws-ebs-csi-driver
+        app.kubernetes.io/name: powervs-csi-driver
     spec:
       affinity:
         nodeAffinity:
@@ -38,7 +38,7 @@ spec:
         - name: ebs-plugin
           securityContext:
             privileged: true
-          image: amazon/aws-ebs-csi-driver:latest
+          image: quay.io/powercloud/powervs-csi-driver:v0.0.1
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
@@ -56,6 +56,8 @@ spec:
               mountPath: /csi
             - name: device-dir
               mountPath: /dev
+            - name: sys-dir
+              mountPath: /sys
           ports:
             - name: healthz
               containerPort: 9808
@@ -69,7 +71,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-driver-registrar
-          image: quay.io/k8scsi/csi-node-driver-registrar:v1.1.0
+          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.0.1
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -89,7 +91,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: liveness-probe
-          image: quay.io/k8scsi/livenessprobe:v1.1.0
+          image: k8s.gcr.io/sig-storage/livenessprobe:v2.1.0
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
@@ -111,4 +113,8 @@ spec:
         - name: device-dir
           hostPath:
             path: /dev
+            type: Directory
+        - name: sys-dir
+          hostPath:
+            path: /sys
             type: Directory

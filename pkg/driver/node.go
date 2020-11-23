@@ -19,12 +19,15 @@ package driver
 import (
 	"context"
 	"fmt"
+	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	//"github.com/kubernetes-csi/csi-lib-fc/fibrechannel"
+	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/fibrechannel"
 	//"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver/internal"
 	"google.golang.org/grpc/codes"
@@ -71,6 +74,7 @@ var (
 // nodeService represents the node service of CSI driver
 type nodeService struct {
 	//metadata      cloud.MetadataService
+	cloud cloud.PowerVSClient
 	mounter       Mounter
 	inFlight      *internal.InFlight
 	driverOptions *DriverOptions
@@ -79,6 +83,10 @@ type nodeService struct {
 // newNodeService creates a new node service
 // it panics if failed to create the service
 func newNodeService(driverOptions *DriverOptions) nodeService {
+	pvsCloud, err := cloud.NewPowerVSCloud("us-south")
+	if err != nil{
+		panic(err)
+	}
 	//metadata, err := cloud.NewMetadata()
 	//if err != nil {
 	//	panic(err)
@@ -86,6 +94,7 @@ func newNodeService(driverOptions *DriverOptions) nodeService {
 
 	return nodeService{
 		//metadata:      metadata,
+		cloud: pvsCloud,
 		mounter:       newNodeMounter(),
 		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
@@ -147,17 +156,26 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		klog.V(4).Info("donedone")
 	}()
 
-	devicePath, ok := req.PublishContext[DevicePathKey]
+	wwn, ok := req.PublishContext[WWNKey]
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
 	}
 
-	source, err := d.findDevicePath(devicePath, volumeID)
+	wwid := "3"+wwn
+	c := fibrechannel.Connector{}
+	c.WWIDs = []string{wwid}
+
+	source, err := fibrechannel.Attach(c, &fibrechannel.OSioHandler{})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
+		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", wwid, err)
 	}
 
-	klog.V(4).Infof("NodeStageVolume: find device path %s -> %s", devicePath, source)
+	//source, err := d.findDevicePath(wwn, volumeID)
+	//if err != nil {
+	//	return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", wwn, err)
+	//}
+
+	klog.V(4).Infof("NodeStageVolume: find device path %s -> %s", wwn, source)
 
 	exists, err := d.mounter.ExistsPath(target)
 	if err != nil {
@@ -366,9 +384,10 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 
-	//segments := map[string]string{
-	//	TopologyKey: d.metadata.GetAvailabilityZone(),
-	//}
+	segments := map[string]string{
+		//TopologyKey: d.metadata.GetAvailabilityZone(),
+		PowerVSInstanceIDKey: "f810e579-9cf7-4898-88db-e8bf796a6993",
+	}
 
 	//outpostArn := d.metadata.GetOutpostArn()
 	//
@@ -380,12 +399,13 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 	//	segments[AwsOutpostIDKey] = outpostArn.Resource
 	//}
 
-	//topology := &csi.Topology{Segments: segments}
+	topology := &csi.Topology{Segments: segments}
 
 	return &csi.NodeGetInfoResponse{
 		//NodeId:             d.metadata.GetInstanceID(),
+		NodeId: "f810e579-9cf7-4898-88db-e8bf796a6993",
 		MaxVolumesPerNode: d.getVolumesLimit(),
-		//AccessibleTopology: topology,
+		AccessibleTopology: topology,
 	}, nil
 }
 

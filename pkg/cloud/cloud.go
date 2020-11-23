@@ -36,6 +36,8 @@ import (
 
 // AWS volume types
 const (
+	VolumeTypeTier1 = "tier1"
+	VolumeTypeTier3 = "tier3"
 	// VolumeTypeIO1 represents a provisioned IOPS SSD type of volume.
 	VolumeTypeIO1 = "io1"
 	// VolumeTypeIO2 represents a provisioned IOPS SSD type of volume.
@@ -80,9 +82,9 @@ const (
 // Defaults
 const (
 	// DefaultVolumeSize represents the default volume size.
-	DefaultVolumeSize int64 = 100 * util.GiB
+	DefaultVolumeSize int64 = 10 * util.GiB
 	// DefaultVolumeType specifies which storage to use for newly created Volumes.
-	DefaultVolumeType = VolumeTypeGP2
+	DefaultVolumeType = VolumeTypeTier1
 )
 
 // Tags
@@ -142,7 +144,7 @@ type Disk struct {
 // DiskOptions represents parameters to create an EBS volume
 type DiskOptions struct {
 	//PowerVS options
-	Tier              string `default:"tier3"`
+	Tier              string
 	Shareable         bool
 	CapacityGigaBytes float64
 

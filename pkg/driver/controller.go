@@ -19,11 +19,12 @@ package driver
 import (
 	"context"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+
 	//"os"
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
@@ -104,6 +105,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, err
 	}
 
+	spew.Dump(req)
 	volSizeGigaBytes, err := getVolSizeGigaBytes(req)
 	if err != nil {
 		return nil, err
@@ -121,10 +123,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
-	disk, err := d.cloud.GetDiskByName(ctx, volName, volSizeBytes)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+	//disk, err := d.cloud.GetDiskByName(ctx, volName, volSizeBytes)
+	//if err != nil {
+	//	return nil, status.Error(codes.Internal, err.Error())
+	//}
 
 	var (
 		volumeType  string
@@ -166,26 +168,26 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
-	snapshotID := ""
-	volumeSource := req.GetVolumeContentSource()
-	if volumeSource != nil {
-		if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
-			return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
-		}
-		sourceSnapshot := volumeSource.GetSnapshot()
-		if sourceSnapshot == nil {
-			return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
-		}
-		snapshotID = sourceSnapshot.GetSnapshotId()
-	}
+	//snapshotID := ""
+	//volumeSource := req.GetVolumeContentSource()
+	//if volumeSource != nil {
+	//	if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
+	//		return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
+	//	}
+	//	sourceSnapshot := volumeSource.GetSnapshot()
+	//	if sourceSnapshot == nil {
+	//		return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
+	//	}
+	//	snapshotID = sourceSnapshot.GetSnapshotId()
+	//}
 
 	// volume exists already
-	if disk != nil {
-		if disk.SnapshotID != snapshotID {
-			return nil, status.Errorf(codes.AlreadyExists, "Volume already exists, but was restored from a different snapshot than %s", snapshotID)
-		}
-		return newCreateVolumeResponse(disk), nil
-	}
+	//if disk != nil {
+	//	if disk.SnapshotID != snapshotID {
+	//		return nil, status.Errorf(codes.AlreadyExists, "Volume already exists, but was restored from a different snapshot than %s", snapshotID)
+	//	}
+	//	return newCreateVolumeResponse(disk), nil
+	//}
 
 	// create a new volume
 	//zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
@@ -204,6 +206,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	opts := &cloud.DiskOptions{
 		//PowerVS options
 		CapacityGigaBytes: volSizeGigaBytes,
+		Tier: "tier3",
+		Shareable: false,
 
 		CapacityBytes:    volSizeBytes,
 		Tags:             volumeTags,
@@ -213,10 +217,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		//OutpostArn:       outpostArn,
 		Encrypted:        isEncrypted,
 		KmsKeyID:         kmsKeyID,
-		SnapshotID:       snapshotID,
+		//SnapshotID:       snapshotID,
 	}
 
-	disk, err = d.cloud.CreateDisk(ctx, volName, opts)
+	disk, err := d.cloud.CreateDisk(ctx, volName, opts)
 	if err != nil {
 		errCode := codes.Internal
 		if err == cloud.ErrNotFound {
@@ -270,11 +274,13 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
-	if !d.cloud.IsExistInstance(ctx, nodeID) {
-		return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
-	}
+	//if !d.cloud.IsExistInstance(ctx, nodeID) {
+	//	return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
+	//}
 
-	if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
+	disk, err := d.cloud.GetDiskByID(ctx, volumeID)
+
+	if err != nil {
 		if err == cloud.ErrNotFound {
 			return nil, status.Error(codes.NotFound, "Volume not found")
 		}
@@ -290,7 +296,7 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	}
 	klog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
 
-	pvInfo := map[string]string{DevicePathKey: devicePath}
+	pvInfo := map[string]string{WWNKey: disk.WWN}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
 }
 
@@ -487,27 +493,27 @@ func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 		}
 	}
 
-	segments := map[string]string{TopologyKey: disk.AvailabilityZone}
-
-	arn, err := arn.Parse(disk.OutpostArn)
-
-	if err == nil {
-		segments[AwsRegionKey] = arn.Region
-		segments[AwsPartitionKey] = arn.Partition
-		segments[AwsAccountIDKey] = arn.AccountID
-		segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
-	}
+	//segments := map[string]string{TopologyKey: disk.AvailabilityZone}
+	//
+	//arn, err := arn.Parse(disk.OutpostArn)
+	//
+	//if err == nil {
+	//	segments[AwsRegionKey] = arn.Region
+	//	segments[AwsPartitionKey] = arn.Partition
+	//	segments[AwsAccountIDKey] = arn.AccountID
+	//	segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
+	//}
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
 			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
 			VolumeContext: map[string]string{},
-			AccessibleTopology: []*csi.Topology{
-				{
-					Segments: segments,
-				},
-			},
+			//AccessibleTopology: []*csi.Topology{
+			//	{
+			//		Segments: segments,
+			//	},
+			//},
 			ContentSource: src,
 		},
 	}
@@ -525,7 +531,7 @@ func getVolSizeGigaBytes(req *csi.CreateVolumeRequest) (float64, error) {
 			return 0, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
 		}
 	}
-	return float64(util.RoundUpBytes(volSizeBytes)), nil
+	return float64(util.BytesToGiB(volSizeBytes)), nil
 }
 
 func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {

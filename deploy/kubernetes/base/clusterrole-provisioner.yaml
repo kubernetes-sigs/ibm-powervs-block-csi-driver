@@ -1,11 +1,11 @@
 ---
-# Source: aws-ebs-csi-driver/templates/clusterrole-provisioner.yaml
+# Source: powervs-csi-driver/templates/clusterrole-provisioner.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ebs-external-provisioner-role
   labels:
-    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/name: powervs-csi-driver
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]

@@ -23,6 +23,8 @@ const (
 	// devicePathKey represents key for device path in PublishContext
 	// devicePath is the device path where the volume is attached to
 	DevicePathKey = "devicePath"
+
+	WWNKey = "wwn"
 )
 
 // constants of keys in volume parameters
@@ -88,4 +90,5 @@ const (
 // constants for default command line flag values
 const (
 	DefaultCSIEndpoint = "unix://tmp/csi.sock"
+	GB = 1024 * 1024 * 1024
 )

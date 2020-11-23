@@ -23,12 +23,13 @@ GOPROXY=direct
 GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
+PLATFORM=linux/ppc64le
 
 .EXPORT_ALL_VARIABLES:
 
 .PHONY: bin/powervs-csi-driver
 bin/powervs-csi-driver: | bin
-	CGO_ENABLED=0 GOOS=linux go build -ldflags ${LDFLAGS} -o bin/powervs-csi-driver ./cmd/
+	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build -ldflags ${LDFLAGS} -o bin/powervs-csi-driver ./cmd/
 
 bin /tmp/helm /tmp/kubeval:
 	@mkdir -p $@
@@ -85,7 +86,7 @@ test-e2e-multi-az: bin/k8s-e2e-tester
 
 .PHONY: image-release
 image-release:
-	docker build -t $(IMAGE):$(VERSION) . --target debian-base
+	docker buildx build -t $(IMAGE):$(VERSION) . --target debian-base
 
 .PHONY: image
 image:

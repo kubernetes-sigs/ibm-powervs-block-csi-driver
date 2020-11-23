@@ -3,12 +3,6 @@ package cloud
 import (
 	"context"
 	"fmt"
-	"github.com/IBM-Cloud/power-go-client/errors"
-	"github.com/IBM-Cloud/power-go-client/power/client/p_cloud_volumes"
-	//"github.com/IBM-Cloud/power-go-client/power/models"
-	"github.com/davecgh/go-spew/spew"
-
-	//"github.com/davecgh/go-spew/spew"
 	gohttp "net/http"
 	"os"
 	"strings"
@@ -21,8 +15,12 @@ import (
 	"github.com/IBM-Cloud/bluemix-go/rest"
 	bxsession "github.com/IBM-Cloud/bluemix-go/session"
 	"github.com/IBM-Cloud/power-go-client/clients/instance"
+	"github.com/IBM-Cloud/power-go-client/errors"
 	"github.com/IBM-Cloud/power-go-client/ibmpisession"
+	"github.com/IBM-Cloud/power-go-client/power/client/p_cloud_volumes"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -162,11 +160,24 @@ func newPowerVSCloud(region string) (Cloud, error) {
 }
 
 func (p *powerVSCloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (disk *Disk, err error) {
-	v, err := p.volClient.Create(volumeName, diskOptions.CapacityGigaBytes, diskOptions.Tier, diskOptions.Shareable, p.instanceID, TIMEOUT)
+	var volumeType string
+	capacityGiB := float64(util.BytesToGiB(diskOptions.CapacityBytes))
+
+	switch diskOptions.VolumeType {
+	case VolumeTypeTier1, VolumeTypeTier3:
+		volumeType = diskOptions.VolumeType
+	case "":
+		volumeType = DefaultVolumeType
+	default:
+		return nil, fmt.Errorf("invalid PowerVS VolumeType %q", diskOptions.VolumeType)
+	}
+
+	v, err := p.volClient.Create(volumeName, capacityGiB, volumeType, diskOptions.Shareable, p.instanceID, TIMEOUT)
 	if err != nil {
 		return nil, err
 	}
-	return &Disk{CapacityGB: diskOptions.CapacityGigaBytes, VolumeID: *v.VolumeID, DiskType: v.DiskType}, nil
+
+	return &Disk{CapacityGB: diskOptions.CapacityGigaBytes, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
 }
 
 func (p *powerVSCloud) DeleteDisk(ctx context.Context, volumeID string) (success bool, err error) {
@@ -174,6 +185,7 @@ func (p *powerVSCloud) DeleteDisk(ctx context.Context, volumeID string) (success
 	if err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
@@ -242,7 +254,7 @@ func (p *powerVSCloud) GetDiskByName(ctx context.Context, name string, capacityB
 				Name:      *v.Name,
 				DiskType:  *v.DiskType,
 				VolumeID:  *v.VolumeID,
-				WWN:       *v.Wwn,
+				WWN:       strings.ToLower(*v.Wwn),
 				Shareable: *v.Shareable,
 			}, nil
 		}
@@ -260,7 +272,7 @@ func (p *powerVSCloud) GetDiskByID(ctx context.Context, volumeID string) (disk *
 		Name:      *v.Name,
 		DiskType:  v.DiskType,
 		VolumeID:  *v.VolumeID,
-		WWN:       v.Wwn,
+		WWN:       strings.ToLower(v.Wwn),
 		Shareable: *v.Shareable,
 	}, nil
 }
