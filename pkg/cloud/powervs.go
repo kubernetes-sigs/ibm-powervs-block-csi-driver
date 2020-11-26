@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	goErrors "errors"
 	"fmt"
 	gohttp "net/http"
 	"os"
@@ -34,15 +35,45 @@ const (
 	VolumeAvailableState = "available"
 )
 
+var (
+	ErrPVMInstanceNotFound = goErrors.New("PVM instance not found")
+	ErrDiskNotFound        = goErrors.New("disk Not Found")
+)
+
 type PowerVSClient interface {
 }
 
 type powerVSCloud struct {
-	bxSess         *bxsession.Session
-	pvmclient      *ibmpisession.IBMPISession
-	volClient      *instance.IBMPIVolumeClient
-	instanceID     string
-	resourceClient controllerv2.ResourceServiceInstanceRepository
+	bxSess    *bxsession.Session
+	piSession *ibmpisession.IBMPISession
+
+	cloudInstanceID string
+
+	imageClient        *instance.IBMPIImageClient
+	pvmInstancesClient *instance.IBMPIInstanceClient
+	resourceClient     controllerv2.ResourceServiceInstanceRepository
+	volClient          *instance.IBMPIVolumeClient
+}
+
+type User struct {
+	ID         string
+	Email      string
+	Account    string
+	cloudName  string `default:"bluemix"`
+	cloudType  string `default:"public"`
+	generation int    `default:"2"`
+}
+
+type PVMInstance struct {
+	ID      string
+	ImageID string
+	Name    string
+}
+
+type PVMImage struct {
+	ID       string
+	Name     string
+	DiskType string
 }
 
 func authenticateAPIKey(sess *bxsession.Session) error {
@@ -56,15 +87,6 @@ func authenticateAPIKey(sess *bxsession.Session) error {
 		return err
 	}
 	return tokenRefresher.AuthenticateAPIKey(config.BluemixAPIKey)
-}
-
-type User struct {
-	ID         string
-	Email      string
-	Account    string
-	cloudName  string `default:"bluemix"`
-	cloudType  string `default:"public"`
-	generation int    `default:"2"`
 }
 
 func fetchUserDetails(sess *bxsession.Session, generation int) (*User, error) {
@@ -103,14 +125,12 @@ func fetchUserDetails(sess *bxsession.Session, generation int) (*User, error) {
 	return &user, nil
 }
 
-func NewPowerVSCloud(region string) (Cloud, error) {
-	return newPowerVSCloud(region)
+func NewPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
+	return newPowerVSCloud(cloudInstanceID, debug)
 }
 
-func newPowerVSCloud(region string) (Cloud, error) {
+func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 	apikey := os.Getenv("IBMCLOUD_API_KEY")
-	instanceID := "7845d372-d4e1-46b8-91fc-41051c984601"
-	DEBUG := true
 	bxSess, err := bxsession.New(&bluemix.Config{BluemixAPIKey: apikey})
 	if err != nil {
 		return nil, err
@@ -133,29 +153,75 @@ func newPowerVSCloud(region string) (Cloud, error) {
 
 	resourceClient := ctrlv2.ResourceServiceInstanceV2()
 
-	in, err := resourceClient.GetInstance(instanceID)
+	in, err := resourceClient.GetInstance(cloudInstanceID)
 	if err != nil {
 		return nil, err
 	}
 
 	zone := in.RegionID
-	region, err = getRegion(zone)
+	region, err := getRegion(zone)
 	if err != nil {
 		return nil, err
 	}
-	pvmclient, err := ibmpisession.New(bxSess.Config.IAMAccessToken, region, DEBUG, TIMEOUT, user.Account, zone)
+	piSession, err := ibmpisession.New(bxSess.Config.IAMAccessToken, region, debug, TIMEOUT, user.Account, zone)
 	if err != nil {
 		return nil, err
 	}
 
-	volClient := instance.NewIBMPIVolumeClient(pvmclient, instanceID)
+	volClient := instance.NewIBMPIVolumeClient(piSession, cloudInstanceID)
+	pvmInstancesClient := instance.NewIBMPIInstanceClient(piSession, cloudInstanceID)
+	imageClient := instance.NewIBMPIImageClient(piSession, cloudInstanceID)
 
 	return &powerVSCloud{
-		bxSess:         bxSess,
-		pvmclient:      pvmclient,
-		resourceClient: resourceClient,
-		volClient:      volClient,
-		instanceID:     instanceID,
+		bxSess:             bxSess,
+		piSession:          piSession,
+		cloudInstanceID:    cloudInstanceID,
+		imageClient:        imageClient,
+		pvmInstancesClient: pvmInstancesClient,
+		resourceClient:     resourceClient,
+		volClient:          volClient,
+	}, nil
+}
+
+func (p *powerVSCloud) GetPVMInstanceByName(name string) (*PVMInstance, error) {
+	in, err := p.pvmInstancesClient.GetAll(p.cloudInstanceID, TIMEOUT)
+	if err != nil {
+		return nil, err
+	}
+	for _, pvmInstance := range in.PvmInstances {
+		if name == *pvmInstance.ServerName {
+			return &PVMInstance{
+				ID:      *pvmInstance.PvmInstanceID,
+				ImageID: *pvmInstance.ImageID,
+				Name:    *pvmInstance.ServerName,
+			}, nil
+		}
+	}
+	return nil, ErrPVMInstanceNotFound
+}
+
+func (p *powerVSCloud) GetPVMInstanceByID(id string) (*PVMInstance, error) {
+	in, err := p.pvmInstancesClient.Get(id, p.cloudInstanceID, TIMEOUT)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PVMInstance{
+		ID:      *in.PvmInstanceID,
+		ImageID: *in.ImageID,
+		Name:    *in.ServerName,
+	}, nil
+}
+
+func (p *powerVSCloud) GetImageByID(id string) (*PVMImage, error) {
+	image, err := p.imageClient.Get(id, p.cloudInstanceID)
+	if err != nil {
+		return nil, err
+	}
+	return &PVMImage{
+		ID:       *image.ImageID,
+		Name:     *image.Name,
+		DiskType: *image.StorageType,
 	}, nil
 }
 
@@ -172,7 +238,7 @@ func (p *powerVSCloud) CreateDisk(ctx context.Context, volumeName string, diskOp
 		return nil, fmt.Errorf("invalid PowerVS VolumeType %q", diskOptions.VolumeType)
 	}
 
-	v, err := p.volClient.Create(volumeName, capacityGiB, volumeType, diskOptions.Shareable, p.instanceID, TIMEOUT)
+	v, err := p.volClient.Create(volumeName, capacityGiB, volumeType, diskOptions.Shareable, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +247,7 @@ func (p *powerVSCloud) CreateDisk(ctx context.Context, volumeName string, diskOp
 }
 
 func (p *powerVSCloud) DeleteDisk(ctx context.Context, volumeID string) (success bool, err error) {
-	err = p.volClient.DeleteVolume(volumeID, p.instanceID, TIMEOUT)
+	err = p.volClient.DeleteVolume(volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return false, err
 	}
@@ -190,7 +256,7 @@ func (p *powerVSCloud) DeleteDisk(ctx context.Context, volumeID string) (success
 }
 
 func (p *powerVSCloud) AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error) {
-	_, err = p.volClient.Attach(nodeID, volumeID, p.instanceID, TIMEOUT)
+	_, err = p.volClient.Attach(nodeID, volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return "", err
 	}
@@ -203,7 +269,7 @@ func (p *powerVSCloud) AttachDisk(ctx context.Context, volumeID string, nodeID s
 }
 
 func (p *powerVSCloud) DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error) {
-	_, err = p.volClient.Detach(nodeID, volumeID, p.instanceID, TIMEOUT)
+	_, err = p.volClient.Detach(nodeID, volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return err
 	}
@@ -219,7 +285,7 @@ func (p *powerVSCloud) ResizeDisk(ctx context.Context, volumeID string, reqSize 
 	if err != nil {
 		return 0, err
 	}
-	v, err := p.volClient.Update(volumeID, disk.Name, float64(reqSize), disk.Shareable, p.instanceID, TIMEOUT)
+	v, err := p.volClient.Update(volumeID, disk.Name, float64(reqSize), disk.Shareable, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return 0, err
 	}
@@ -228,7 +294,7 @@ func (p *powerVSCloud) ResizeDisk(ctx context.Context, volumeID string, reqSize 
 
 func (p *powerVSCloud) WaitForAttachmentState(ctx context.Context, volumeID, state string) error {
 	err := wait.PollImmediate(PollInterval, PollTimeout, func() (bool, error) {
-		v, err := p.volClient.Get(volumeID, p.instanceID, TIMEOUT)
+		v, err := p.volClient.Get(volumeID, p.cloudInstanceID, TIMEOUT)
 		if err != nil {
 			return false, err
 		}
@@ -243,8 +309,8 @@ func (p *powerVSCloud) WaitForAttachmentState(ctx context.Context, volumeID, sta
 
 func (p *powerVSCloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error) {
 	//TODO: remove capacityBytes
-	params := p_cloud_volumes.NewPcloudCloudinstancesVolumesGetallParamsWithTimeout(TIMEOUT).WithCloudInstanceID(p.instanceID)
-	resp, err := p.pvmclient.Power.PCloudVolumes.PcloudCloudinstancesVolumesGetall(params, ibmpisession.NewAuth(p.pvmclient, p.instanceID))
+	params := p_cloud_volumes.NewPcloudCloudinstancesVolumesGetallParamsWithTimeout(TIMEOUT).WithCloudInstanceID(p.cloudInstanceID)
+	resp, err := p.piSession.Power.PCloudVolumes.PcloudCloudinstancesVolumesGetall(params, ibmpisession.NewAuth(p.piSession, p.cloudInstanceID))
 	if err != nil {
 		return nil, errors.ToError(err)
 	}
@@ -260,11 +326,11 @@ func (p *powerVSCloud) GetDiskByName(ctx context.Context, name string, capacityB
 		}
 	}
 
-	return nil, fmt.Errorf("disk not found")
+	return nil, ErrDiskNotFound
 }
 
 func (p *powerVSCloud) GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error) {
-	v, err := p.volClient.Get(volumeID, p.instanceID, TIMEOUT)
+	v, err := p.volClient.Get(volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return nil, err
 	}

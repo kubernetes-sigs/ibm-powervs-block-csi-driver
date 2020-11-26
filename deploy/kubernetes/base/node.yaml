@@ -1,33 +1,22 @@
 ---
-# Source: powervs-csi-driver/templates/node.yaml
-# Node Service
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: ebs-csi-node
+  name: powervs-csi-node
   namespace: kube-system
   labels:
     app.kubernetes.io/name: powervs-csi-driver
 spec:
   selector:
     matchLabels:
-      app: ebs-csi-node
+      app: powervs-csi-node
       app.kubernetes.io/name: powervs-csi-driver
   template:
     metadata:
       labels:
-        app: ebs-csi-node
+        app: powervs-csi-node
         app.kubernetes.io/name: powervs-csi-driver
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: eks.amazonaws.com/compute-type
-                operator: NotIn
-                values:
-                - fargate
       nodeSelector:
         kubernetes.io/os: linux
       hostNetwork: true
@@ -35,19 +24,27 @@ spec:
       tolerations:
         - operator: Exists
       containers:
-        - name: ebs-plugin
+        - name: powervs-plugin
           securityContext:
             privileged: true
           image: quay.io/powercloud/powervs-csi-driver:v0.0.1
+          imagePullPolicy: Always
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
           # - --volume-attach-limit=42
             - --logtostderr
             - --v=5
+            - --pvm-cloud-instance-id=7845d372-d4e1-46b8-91fc-41051c984601
+            - --debug
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
+            - name: IBMCLOUD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ibm-secret
+                  key: IBMCLOUD_API_KEY
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
@@ -79,12 +76,12 @@ spec:
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "rm -rf /registration/ebs.csi.aws.com-reg.sock /csi/csi.sock"]
+                command: ["/bin/sh", "-c", "rm -rf /registration/powervs.csi.ibm.com-reg.sock /csi/csi.sock"]
           env:
             - name: ADDRESS
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/ebs.csi.aws.com/csi.sock
+              value: /var/lib/kubelet/plugins/powervs.csi.ibm.com/csi.sock
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
@@ -104,7 +101,7 @@ spec:
             type: Directory
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/ebs.csi.aws.com/
+            path: /var/lib/kubelet/plugins/powervs.csi.ibm.com/
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:

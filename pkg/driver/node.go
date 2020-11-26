@@ -19,17 +19,13 @@ package driver
 import (
 	"context"
 	"fmt"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	//"github.com/kubernetes-csi/csi-lib-fc/fibrechannel"
+	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/fibrechannel"
-	//"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver/internal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
@@ -39,28 +35,13 @@ import (
 )
 
 const (
-	// FSTypeExt2 represents the ext2 filesystem type
-	FSTypeExt2 = "ext2"
-	// FSTypeExt3 represents the ext3 filesystem type
-	FSTypeExt3 = "ext3"
-	// FSTypeExt4 represents the ext4 filesystem type
-	FSTypeExt4 = "ext4"
-	// FSTypeXfs represents te xfs filesystem type
-	FSTypeXfs = "xfs"
 
 	// default file system type to be used when it is not provided
-	defaultFsType = FSTypeExt4
+	defaultFsType = "ext4"
 
-	// defaultMaxEBSVolumes is the maximum number of volumes that an AWS instance can have attached.
-	// More info at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/volume_limits.html
-	defaultMaxEBSVolumes = 39
-
-	// defaultMaxEBSNitroVolumes is the limit of volumes for some smaller instances, like c5 and m5.
-	defaultMaxEBSNitroVolumes = 25
-)
-
-var (
-	ValidFSTypes = []string{FSTypeExt2, FSTypeExt3, FSTypeExt4, FSTypeXfs}
+	// defaultMaxVolumesPerInstance is the limit of volumes can be attached in the PowerVS environment
+	// TODO: rightnow 99 is just a placeholder, this needs to be changed post discussion with PowerVS team
+	defaultMaxVolumesPerInstance = 99
 )
 
 var (
@@ -73,30 +54,22 @@ var (
 
 // nodeService represents the node service of CSI driver
 type nodeService struct {
-	//metadata      cloud.MetadataService
-	cloud cloud.PowerVSClient
+	cloud         cloud.Cloud
 	mounter       Mounter
-	inFlight      *internal.InFlight
-	driverOptions *DriverOptions
+	driverOptions *Options
 }
 
 // newNodeService creates a new node service
 // it panics if failed to create the service
-func newNodeService(driverOptions *DriverOptions) nodeService {
-	pvsCloud, err := cloud.NewPowerVSCloud("us-south")
-	if err != nil{
+func newNodeService(driverOptions *Options) nodeService {
+	pvsCloud, err := NewPowerVSCloudFunc(driverOptions.pvmCloudInstanceID, driverOptions.debug)
+	if err != nil {
 		panic(err)
 	}
-	//metadata, err := cloud.NewMetadata()
-	//if err != nil {
-	//	panic(err)
-	//}
 
 	return nodeService{
-		//metadata:      metadata,
-		cloud: pvsCloud,
+		cloud:         pvsCloud,
 		mounter:       newNodeMounter(),
-		inFlight:      internal.NewInFlight(),
 		driverOptions: driverOptions,
 	}
 }
@@ -146,36 +119,17 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		}
 	}
 
-	if ok := d.inFlight.Insert(req); !ok {
-		msg := fmt.Sprintf("request to stage volume=%q is already in progress", volumeID)
-		return nil, status.Error(codes.Internal, msg)
-	}
-	defer func() {
-		klog.V(4).Infof("NodeStageVolume: volume=%q operation finished", req.GetVolumeId())
-		d.inFlight.Delete(req)
-		klog.V(4).Info("donedone")
-	}()
-
 	wwn, ok := req.PublishContext[WWNKey]
 	if !ok {
-		return nil, status.Error(codes.InvalidArgument, "Device path not provided")
+		return nil, status.Error(codes.InvalidArgument, "WWN ID not provided")
 	}
 
-	wwid := "3"+wwn
-	c := fibrechannel.Connector{}
-	c.WWIDs = []string{wwid}
-
-	source, err := fibrechannel.Attach(c, &fibrechannel.OSioHandler{})
+	source, err := getFCSource(wwn)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", wwid, err)
+		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", wwn, err)
 	}
 
-	//source, err := d.findDevicePath(wwn, volumeID)
-	//if err != nil {
-	//	return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", wwn, err)
-	//}
-
-	klog.V(4).Infof("NodeStageVolume: find device path %s -> %s", wwn, source)
+	klog.V(4).Infof("NodeStageVolume: find device path for wwn %s -> %s", wwn, source)
 
 	exists, err := d.mounter.ExistsPath(target)
 	if err != nil {
@@ -218,6 +172,15 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	return &csi.NodeStageVolumeResponse{}, nil
+}
+
+// getFCSource will find the devicePath for the FC volume by wwn ID
+func getFCSource(wwn string) (devicePath string, err error){
+	c := fibrechannel.Connector{}
+	// Prepending the 3 which is missing in the wwn getting it from the PowerVS infra
+	c.WWIDs = []string{"3"+wwn}
+
+	return fibrechannel.Attach(c, &fibrechannel.OSioHandler{})
 }
 
 func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
@@ -384,45 +347,49 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
 
-	segments := map[string]string{
-		//TopologyKey: d.metadata.GetAvailabilityZone(),
-		PowerVSInstanceIDKey: "f810e579-9cf7-4898-88db-e8bf796a6993",
+	hostname, err := os.Hostname()
+	if err != nil {
+		klog.Errorf("failed to get hostname, err: %s", err)
+		return nil, err
+	}
+	in, err := d.cloud.GetPVMInstanceByName(hostname)
+	if err != nil {
+		klog.Errorf("failed to get the instance for %s, err: %s", hostname, err)
+		return nil, fmt.Errorf("failed to get the instance for %s, err: %s", hostname, err)
 	}
 
-	//outpostArn := d.metadata.GetOutpostArn()
-	//
-	//// to my surprise ARN's string representation is not empty for empty ARN
-	//if len(outpostArn.Resource) > 0 {
-	//	segments[AwsRegionKey] = outpostArn.Region
-	//	segments[AwsPartitionKey] = outpostArn.Partition
-	//	segments[AwsAccountIDKey] = outpostArn.AccountID
-	//	segments[AwsOutpostIDKey] = outpostArn.Resource
-	//}
+	image, err := d.cloud.GetImageByID(in.ImageID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the image details for %s, err: %s", in.ImageID, err)
+	}
+
+	segments := map[string]string{
+		DiskTypeKey: image.DiskType,
+	}
 
 	topology := &csi.Topology{Segments: segments}
 
 	return &csi.NodeGetInfoResponse{
-		//NodeId:             d.metadata.GetInstanceID(),
-		NodeId: "f810e579-9cf7-4898-88db-e8bf796a6993",
-		MaxVolumesPerNode: d.getVolumesLimit(),
+		NodeId:             in.ID,
+		MaxVolumesPerNode:  d.getVolumesLimit(),
 		AccessibleTopology: topology,
 	}, nil
 }
 
 func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mountOptions []string) error {
 	target := req.GetTargetPath()
-	volumeID := req.GetVolumeId()
+	//volumeID := req.GetVolumeId()
 
-	devicePath, exists := req.PublishContext[DevicePathKey]
+	wwn, exists := req.PublishContext[WWNKey]
 	if !exists {
-		return status.Error(codes.InvalidArgument, "Device path not provided")
+		return status.Error(codes.InvalidArgument, "WWN ID not provided")
 	}
-	source, err := d.findDevicePath(devicePath, volumeID)
+	source, err := getFCSource(wwn)
 	if err != nil {
-		return status.Errorf(codes.Internal, "Failed to find device path %s. %v", devicePath, err)
+		return status.Errorf(codes.Internal, "Failed to find device path for wwn %s. %v", wwn, err)
 	}
 
-	klog.V(4).Infof("NodePublishVolume [block]: find device path %s -> %s", devicePath, source)
+	klog.V(4).Infof("NodePublishVolume [block]: find device path for wwn %s -> %s", wwn, source)
 
 	globalMountPath := filepath.Dir(target)
 
@@ -551,13 +518,7 @@ func (d *nodeService) getVolumesLimit() int64 {
 	if d.driverOptions.volumeAttachLimit >= 0 {
 		return d.driverOptions.volumeAttachLimit
 	}
-	ebsNitroInstanceTypeRegex := "^[cmr]5.*|t3|z1d"
-	//instanceType := d.metadata.GetInstanceType()
-	instanceType := "fake"
-	if ok, _ := regexp.MatchString(ebsNitroInstanceTypeRegex, instanceType); ok {
-		return defaultMaxEBSNitroVolumes
-	}
-	return defaultMaxEBSVolumes
+	return defaultMaxVolumesPerInstance
 }
 
 // hasMountOption returns a boolean indicating whether the given

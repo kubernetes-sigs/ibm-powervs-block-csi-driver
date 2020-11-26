@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
 
-	//"os"
-	"strconv"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -47,8 +45,8 @@ var (
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
-		csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
-		csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
+		//csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
+		//csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 		csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
 	}
 )
@@ -56,39 +54,23 @@ var (
 // controllerService represents the controller service of CSI driver
 type controllerService struct {
 	cloud         cloud.Cloud
-	driverOptions *DriverOptions
+	driverOptions *Options
 }
 
 var (
-	// NewMetadataFunc is a variable for the cloud.NewMetadata function that can
-	// be overwritten in unit tests.
-	NewMetadataFunc = cloud.NewMetadata
-	// NewCloudFunc is a variable for the cloud.NewCloud function that can
-	// be overwritten in unit tests.
-	NewCloudFunc        = cloud.NewCloud
 	NewPowerVSCloudFunc = cloud.NewPowerVSCloud
 )
 
 // newControllerService creates a new controller service
 // it panics if failed to create the service
-func newControllerService(driverOptions *DriverOptions) controllerService {
-	//region := os.Getenv("AWS_REGION")
-	//if region == "" {
-	//	metadata, err := NewMetadataFunc()
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	region = metadata.GetRegion()
-	//}
-
-	//cloud, err := NewCloudFunc(region)
-	cloud, err := NewPowerVSCloudFunc("us-south")
+func newControllerService(driverOptions *Options) controllerService {
+	c, err := NewPowerVSCloudFunc(driverOptions.pvmCloudInstanceID, driverOptions.debug)
 	if err != nil {
 		panic(err)
 	}
 
 	return controllerService{
-		cloud:         cloud,
+		cloud:         c,
 		driverOptions: driverOptions,
 	}
 }
@@ -123,19 +105,8 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
-	//disk, err := d.cloud.GetDiskByName(ctx, volName, volSizeBytes)
-	//if err != nil {
-	//	return nil, status.Error(codes.Internal, err.Error())
-	//}
-
 	var (
 		volumeType  string
-		iopsPerGB   int
-		isEncrypted bool
-		kmsKeyID    string
-		volumeTags  = map[string]string{
-			cloud.VolumeNameTagKey: volName,
-		}
 	)
 
 	for key, value := range req.GetParameters() {
@@ -144,80 +115,18 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			klog.Warning("\"fstype\" is deprecated, please use \"csi.storage.k8s.io/fstype\" instead")
 		case VolumeTypeKey:
 			volumeType = value
-		case IopsPerGBKey:
-			iopsPerGB, err = strconv.Atoi(value)
-			if err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse invalid iopsPerGB: %v", err)
-			}
-		case EncryptedKey:
-			if value == "true" {
-				isEncrypted = true
-			} else {
-				isEncrypted = false
-			}
-		case KmsKeyIDKey:
-			kmsKeyID = value
-		case PVCNameKey:
-			volumeTags[PVCNameTag] = value
-		case PVCNamespaceKey:
-			volumeTags[PVCNamespaceTag] = value
-		case PVNameKey:
-			volumeTags[PVNameTag] = value
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 		}
 	}
 
-	//snapshotID := ""
-	//volumeSource := req.GetVolumeContentSource()
-	//if volumeSource != nil {
-	//	if _, ok := volumeSource.GetType().(*csi.VolumeContentSource_Snapshot); !ok {
-	//		return nil, status.Error(codes.InvalidArgument, "Unsupported volumeContentSource type")
-	//	}
-	//	sourceSnapshot := volumeSource.GetSnapshot()
-	//	if sourceSnapshot == nil {
-	//		return nil, status.Error(codes.InvalidArgument, "Error retrieving snapshot from the volumeContentSource")
-	//	}
-	//	snapshotID = sourceSnapshot.GetSnapshotId()
-	//}
-
-	// volume exists already
-	//if disk != nil {
-	//	if disk.SnapshotID != snapshotID {
-	//		return nil, status.Errorf(codes.AlreadyExists, "Volume already exists, but was restored from a different snapshot than %s", snapshotID)
-	//	}
-	//	return newCreateVolumeResponse(disk), nil
-	//}
-
-	// create a new volume
-	//zone := pickAvailabilityZone(req.GetAccessibilityRequirements())
-	//outpostArn := getOutpostArn(req.GetAccessibilityRequirements())
-
-	// fill volume tags
-	//if d.driverOptions.kubernetesClusterID != "" {
-	//	resourceLifecycleTag := ResourceLifecycleTagPrefix + d.driverOptions.kubernetesClusterID
-	//	volumeTags[resourceLifecycleTag] = ResourceLifecycleOwned
-	//	volumeTags[NameTag] = d.driverOptions.kubernetesClusterID + "-dynamic-" + volName
-	//}
-	//for k, v := range d.driverOptions.extraTags {
-	//	volumeTags[k] = v
-	//}
-
 	opts := &cloud.DiskOptions{
 		//PowerVS options
 		CapacityGigaBytes: volSizeGigaBytes,
-		Tier: "tier3",
-		Shareable: false,
+		Shareable:         false,
 
-		CapacityBytes:    volSizeBytes,
-		Tags:             volumeTags,
-		VolumeType:       volumeType,
-		IOPSPerGB:        iopsPerGB,
-		//AvailabilityZone: zone,
-		//OutpostArn:       outpostArn,
-		Encrypted:        isEncrypted,
-		KmsKeyID:         kmsKeyID,
-		//SnapshotID:       snapshotID,
+		CapacityBytes: volSizeBytes,
+		VolumeType:    volumeType,
 	}
 
 	disk, err := d.cloud.CreateDisk(ctx, volName, opts)

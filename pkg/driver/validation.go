@@ -23,13 +23,17 @@ import (
 	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 )
 
-func ValidateDriverOptions(options *DriverOptions) error {
+func ValidateDriverOptions(options *Options) error {
 	if err := validateExtraTags(options.extraTags); err != nil {
 		return fmt.Errorf("Invalid extra tags: %v", err)
 	}
 
 	if err := validateMode(options.mode); err != nil {
 		return fmt.Errorf("Invalid mode: %v", err)
+	}
+
+	if options.pvmCloudInstanceID == ""{
+		return fmt.Errorf("pvm-cloud-instance-id can't be empty")
 	}
 
 	return nil

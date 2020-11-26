@@ -42,10 +42,10 @@ const (
 )
 
 const (
-	DriverName      = "powervs.csi.ibm.com"
-	PowerVSInstanceIDKey = "topology." + DriverName + "/instance-id"
+	DriverName       = "powervs.csi.ibm.com"
+	DiskTypeKey      = "topology." + DriverName + "/disk-type"
 	PowerVSRegionKey = "topology." + DriverName + "/region"
-	PowerVSZoneKey = "topology." + DriverName + "/zone"
+	PowerVSZoneKey   = "topology." + DriverName + "/zone"
 
 	TopologyKey     = "topology." + DriverName + "/zone"
 	AwsPartitionKey = "topology." + DriverName + "/partition"
@@ -59,21 +59,23 @@ type Driver struct {
 	nodeService
 
 	srv     *grpc.Server
-	options *DriverOptions
+	options *Options
 }
 
-type DriverOptions struct {
+type Options struct {
 	endpoint            string
 	extraTags           map[string]string
 	mode                Mode
 	volumeAttachLimit   int64
 	kubernetesClusterID string
+	pvmCloudInstanceID string
+	debug bool
 }
 
-func NewDriver(options ...func(*DriverOptions)) (*Driver, error) {
+func NewDriver(options ...func(*Options)) (*Driver, error) {
 	klog.Infof("Driver: %v Version: %v", DriverName, driverVersion)
 
-	driverOptions := DriverOptions{
+	driverOptions := Options{
 		endpoint: DefaultCSIEndpoint,
 		mode:     AllMode,
 	}
@@ -150,41 +152,44 @@ func (d *Driver) Stop() {
 	d.srv.Stop()
 }
 
-func WithEndpoint(endpoint string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
+func WithEndpoint(endpoint string) func(*Options) {
+	return func(o *Options) {
 		o.endpoint = endpoint
 	}
 }
 
-func WithExtraTags(extraTags map[string]string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
+func WithExtraTags(extraTags map[string]string) func(*Options) {
+	return func(o *Options) {
 		o.extraTags = extraTags
 	}
 }
 
-//func WithExtraVolumeTags(extraVolumeTags map[string]string) func(*DriverOptions) {
-//	return func(o *DriverOptions) {
-//		if o.extraTags == nil && extraVolumeTags != nil {
-//			klog.Warning("DEPRECATION WARNING: --extra-volume-tags is deprecated, please use --extra-tags instead")
-//			o.extraTags = extraVolumeTags
-//		}
-//	}
-//}
-
-func WithMode(mode Mode) func(*DriverOptions) {
-	return func(o *DriverOptions) {
+func WithMode(mode Mode) func(*Options) {
+	return func(o *Options) {
 		o.mode = mode
 	}
 }
 
-func WithVolumeAttachLimit(volumeAttachLimit int64) func(*DriverOptions) {
-	return func(o *DriverOptions) {
+func WithPVMCloudInstanceID(ID string) func(*Options) {
+	return func(o *Options) {
+		o.pvmCloudInstanceID = ID
+	}
+}
+
+func WithDebug(debug bool) func(*Options) {
+	return func(o *Options) {
+		o.debug = debug
+	}
+}
+
+func WithVolumeAttachLimit(volumeAttachLimit int64) func(*Options) {
+	return func(o *Options) {
 		o.volumeAttachLimit = volumeAttachLimit
 	}
 }
 
-func WithKubernetesClusterID(clusterID string) func(*DriverOptions) {
-	return func(o *DriverOptions) {
+func WithKubernetesClusterID(clusterID string) func(*Options) {
+	return func(o *Options) {
 		o.kubernetesClusterID = clusterID
 	}
 }

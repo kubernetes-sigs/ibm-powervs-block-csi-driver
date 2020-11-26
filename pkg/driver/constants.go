@@ -90,5 +90,5 @@ const (
 // constants for default command line flag values
 const (
 	DefaultCSIEndpoint = "unix://tmp/csi.sock"
-	GB = 1024 * 1024 * 1024
+	GB                 = 1024 * 1024 * 1024
 )

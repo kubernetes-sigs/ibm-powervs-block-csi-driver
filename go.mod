@@ -11,8 +11,6 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/mock v1.4.1
-	github.com/golang/protobuf v1.3.3
-	github.com/kubernetes-csi/csi-lib-fc v0.0.0-20200118015005-fe8a7253a266
 	github.com/kubernetes-sigs/aws-ebs-csi-driver v0.7.0
 	google.golang.org/grpc v1.26.0
 	k8s.io/apimachinery v0.17.3

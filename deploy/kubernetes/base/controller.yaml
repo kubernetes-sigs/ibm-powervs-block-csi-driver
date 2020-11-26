@@ -1,10 +1,8 @@
 ---
-# Source: powervs-csi-driver/templates/controller.yaml
-# Controller Service
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: ebs-csi-controller
+  name: powervs-csi-controller
   namespace: kube-system
   labels:
     app.kubernetes.io/name: powervs-csi-driver
@@ -12,22 +10,22 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: ebs-csi-controller
+      app: powervs-csi-controller
       app.kubernetes.io/name: powervs-csi-driver
   template:
     metadata:
       labels:
-        app: ebs-csi-controller
+        app: powervs-csi-controller
         app.kubernetes.io/name: powervs-csi-driver
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-      serviceAccountName: ebs-csi-controller-sa
+      serviceAccountName: powervs-csi-controller-sa
       priorityClassName: system-cluster-critical
       tolerations:
         - operator: Exists
       containers:
-        - name: ebs-plugin
+        - name: powervs-plugin
           image: quay.io/powercloud/powervs-csi-driver:v0.0.1
           imagePullPolicy: Always
           args:
@@ -35,6 +33,8 @@ spec:
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
             - --v=5
+            - --pvm-cloud-instance-id=7845d372-d4e1-46b8-91fc-41051c984601
+            - --debug
           env:
             - name: CSI_ENDPOINT
               value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
