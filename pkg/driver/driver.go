@@ -23,10 +23,10 @@ import (
 	"fmt"
 	"net"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/util"
+	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
 	"google.golang.org/grpc"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // Mode is the operating mode of the CSI driver.
@@ -44,14 +44,6 @@ const (
 const (
 	DriverName       = "powervs.csi.ibm.com"
 	DiskTypeKey      = "topology." + DriverName + "/disk-type"
-	PowerVSRegionKey = "topology." + DriverName + "/region"
-	PowerVSZoneKey   = "topology." + DriverName + "/zone"
-
-	TopologyKey     = "topology." + DriverName + "/zone"
-	AwsPartitionKey = "topology." + DriverName + "/partition"
-	AwsAccountIDKey = "topology." + DriverName + "/account-id"
-	AwsRegionKey    = "topology." + DriverName + "/region"
-	AwsOutpostIDKey = "topology." + DriverName + "/outpost-id"
 )
 
 type Driver struct {
@@ -158,12 +150,6 @@ func WithEndpoint(endpoint string) func(*Options) {
 	}
 }
 
-func WithExtraTags(extraTags map[string]string) func(*Options) {
-	return func(o *Options) {
-		o.extraTags = extraTags
-	}
-}
-
 func WithMode(mode Mode) func(*Options) {
 	return func(o *Options) {
 		o.mode = mode
@@ -185,11 +171,5 @@ func WithDebug(debug bool) func(*Options) {
 func WithVolumeAttachLimit(volumeAttachLimit int64) func(*Options) {
 	return func(o *Options) {
 		o.volumeAttachLimit = volumeAttachLimit
-	}
-}
-
-func WithKubernetesClusterID(clusterID string) func(*Options) {
-	return func(o *Options) {
-		o.kubernetesClusterID = clusterID
 	}
 }

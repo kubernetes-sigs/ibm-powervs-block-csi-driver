@@ -5,6 +5,7 @@
 
 FROM --platform=linux/ppc64le k8s.gcr.io/build-image/debian-base:v2.1.3 AS debian-base
 RUN clean-install ca-certificates e2fsprogs mount udev util-linux xfsprogs
+RUN clean-install bash multipath-tools sg3-utils
 # COPY --from=builder /go/src/github.com/ppc64le-cloud/powervs-csi-driver/bin/powervs-csi-driver /bin/powervs-csi-driver
 COPY ./bin/powervs-csi-driver /bin/powervs-csi-driver
 

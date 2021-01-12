@@ -18,9 +18,6 @@ package driver
 
 import (
 	"context"
-	"fmt"
-	"github.com/davecgh/go-spew/spew"
-
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -28,13 +25,11 @@ import (
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 var (
-	// volumeCaps represents how the volume could be accessed.
-	// It is SINGLE_NODE_WRITER since EBS volume could only be
-	// attached to a single node at any given time.
+	// TODO: explore multi-node attach
 	volumeCaps = []csi.VolumeCapability_AccessMode{
 		{
 			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
@@ -45,8 +40,6 @@ var (
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
-		//csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
-		//csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 		csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
 	}
 )
@@ -87,12 +80,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, err
 	}
 
-	spew.Dump(req)
-	volSizeGigaBytes, err := getVolSizeGigaBytes(req)
-	if err != nil {
-		return nil, err
-	}
-
 	volCaps := req.GetVolumeCapabilities()
 	if len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
@@ -105,14 +92,10 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
-	var (
-		volumeType  string
-	)
+	var volumeType  string
 
 	for key, value := range req.GetParameters() {
 		switch strings.ToLower(key) {
-		case "fstype":
-			klog.Warning("\"fstype\" is deprecated, please use \"csi.storage.k8s.io/fstype\" instead")
 		case VolumeTypeKey:
 			volumeType = value
 		default:
@@ -121,21 +104,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	opts := &cloud.DiskOptions{
-		//PowerVS options
-		CapacityGigaBytes: volSizeGigaBytes,
 		Shareable:         false,
-
 		CapacityBytes: volSizeBytes,
 		VolumeType:    volumeType,
 	}
 
-	disk, err := d.cloud.CreateDisk(ctx, volName, opts)
+	disk, err := d.cloud.CreateDisk(volName, opts)
 	if err != nil {
-		errCode := codes.Internal
-		if err == cloud.ErrNotFound {
-			errCode = codes.NotFound
-		}
-		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
+		return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
 	}
 	return newCreateVolumeResponse(disk), nil
 }
@@ -147,11 +123,14 @@ func (d *controllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	if _, err := d.cloud.DeleteDisk(ctx, volumeID); err != nil {
+	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
 		if err == cloud.ErrNotFound {
 			klog.V(4).Info("DeleteVolume: volume not found, returning with success")
 			return &csi.DeleteVolumeResponse{}, nil
 		}
+	}
+
+	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete volume ID %q: %v", volumeID, err)
 	}
 
@@ -183,11 +162,11 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
-	//if !d.cloud.IsExistInstance(ctx, nodeID) {
-	//	return nil, status.Errorf(codes.NotFound, "Instance %q not found", nodeID)
-	//}
+	if _, err := d.cloud.GetPVMInstanceByID(nodeID); err != nil {
+		return nil, status.Errorf(codes.NotFound, "Instance %q not found, err: %v", nodeID, err)
+	}
 
-	disk, err := d.cloud.GetDiskByID(ctx, volumeID)
+	disk, err := d.cloud.GetDiskByID(volumeID)
 
 	if err != nil {
 		if err == cloud.ErrNotFound {
@@ -196,16 +175,23 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		return nil, status.Errorf(codes.Internal, "Could not get volume with ID %q: %v", volumeID, err)
 	}
 
-	devicePath, err := d.cloud.AttachDisk(ctx, volumeID, nodeID)
+	pvInfo := map[string]string{WWNKey: disk.WWN}
+
+	attached, err := d.cloud.IsAttached(volumeID, nodeID)
+	if attached {
+		klog.V(5).Infof("ControllerPublishVolume: volume %s already attached to node %s, returning success", volumeID, nodeID)
+		return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
+	}
+
+	err = d.cloud.AttachDisk(volumeID, nodeID)
 	if err != nil {
 		if err == cloud.ErrAlreadyExists {
 			return nil, status.Error(codes.AlreadyExists, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
-	klog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s through device %s", volumeID, nodeID, devicePath)
+	klog.V(5).Infof("ControllerPublishVolume: volume %s attached to node %s", volumeID, nodeID)
 
-	pvInfo := map[string]string{WWNKey: disk.WWN}
 	return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
 }
 
@@ -221,10 +207,19 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		return nil, status.Error(codes.InvalidArgument, "Node ID not provided")
 	}
 
-	if err := d.cloud.DetachDisk(ctx, volumeID, nodeID); err != nil {
+	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
 		if err == cloud.ErrNotFound {
+			klog.V(4).Info("ControllerUnpublishVolume: volume not found, returning with success")
 			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
+	}
+
+	if attached, err := d.cloud.IsAttached(volumeID, nodeID); !attached {
+		klog.V(4).Infof("ControllerUnpublishVolume: volume %s is not attached to %s, err: %v, returning with success", volumeID, nodeID, err)
+		return &csi.ControllerUnpublishVolumeResponse{}, nil
+	}
+
+	if err := d.cloud.DetachDisk(volumeID, nodeID); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
 	}
 	klog.V(5).Infof("ControllerUnpublishVolume: volume %s detached from node %s", volumeID, nodeID)
@@ -270,7 +265,7 @@ func (d *controllerService) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	if _, err := d.cloud.GetDiskByID(ctx, volumeID); err != nil {
+	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
 		if err == cloud.ErrNotFound {
 			return nil, status.Error(codes.NotFound, "Volume not found")
 		}
@@ -304,7 +299,7 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		return nil, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
 	}
 
-	actualSizeGiB, err := d.cloud.ResizeDisk(ctx, volumeID, newSize)
+	actualSizeGiB, err := d.cloud.ResizeDisk(volumeID, newSize)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not resize volume %q: %v", volumeID, err)
 	}
@@ -349,98 +344,17 @@ func (d *controllerService) ListSnapshots(ctx context.Context, req *csi.ListSnap
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-// pickAvailabilityZone selects 1 zone given topology requirement.
-// if not found, empty string is returned.
-func pickAvailabilityZone(requirement *csi.TopologyRequirement) string {
-	if requirement == nil {
-		return ""
-	}
-	for _, topology := range requirement.GetPreferred() {
-		zone, exists := topology.GetSegments()[TopologyKey]
-		if exists {
-			return zone
-		}
-	}
-	for _, topology := range requirement.GetRequisite() {
-		zone, exists := topology.GetSegments()[TopologyKey]
-		if exists {
-			return zone
-		}
-	}
-	return ""
-}
-
-func getOutpostArn(requirement *csi.TopologyRequirement) string {
-	if requirement == nil {
-		return ""
-	}
-	for _, topology := range requirement.GetPreferred() {
-		_, exists := topology.GetSegments()[AwsOutpostIDKey]
-		if exists {
-			return BuildOutpostArn(topology.GetSegments())
-		}
-	}
-	for _, topology := range requirement.GetRequisite() {
-		_, exists := topology.GetSegments()[AwsOutpostIDKey]
-		if exists {
-			return BuildOutpostArn(topology.GetSegments())
-		}
-	}
-
-	return ""
-}
-
 func newCreateVolumeResponse(disk *cloud.Disk) *csi.CreateVolumeResponse {
 	var src *csi.VolumeContentSource
-	if disk.SnapshotID != "" {
-		src = &csi.VolumeContentSource{
-			Type: &csi.VolumeContentSource_Snapshot{
-				Snapshot: &csi.VolumeContentSource_SnapshotSource{
-					SnapshotId: disk.SnapshotID,
-				},
-			},
-		}
-	}
-
-	//segments := map[string]string{TopologyKey: disk.AvailabilityZone}
-	//
-	//arn, err := arn.Parse(disk.OutpostArn)
-	//
-	//if err == nil {
-	//	segments[AwsRegionKey] = arn.Region
-	//	segments[AwsPartitionKey] = arn.Partition
-	//	segments[AwsAccountIDKey] = arn.AccountID
-	//	segments[AwsOutpostIDKey] = strings.ReplaceAll(arn.Resource, "outpost/", "")
-	//}
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      disk.VolumeID,
 			CapacityBytes: util.GiBToBytes(disk.CapacityGiB),
 			VolumeContext: map[string]string{},
-			//AccessibleTopology: []*csi.Topology{
-			//	{
-			//		Segments: segments,
-			//	},
-			//},
 			ContentSource: src,
 		},
 	}
-}
-
-func getVolSizeGigaBytes(req *csi.CreateVolumeRequest) (float64, error) {
-	var volSizeBytes int64
-	capRange := req.GetCapacityRange()
-	if capRange == nil {
-		volSizeBytes = cloud.DefaultVolumeSize
-	} else {
-		volSizeBytes = util.RoundUpBytes(capRange.GetRequiredBytes())
-		maxVolSize := capRange.GetLimitBytes()
-		if maxVolSize > 0 && maxVolSize < volSizeBytes {
-			return 0, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
-		}
-	}
-	return float64(util.BytesToGiB(volSizeBytes)), nil
 }
 
 func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
@@ -456,29 +370,4 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 		}
 	}
 	return volSizeBytes, nil
-}
-
-// BuildOutpostArn returns the string representation of the outpost ARN from the given csi.TopologyRequirement.segments
-func BuildOutpostArn(segments map[string]string) string {
-
-	if len(segments[AwsPartitionKey]) <= 0 {
-		return ""
-	}
-
-	if len(segments[AwsRegionKey]) <= 0 {
-		return ""
-	}
-	if len(segments[AwsOutpostIDKey]) <= 0 {
-		return ""
-	}
-	if len(segments[AwsAccountIDKey]) <= 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("arn:%s:outposts:%s:%s:outpost/%s",
-		segments[AwsPartitionKey],
-		segments[AwsRegionKey],
-		segments[AwsAccountIDKey],
-		segments[AwsOutpostIDKey],
-	)
 }

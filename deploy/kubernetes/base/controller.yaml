@@ -7,7 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: powervs-csi-driver
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: powervs-csi-controller

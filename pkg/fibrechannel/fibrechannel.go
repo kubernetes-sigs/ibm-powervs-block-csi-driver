@@ -117,25 +117,16 @@ func scsiHostRescan(io ioHandler) {
 	}
 }
 
-func fcHostIssueLip(io ioHandler) {
-	fcPath := "/sys/class/fc_host/"
-	if dirs, err := io.ReadDir(fcPath); err == nil {
-		for _, f := range dirs {
-			name := fcPath + f.Name() + "/issue_lip"
-			data := []byte("1")
-			io.WriteFile(name, data, 0666)
-		}
-	}
-}
-
-func rescanScsiBus() {
-	cmd := exec.Command("/usr/bin/rescan-scsi-bus.sh")
-	stdoutStderr, err := cmd.CombinedOutput()
-	if err != nil {
-		glog.Errorf("failed to rescan-scsi-bus.sh: %v", err)
-	}
-	glog.Infof("output of rescan-scsi-bus.sh: %s", stdoutStderr)
-}
+//func fcHostIssueLip(io ioHandler) {
+//	fcPath := "/sys/class/fc_host/"
+//	if dirs, err := io.ReadDir(fcPath); err == nil {
+//		for _, f := range dirs {
+//			name := fcPath + f.Name() + "/issue_lip"
+//			data := []byte("1")
+//			io.WriteFile(name, data, 0666)
+//		}
+//	}
+//}
 
 func searchDisk(c Connector, io ioHandler) (string, error) {
 	var diskIds []string
@@ -173,7 +164,7 @@ func searchDisk(c Connector, io ioHandler) (string, error) {
 		// rescan and search again
 		// rescan scsi bus
 		scsiHostRescan(io)
-		fcHostIssueLip(io)
+		//fcHostIssueLip(io)
 		rescaned = true
 	}
 	// if no disk matches input wwn and lun, exit
@@ -337,4 +328,14 @@ func removeFromScsiSubsystem(deviceName string, io ioHandler) {
 	glog.Infof("fc: remove device from scsi-subsystem: path: %s", fileName)
 	data := []byte("1")
 	io.WriteFile(fileName, data, 0666)
+}
+
+func RemoveMultipathDevice(device string) error {
+	cmd := exec.Command("multipath", "-f", device)
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed remove multipath device: %s err: %v", device, err)
+	}
+	glog.Infof("output of multipath device remove command: %s", stdoutStderr)
+	return nil
 }

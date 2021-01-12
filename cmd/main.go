@@ -23,7 +23,7 @@ import (
 
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func main() {
@@ -32,12 +32,12 @@ func main() {
 
 	drv, err := driver.NewDriver(
 		driver.WithEndpoint(options.ServerOptions.Endpoint),
-		driver.WithExtraTags(options.ControllerOptions.ExtraTags),
+		//driver.WithExtraTags(options.ControllerOptions.ExtraTags),
 		//river.WithExtraVolumeTags(options.ControllerOptions.ExtraVolumeTags),
 		driver.WithMode(options.DriverMode),
 		driver.WithDebug(options.ServerOptions.Debug),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
-		driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
+		//driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
 		driver.WithPVMCloudInstanceID(options.ServerOptions.PVMCloudInstanceID),
 	)
 	if err != nil {

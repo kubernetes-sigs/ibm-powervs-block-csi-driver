@@ -27,7 +27,7 @@ import (
 	"github.com/ppc64le-cloud/powervs-csi-driver/cmd/options"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // Options is the combined set of options for all operating modes.
@@ -35,7 +35,7 @@ type Options struct {
 	DriverMode driver.Mode
 
 	*options.ServerOptions
-	*options.ControllerOptions
+	//*options.ControllerOptions
 	*options.NodeOptions
 }
 
@@ -52,7 +52,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 		mode = driver.AllMode
 
 		serverOptions     = options.ServerOptions{}
-		controllerOptions = options.ControllerOptions{}
+		//controllerOptions = options.ControllerOptions{}
 		nodeOptions       = options.NodeOptions{}
 	)
 
@@ -64,7 +64,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 
 		switch {
 		case cmd == string(driver.ControllerMode):
-			controllerOptions.AddFlags(fs)
+			//controllerOptions.AddFlags(fs)
 			args = os.Args[2:]
 			mode = driver.ControllerMode
 
@@ -74,12 +74,12 @@ func GetOptions(fs *flag.FlagSet) *Options {
 			mode = driver.NodeMode
 
 		case cmd == string(driver.AllMode):
-			controllerOptions.AddFlags(fs)
+			//controllerOptions.AddFlags(fs)
 			nodeOptions.AddFlags(fs)
 			args = os.Args[2:]
 
 		case strings.HasPrefix(cmd, "-"):
-			controllerOptions.AddFlags(fs)
+			//controllerOptions.AddFlags(fs)
 			nodeOptions.AddFlags(fs)
 			args = os.Args[1:]
 
@@ -106,7 +106,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 		DriverMode: mode,
 
 		ServerOptions:     &serverOptions,
-		ControllerOptions: &controllerOptions,
+		//ControllerOptions: &controllerOptions,
 		NodeOptions:       &nodeOptions,
 	}
 }

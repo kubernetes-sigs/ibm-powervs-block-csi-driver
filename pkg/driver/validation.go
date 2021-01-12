@@ -18,51 +18,15 @@ package driver
 
 import (
 	"fmt"
-	"strings"
-
-	"github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud"
 )
 
 func ValidateDriverOptions(options *Options) error {
-	if err := validateExtraTags(options.extraTags); err != nil {
-		return fmt.Errorf("Invalid extra tags: %v", err)
-	}
-
 	if err := validateMode(options.mode); err != nil {
 		return fmt.Errorf("Invalid mode: %v", err)
 	}
 
 	if options.pvmCloudInstanceID == ""{
 		return fmt.Errorf("pvm-cloud-instance-id can't be empty")
-	}
-
-	return nil
-}
-
-func validateExtraTags(tags map[string]string) error {
-	if len(tags) > cloud.MaxNumTagsPerResource {
-		return fmt.Errorf("Too many tags (actual: %d, limit: %d)", len(tags), cloud.MaxNumTagsPerResource)
-	}
-
-	for k, v := range tags {
-		if len(k) > cloud.MaxTagKeyLength {
-			return fmt.Errorf("Tag key too long (actual: %d, limit: %d)", len(k), cloud.MaxTagKeyLength)
-		}
-		if len(v) > cloud.MaxTagValueLength {
-			return fmt.Errorf("Tag value too long (actual: %d, limit: %d)", len(v), cloud.MaxTagValueLength)
-		}
-		if k == cloud.VolumeNameTagKey {
-			return fmt.Errorf("Tag key '%s' is reserved", cloud.VolumeNameTagKey)
-		}
-		if k == cloud.SnapshotNameTagKey {
-			return fmt.Errorf("Tag key '%s' is reserved", cloud.VolumeNameTagKey)
-		}
-		if strings.HasPrefix(k, cloud.KubernetesTagKeyPrefix) {
-			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.KubernetesTagKeyPrefix)
-		}
-		if strings.HasPrefix(k, cloud.AWSTagKeyPrefix) {
-			return fmt.Errorf("Tag key prefix '%s' is reserved", cloud.AWSTagKeyPrefix)
-		}
 	}
 
 	return nil

@@ -1,8 +1,6 @@
 package cloud
 
 import (
-	"context"
-	goErrors "errors"
 	"fmt"
 	gohttp "net/http"
 	"os"
@@ -29,15 +27,10 @@ var _ Cloud = &powerVSCloud{}
 
 const (
 	PollTimeout          = 120 * time.Second
-	PollInterval         = 10 * time.Second
+	PollInterval         = 5 * time.Second
 	TIMEOUT              = 60 * time.Minute
 	VolumeInUseState     = "in-use"
 	VolumeAvailableState = "available"
-)
-
-var (
-	ErrPVMInstanceNotFound = goErrors.New("PVM instance not found")
-	ErrDiskNotFound        = goErrors.New("disk Not Found")
 )
 
 type PowerVSClient interface {
@@ -131,6 +124,9 @@ func NewPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 
 func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 	apikey := os.Getenv("IBMCLOUD_API_KEY")
+	if cloudInstanceID == ""{
+		return nil, fmt.Errorf("instance id can't be empty")
+	}
 	bxSess, err := bxsession.New(&bluemix.Config{BluemixAPIKey: apikey})
 	if err != nil {
 		return nil, err
@@ -197,11 +193,11 @@ func (p *powerVSCloud) GetPVMInstanceByName(name string) (*PVMInstance, error) {
 			}, nil
 		}
 	}
-	return nil, ErrPVMInstanceNotFound
+	return nil, ErrNotFound
 }
 
-func (p *powerVSCloud) GetPVMInstanceByID(id string) (*PVMInstance, error) {
-	in, err := p.pvmInstancesClient.Get(id, p.cloudInstanceID, TIMEOUT)
+func (p *powerVSCloud) GetPVMInstanceByID(instanceID string) (*PVMInstance, error) {
+	in, err := p.pvmInstancesClient.Get(instanceID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return nil, err
 	}
@@ -213,8 +209,8 @@ func (p *powerVSCloud) GetPVMInstanceByID(id string) (*PVMInstance, error) {
 	}, nil
 }
 
-func (p *powerVSCloud) GetImageByID(id string) (*PVMImage, error) {
-	image, err := p.imageClient.Get(id, p.cloudInstanceID)
+func (p *powerVSCloud) GetImageByID(imageID string) (*PVMImage, error) {
+	image, err := p.imageClient.Get(imageID, p.cloudInstanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -225,9 +221,9 @@ func (p *powerVSCloud) GetImageByID(id string) (*PVMImage, error) {
 	}, nil
 }
 
-func (p *powerVSCloud) CreateDisk(ctx context.Context, volumeName string, diskOptions *DiskOptions) (disk *Disk, err error) {
+func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error) {
 	var volumeType string
-	capacityGiB := float64(util.BytesToGiB(diskOptions.CapacityBytes))
+	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
 	case VolumeTypeTier1, VolumeTypeTier3:
@@ -238,15 +234,15 @@ func (p *powerVSCloud) CreateDisk(ctx context.Context, volumeName string, diskOp
 		return nil, fmt.Errorf("invalid PowerVS VolumeType %q", diskOptions.VolumeType)
 	}
 
-	v, err := p.volClient.Create(volumeName, capacityGiB, volumeType, diskOptions.Shareable, p.cloudInstanceID, TIMEOUT)
+	v, err := p.volClient.Create(volumeName, float64(capacityGiB), volumeType, diskOptions.Shareable, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Disk{CapacityGB: diskOptions.CapacityGigaBytes, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
+	return &Disk{CapacityGiB: capacityGiB, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
 }
 
-func (p *powerVSCloud) DeleteDisk(ctx context.Context, volumeID string) (success bool, err error) {
+func (p *powerVSCloud) DeleteDisk(volumeID string) (success bool, err error) {
 	err = p.volClient.DeleteVolume(volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return false, err
@@ -255,33 +251,41 @@ func (p *powerVSCloud) DeleteDisk(ctx context.Context, volumeID string) (success
 	return true, nil
 }
 
-func (p *powerVSCloud) AttachDisk(ctx context.Context, volumeID string, nodeID string) (devicePath string, err error) {
+func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
 	_, err = p.volClient.Attach(nodeID, volumeID, p.cloudInstanceID, TIMEOUT)
-	if err != nil {
-		return "", err
-	}
-
-	err = p.WaitForAttachmentState(ctx, volumeID, VolumeInUseState)
-	if err != nil {
-		return "", err
-	}
-	return "", nil
-}
-
-func (p *powerVSCloud) DetachDisk(ctx context.Context, volumeID string, nodeID string) (err error) {
-	_, err = p.volClient.Detach(nodeID, volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return err
 	}
-	err = p.WaitForAttachmentState(ctx, volumeID, VolumeAvailableState)
+
+	err = p.WaitForAttachmentState(volumeID, VolumeInUseState)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (p *powerVSCloud) ResizeDisk(ctx context.Context, volumeID string, reqSize int64) (newSize int64, err error) {
-	disk, err := p.GetDiskByID(ctx, volumeID)
+func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
+	_, err = p.volClient.Detach(nodeID, volumeID, p.cloudInstanceID, TIMEOUT)
+	if err != nil {
+		return err
+	}
+	err = p.WaitForAttachmentState(volumeID, VolumeAvailableState)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *powerVSCloud) IsAttached(volumeID string, nodeID string) (attached bool, err error) {
+	_, err = p.volClient.CheckVolumeAttach(p.cloudInstanceID, nodeID, volumeID, TIMEOUT)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64, err error) {
+	disk, err := p.GetDiskByID(volumeID)
 	if err != nil {
 		return 0, err
 	}
@@ -292,7 +296,7 @@ func (p *powerVSCloud) ResizeDisk(ctx context.Context, volumeID string, reqSize 
 	return int64(*v.Size), nil
 }
 
-func (p *powerVSCloud) WaitForAttachmentState(ctx context.Context, volumeID, state string) error {
+func (p *powerVSCloud) WaitForAttachmentState(volumeID, state string) error {
 	err := wait.PollImmediate(PollInterval, PollTimeout, func() (bool, error) {
 		v, err := p.volClient.Get(volumeID, p.cloudInstanceID, TIMEOUT)
 		if err != nil {
@@ -307,7 +311,7 @@ func (p *powerVSCloud) WaitForAttachmentState(ctx context.Context, volumeID, sta
 	return nil
 }
 
-func (p *powerVSCloud) GetDiskByName(ctx context.Context, name string, capacityBytes int64) (disk *Disk, err error) {
+func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
 	//TODO: remove capacityBytes
 	params := p_cloud_volumes.NewPcloudCloudinstancesVolumesGetallParamsWithTimeout(TIMEOUT).WithCloudInstanceID(p.cloudInstanceID)
 	resp, err := p.piSession.Power.PCloudVolumes.PcloudCloudinstancesVolumesGetall(params, ibmpisession.NewAuth(p.piSession, p.cloudInstanceID))
@@ -322,16 +326,20 @@ func (p *powerVSCloud) GetDiskByName(ctx context.Context, name string, capacityB
 				VolumeID:  *v.VolumeID,
 				WWN:       strings.ToLower(*v.Wwn),
 				Shareable: *v.Shareable,
+				CapacityGiB: int64(*v.Size),
 			}, nil
 		}
 	}
 
-	return nil, ErrDiskNotFound
+	return nil, ErrNotFound
 }
 
-func (p *powerVSCloud) GetDiskByID(ctx context.Context, volumeID string) (disk *Disk, err error) {
+func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 	v, err := p.volClient.Get(volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
+		if strings.Contains(err.Error(),"Resource not found"){
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return &Disk{
@@ -340,31 +348,8 @@ func (p *powerVSCloud) GetDiskByID(ctx context.Context, volumeID string) (disk *
 		VolumeID:  *v.VolumeID,
 		WWN:       strings.ToLower(v.Wwn),
 		Shareable: *v.Shareable,
+		CapacityGiB: int64(*v.Size),
 	}, nil
-}
-
-func (p *powerVSCloud) IsExistInstance(ctx context.Context, nodeID string) (success bool) {
-	panic("implement me")
-}
-
-func (p *powerVSCloud) CreateSnapshot(ctx context.Context, volumeID string, snapshotOptions *SnapshotOptions) (snapshot *Snapshot, err error) {
-	panic("implement me")
-}
-
-func (p *powerVSCloud) DeleteSnapshot(ctx context.Context, snapshotID string) (success bool, err error) {
-	panic("implement me")
-}
-
-func (p *powerVSCloud) GetSnapshotByName(ctx context.Context, name string) (snapshot *Snapshot, err error) {
-	panic("implement me")
-}
-
-func (p *powerVSCloud) GetSnapshotByID(ctx context.Context, snapshotID string) (snapshot *Snapshot, err error) {
-	panic("implement me")
-}
-
-func (p *powerVSCloud) ListSnapshots(ctx context.Context, volumeID string, maxResults int64, nextToken string) (listSnapshotsResponse *ListSnapshotsResponse, err error) {
-	panic("implement me")
 }
 
 func getRegion(zone string) (region string, err error) {

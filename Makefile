@@ -31,58 +31,9 @@ PLATFORM=linux/ppc64le
 bin/powervs-csi-driver: | bin
 	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build -ldflags ${LDFLAGS} -o bin/powervs-csi-driver ./cmd/
 
-bin /tmp/helm /tmp/kubeval:
-	@mkdir -p $@
-
-bin/helm: | /tmp/helm bin
-	@curl -o /tmp/helm/helm.tar.gz -sSL https://get.helm.sh/helm-v3.1.2-${GOOS}-amd64.tar.gz
-	@tar -zxf /tmp/helm/helm.tar.gz -C bin --strip-components=1
-	@rm -rf /tmp/helm/*
-
-bin/kubeval: | /tmp/kubeval bin
-	@curl -o /tmp/kubeval/kubeval.tar.gz -sSL https://github.com/instrumenta/kubeval/releases/download/0.15.0/kubeval-linux-amd64.tar.gz
-	@tar -zxf /tmp/kubeval/kubeval.tar.gz -C bin kubeval
-	@rm -rf /tmp/kubeval/*
-
-bin/mockgen: | bin
-	go get github.com/golang/mock/mockgen@latest
-
-bin/golangci-lint: | bin
-	echo "Installing golangci-lint..."
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s v1.21.0
-
-.PHONY: kubeval
-kubeval: bin/kubeval
-	bin/kubeval -d deploy/kubernetes/base,deploy/kubernetes/cluster,deploy/kubernetes/overlays -i kustomization.yaml,crd_.+\.yaml,controller_add
-
-mockgen: bin/mockgen
-	./hack/update-gomock
-
-.PHONY: verify
-verify: bin/golangci-lint
-	echo "verifying and linting files ..."
-	./hack/verify-all
-	echo "Congratulations! All Go source files have been linted."
-
 .PHONY: test
 test:
 	go test -v -race ./cmd/... ./pkg/...
-
-.PHONY: test-sanity
-test-sanity:
-	#go test -v ./tests/sanity/...
-	echo "succeed"
-
-bin/k8s-e2e-tester: | bin
-	go get github.com/aws/aws-k8s-tester/e2e/tester/cmd/k8s-e2e-tester@master
-
-.PHONY: test-e2e-single-az
-test-e2e-single-az: bin/k8s-e2e-tester
-	TESTCONFIG=./tester/single-az-config.yaml ${GOBIN}/k8s-e2e-tester
-
-.PHONY: test-e2e-multi-az
-test-e2e-multi-az: bin/k8s-e2e-tester
-	TESTCONFIG=./tester/multi-az-config.yaml ${GOBIN}/k8s-e2e-tester
 
 .PHONY: image-release
 image-release:
@@ -95,18 +46,10 @@ image:
 .PHONY: push-release
 push-release:
 	docker push $(IMAGE):$(VERSION)
-	docker push $(IMAGE):$(VERSION_AMAZONLINUX)
 
 .PHONY: push
 push:
 	docker push $(IMAGE):latest
-
-.PHONY: verify-vendor
-test: verify-vendor
-verify: verify-vendor
-verify-vendor:
-	@ echo; echo "### $@:"
-	@ ./hack/verify-vendor.sh
 
 .PHONY: clean
 clean:

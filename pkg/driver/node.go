@@ -23,12 +23,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/fibrechannel"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/util/resizefs"
 	"k8s.io/utils/exec"
 	"k8s.io/utils/mount"
@@ -41,7 +41,7 @@ const (
 
 	// defaultMaxVolumesPerInstance is the limit of volumes can be attached in the PowerVS environment
 	// TODO: rightnow 99 is just a placeholder, this needs to be changed post discussion with PowerVS team
-	defaultMaxVolumesPerInstance = 99
+	defaultMaxVolumesPerInstance = 127 - 1
 )
 
 var (
@@ -102,29 +102,31 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	mount := volCap.GetMount()
-	if mount == nil {
-		return nil, status.Error(codes.InvalidArgument, "NodeStageVolume: mount is nil within volume capability")
+	mnt := volCap.GetMount()
+	if mnt == nil {
+		return nil, status.Error(codes.InvalidArgument, "NodeStageVolume: mnt is nil within volume capability")
 	}
 
-	fsType := mount.GetFsType()
+	fsType := mnt.GetFsType()
 	if len(fsType) == 0 {
 		fsType = defaultFsType
 	}
 
 	var mountOptions []string
-	for _, f := range mount.MountFlags {
+	for _, f := range mnt.MountFlags {
 		if !hasMountOption(mountOptions, f) {
 			mountOptions = append(mountOptions, f)
 		}
 	}
 
 	wwn, ok := req.PublishContext[WWNKey]
-	if !ok {
-		return nil, status.Error(codes.InvalidArgument, "WWN ID not provided")
+	if !ok  || wwn == "" {
+		return nil, status.Error(codes.InvalidArgument, "WWN ID is not provided or empty")
 	}
 
-	source, err := getFCSource(wwn)
+	_ = d.mounter.RescanSCSIBus()
+
+	source, err := d.mounter.GetDevicePath(wwn)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", wwn, err)
 	}
@@ -167,20 +169,11 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	klog.V(5).Infof("NodeStageVolume: formatting %s and mounting at %s with fstype %s", source, target, fsType)
 	err = d.mounter.FormatAndMount(source, target, fsType, mountOptions)
 	if err != nil {
-		msg := fmt.Sprintf("could not format %q and mount it at %q", source, target)
+		msg := fmt.Sprintf("could not format %q and mnt it at %q", source, target)
 		return nil, status.Error(codes.Internal, msg)
 	}
 
 	return &csi.NodeStageVolumeResponse{}, nil
-}
-
-// getFCSource will find the devicePath for the FC volume by wwn ID
-func getFCSource(wwn string) (devicePath string, err error){
-	c := fibrechannel.Connector{}
-	// Prepending the 3 which is missing in the wwn getting it from the PowerVS infra
-	c.WWIDs = []string{"3"+wwn}
-
-	return fibrechannel.Attach(c, &fibrechannel.OSioHandler{})
 }
 
 func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
@@ -221,7 +214,24 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not unmount target %q: %v", target, err)
 	}
-
+	handler := &fibrechannel.OSioHandler{}
+	var mpath bool
+	if mdev, _ := fibrechannel.FindMultipathDeviceForDevice(dev, handler); mdev != "" {
+		klog.V(5).Infof("Multipath device found: %s for %s", mdev, dev)
+		mpath = true
+		dev = mdev
+	}
+	klog.Infof("Detaching: %s", dev)
+	err = fibrechannel.Detach(dev, handler)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to detach %s: %v", dev, err)
+	}
+	if mpath {
+		klog.Infof("Deleting the multipath device: %s", dev)
+		if err := fibrechannel.RemoveMultipathDevice(dev); err != nil{
+			return nil, err
+		}
+	}
 	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 
@@ -352,6 +362,9 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 		klog.Errorf("failed to get hostname, err: %s", err)
 		return nil, err
 	}
+	// virtual server instances in the PowerVS doesn't contain the domain names, hence need to be trimmed if exists
+	hostname = strings.Split(hostname, ".")[0]
+
 	in, err := d.cloud.GetPVMInstanceByName(hostname)
 	if err != nil {
 		klog.Errorf("failed to get the instance for %s, err: %s", hostname, err)
@@ -384,7 +397,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	if !exists {
 		return status.Error(codes.InvalidArgument, "WWN ID not provided")
 	}
-	source, err := getFCSource(wwn)
+	source, err := d.mounter.GetDevicePath(wwn)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Failed to find device path for wwn %s. %v", wwn, err)
 	}
@@ -457,60 +470,6 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	}
 
 	return nil
-}
-
-// findDevicePath finds path of device and verifies its existence
-// if the device is not nvme, return the path directly
-// if the device is nvme, finds and returns the nvme device path eg. /dev/nvme1n1
-func (d *nodeService) findDevicePath(devicePath, volumeID string) (string, error) {
-	exists, err := d.mounter.ExistsPath(devicePath)
-	if err != nil {
-		return "", err
-	}
-
-	// If the path exists, assume it is not nvme device
-	if exists {
-		return devicePath, nil
-	}
-
-	// Else find the nvme device path using volume ID
-	// This is the magic name on which AWS presents NVME devices under /dev/disk/by-id/
-	// For example, vol-0fab1d5e3f72a5e23 creates a symlink at
-	// /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23
-	nvmeName := "nvme-Amazon_Elastic_Block_Store_" + strings.Replace(volumeID, "-", "", -1)
-
-	return findNvmeVolume(nvmeName)
-}
-
-// findNvmeVolume looks for the nvme volume with the specified name
-// It follows the symlink (if it exists) and returns the absolute path to the device
-func findNvmeVolume(findName string) (device string, err error) {
-	p := filepath.Join("/dev/disk/by-id/", findName)
-	stat, err := os.Lstat(p)
-	if err != nil {
-		if os.IsNotExist(err) {
-			klog.V(5).Infof("nvme path %q not found", p)
-			return "", fmt.Errorf("nvme path %q not found", p)
-		}
-		return "", fmt.Errorf("error getting stat of %q: %v", p, err)
-	}
-
-	if stat.Mode()&os.ModeSymlink != os.ModeSymlink {
-		klog.Warningf("nvme file %q found, but was not a symlink", p)
-		return "", fmt.Errorf("nvme file %q found, but was not a symlink", p)
-	}
-	// Find the target, resolving to an absolute path
-	// For example, /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0fab1d5e3f72a5e23 -> ../../nvme2n1
-	resolved, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		return "", fmt.Errorf("error reading target of symlink %q: %v", p, err)
-	}
-
-	if !strings.HasPrefix(resolved, "/dev") {
-		return "", fmt.Errorf("resolved symlink for %q was unexpected: %q", p, resolved)
-	}
-
-	return resolved, nil
 }
 
 // getVolumesLimit returns the limit of volumes that the node supports
