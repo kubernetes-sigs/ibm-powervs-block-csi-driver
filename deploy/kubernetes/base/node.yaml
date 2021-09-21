@@ -20,6 +20,7 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       hostNetwork: true
+      serviceAccountName: powervs-csi-node-sa
       priorityClassName: system-node-critical
       tolerations:
         - operator: Exists
@@ -35,11 +36,14 @@ spec:
           # - --volume-attach-limit=42
             - --logtostderr
             - --v=5
-            - --pvm-cloud-instance-id=7845d372-d4e1-46b8-91fc-41051c984601
             - --debug
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
+            - name: CSI_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             - name: IBMCLOUD_API_KEY
               valueFrom:
                 secretKeyRef:

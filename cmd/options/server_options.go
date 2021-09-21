@@ -28,14 +28,11 @@ import (
 type ServerOptions struct {
 	// Endpoint is the endpoint that the driver server should listen on.
 	Endpoint string
-	// PowerVS Cloud Instance ID
-	PVMCloudInstanceID string
 	// Debug
 	Debug bool
 }
 
 func (s *ServerOptions) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&s.Endpoint, "endpoint", driver.DefaultCSIEndpoint, "Endpoint for the CSI driver server")
-	fs.StringVar(&s.PVMCloudInstanceID, "pvm-cloud-instance-id","","ID of the PVM Cloud Instance ID")
-	fs.BoolVar(&s.Debug, "debug",false,"Debug option PowerVS client(Prints API requests and replies)")
+	fs.BoolVar(&s.Debug, "debug", false, "Debug option PowerVS client(Prints API requests and replies)")
 }

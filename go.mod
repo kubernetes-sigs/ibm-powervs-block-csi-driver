@@ -10,7 +10,9 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	google.golang.org/grpc v1.27.0
+	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.4
+	k8s.io/client-go v0.19.4
 	k8s.io/klog/v2 v2.4.0
 	k8s.io/kubernetes v1.19.4
 	k8s.io/utils v0.0.0-20200729134348-d5654de09c73

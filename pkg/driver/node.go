@@ -62,7 +62,13 @@ type nodeService struct {
 // newNodeService creates a new node service
 // it panics if failed to create the service
 func newNodeService(driverOptions *Options) nodeService {
-	pvsCloud, err := NewPowerVSCloudFunc(driverOptions.pvmCloudInstanceID, driverOptions.debug)
+	klog.V(4).Infof("retrieving node info from metadata service")
+	metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient)
+	if err != nil {
+		panic(err)
+	}
+
+	pvsCloud, err := NewPowerVSCloudFunc(metadata.GetCloudInstanceId(), driverOptions.debug)
 	if err != nil {
 		panic(err)
 	}
@@ -120,7 +126,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	wwn, ok := req.PublishContext[WWNKey]
-	if !ok  || wwn == "" {
+	if !ok || wwn == "" {
 		return nil, status.Error(codes.InvalidArgument, "WWN ID is not provided or empty")
 	}
 
@@ -228,7 +234,7 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	}
 	if mpath {
 		klog.Infof("Deleting the multipath device: %s", dev)
-		if err := fibrechannel.RemoveMultipathDevice(dev); err != nil{
+		if err := fibrechannel.RemoveMultipathDevice(dev); err != nil {
 			return nil, err
 		}
 	}
@@ -356,21 +362,18 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
-
-	hostname, err := os.Hostname()
+	klog.V(4).Infof("retrieving node info from metadata service")
+	metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient)
 	if err != nil {
-		klog.Errorf("failed to get hostname, err: %s", err)
-		return nil, err
+		panic(err)
 	}
-	// virtual server instances in the PowerVS doesn't contain the domain names, hence need to be trimmed if exists
-	hostname = strings.Split(hostname, ".")[0]
+	pvmInstanceId := metadata.GetPvmInstanceId()
 
-	in, err := d.cloud.GetPVMInstanceByName(hostname)
+	in, err := d.cloud.GetPVMInstanceByID(pvmInstanceId)
 	if err != nil {
-		klog.Errorf("failed to get the instance for %s, err: %s", hostname, err)
-		return nil, fmt.Errorf("failed to get the instance for %s, err: %s", hostname, err)
+		klog.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", pvmInstanceId, err)
+		return nil, fmt.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", pvmInstanceId, err)
 	}
-
 	image, err := d.cloud.GetImageByID(in.ImageID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the image details for %s, err: %s", in.ImageID, err)
@@ -383,7 +386,7 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 	topology := &csi.Topology{Segments: segments}
 
 	return &csi.NodeGetInfoResponse{
-		NodeId:             in.ID,
+		NodeId:             pvmInstanceId,
 		MaxVolumesPerNode:  d.getVolumesLimit(),
 		AccessibleTopology: topology,
 	}, nil
