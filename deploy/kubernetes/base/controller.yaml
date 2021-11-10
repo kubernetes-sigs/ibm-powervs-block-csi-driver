@@ -90,6 +90,17 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-resizer
+           image: k8s.gcr.io/sig-storage/csi-resizer:v1.1.0
+           args:
+             - --csi-address=$(ADDRESS)
+             - --v=2
+           env:
+             - name: ADDRESS
+               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+           volumeMounts:
+             - name: socket-dir
+               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: liveness-probe
           image: k8s.gcr.io/sig-storage/livenessprobe:v2.1.0
           args:
