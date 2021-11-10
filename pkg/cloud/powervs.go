@@ -124,9 +124,6 @@ func NewPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 
 func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 	apikey := os.Getenv("IBMCLOUD_API_KEY")
-	if cloudInstanceID == ""{
-		return nil, fmt.Errorf("instance id can't be empty")
-	}
 	bxSess, err := bxsession.New(&bluemix.Config{BluemixAPIKey: apikey})
 	if err != nil {
 		return nil, err
@@ -148,7 +145,6 @@ func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 	}
 
 	resourceClient := ctrlv2.ResourceServiceInstanceV2()
-
 	in, err := resourceClient.GetInstance(cloudInstanceID)
 	if err != nil {
 		return nil, err
@@ -321,11 +317,11 @@ func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
 	for _, v := range resp.Payload.Volumes {
 		if name == *v.Name {
 			return &Disk{
-				Name:      *v.Name,
-				DiskType:  *v.DiskType,
-				VolumeID:  *v.VolumeID,
-				WWN:       strings.ToLower(*v.Wwn),
-				Shareable: *v.Shareable,
+				Name:        *v.Name,
+				DiskType:    *v.DiskType,
+				VolumeID:    *v.VolumeID,
+				WWN:         strings.ToLower(*v.Wwn),
+				Shareable:   *v.Shareable,
 				CapacityGiB: int64(*v.Size),
 			}, nil
 		}
@@ -337,17 +333,17 @@ func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
 func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 	v, err := p.volClient.Get(volumeID, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
-		if strings.Contains(err.Error(),"Resource not found"){
+		if strings.Contains(err.Error(), "Resource not found") {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
 	return &Disk{
-		Name:      *v.Name,
-		DiskType:  v.DiskType,
-		VolumeID:  *v.VolumeID,
-		WWN:       strings.ToLower(v.Wwn),
-		Shareable: *v.Shareable,
+		Name:        *v.Name,
+		DiskType:    v.DiskType,
+		VolumeID:    *v.VolumeID,
+		WWN:         strings.ToLower(v.Wwn),
+		Shareable:   *v.Shareable,
 		CapacityGiB: int64(*v.Size),
 	}, nil
 }

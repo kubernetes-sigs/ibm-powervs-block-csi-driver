@@ -42,8 +42,8 @@ const (
 )
 
 const (
-	DriverName       = "powervs.csi.ibm.com"
-	DiskTypeKey      = "topology." + DriverName + "/disk-type"
+	DriverName  = "powervs.csi.ibm.com"
+	DiskTypeKey = "topology." + DriverName + "/disk-type"
 )
 
 type Driver struct {
@@ -60,8 +60,7 @@ type Options struct {
 	mode                Mode
 	volumeAttachLimit   int64
 	kubernetesClusterID string
-	pvmCloudInstanceID string
-	debug bool
+	debug               bool
 }
 
 func NewDriver(options ...func(*Options)) (*Driver, error) {
@@ -153,12 +152,6 @@ func WithEndpoint(endpoint string) func(*Options) {
 func WithMode(mode Mode) func(*Options) {
 	return func(o *Options) {
 		o.mode = mode
-	}
-}
-
-func WithPVMCloudInstanceID(ID string) func(*Options) {
-	return func(o *Options) {
-		o.pvmCloudInstanceID = ID
 	}
 }
 
