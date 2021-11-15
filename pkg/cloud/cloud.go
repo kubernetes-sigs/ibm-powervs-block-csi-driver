@@ -28,6 +28,13 @@ const (
 	VolumeTypeTier3 = "tier3"
 )
 
+var (
+	ValidVolumeTypes = []string{
+		VolumeTypeTier1,
+		VolumeTypeTier3,
+	}
+)
+
 // Defaults
 const (
 	// DefaultVolumeSize represents the default volume size.

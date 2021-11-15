@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -32,9 +33,31 @@ var DefaultKubernetesAPIClient = func() (kubernetes.Interface, error) {
 	return clientset, nil
 }
 
+// Get testing kubernetes APIclient
+var TestingKubernetesAPIClient = func() (kubernetes.Interface, error) {
+	// Get configuration from config file
+	config, err := clientcmd.BuildConfigFromFlags("", "/root/.kube/config")
+	if err != nil {
+		fmt.Println("ERROR building configuration:", err)
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
+}
+
 // Get instance info from kubernetes API
 func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error) {
 	nodeName := os.Getenv("CSI_NODE_NAME")
+	if nodeName == "" {
+		hostName, err := os.Hostname()
+		if err != nil {
+			return nil, err
+		}
+		nodeName = hostName
+	}
 	if nodeName == "" {
 		return nil, fmt.Errorf("CSI_NODE_NAME env var not set")
 	}

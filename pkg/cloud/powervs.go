@@ -285,7 +285,8 @@ func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64
 	if err != nil {
 		return 0, err
 	}
-	v, err := p.volClient.Update(volumeID, disk.Name, float64(reqSize), disk.Shareable, p.cloudInstanceID, TIMEOUT)
+	capacityGiB := util.BytesToGiB(reqSize)
+	v, err := p.volClient.Update(volumeID, disk.Name, float64(capacityGiB), disk.Shareable, p.cloudInstanceID, TIMEOUT)
 	if err != nil {
 		return 0, err
 	}

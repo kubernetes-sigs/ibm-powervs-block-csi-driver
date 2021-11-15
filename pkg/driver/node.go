@@ -36,8 +36,16 @@ import (
 
 const (
 
+	// FSTypeExt2 represents the ext2 filesystem type
+	FSTypeExt2 = "ext2"
+	// FSTypeExt3 represents the ext3 filesystem type
+	FSTypeExt3 = "ext3"
+	// FSTypeExt4 represents the ext4 filesystem type
+	FSTypeExt4 = "ext4"
+	// FSTypeXfs represents te xfs filesystem type
+	FSTypeXfs = "xfs"
 	// default file system type to be used when it is not provided
-	defaultFsType = "ext4"
+	DefaultFsType = "ext4"
 
 	// defaultMaxVolumesPerInstance is the limit of volumes can be attached in the PowerVS environment
 	// TODO: rightnow 99 is just a placeholder, this needs to be changed post discussion with PowerVS team
@@ -115,7 +123,7 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	fsType := mnt.GetFsType()
 	if len(fsType) == 0 {
-		fsType = defaultFsType
+		fsType = DefaultFsType
 	}
 
 	var mountOptions []string
@@ -461,7 +469,7 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 
 	fsType := mode.Mount.GetFsType()
 	if len(fsType) == 0 {
-		fsType = defaultFsType
+		fsType = DefaultFsType
 	}
 
 	klog.V(5).Infof("NodePublishVolume: mounting %s at %s with option %s as fstype %s", source, target, mountOptions, fsType)
