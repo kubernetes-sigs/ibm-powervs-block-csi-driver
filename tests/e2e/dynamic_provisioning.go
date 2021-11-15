@@ -20,12 +20,11 @@ var _ = Describe("[powervs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("powervs")
 
 	var (
-		cs clientset.Interface
-		ns *v1.Namespace
-		//powervsDriver driver.PreProvisionedVolumeTestDriver
+		cs           clientset.Interface
+		ns           *v1.Namespace
 		pvTestDriver driver.DynamicPVTestDriver
 		volumeTypes  = powervscloud.ValidVolumeTypes
-		fsTypes      = []string{powervscsidriver.FSTypeXfs}
+		fsTypes      = []string{powervscsidriver.FSTypeXfs, powervscsidriver.FSTypeExt2, powervscsidriver.FSTypeExt3, powervscsidriver.FSTypeExt4}
 	)
 
 	BeforeEach(func() {
@@ -320,7 +319,7 @@ var _ = Describe("[powervs-csi-e2e] [single-az] Dynamic Provisioning", func() {
 			Skip(fmt.Sprintf("Could not get Metadata : %v", err))
 		}
 
-		cloud, err := powervscloud.NewPowerVSCloud(metadata.GetServiceInstanceId(), true)
+		cloud, err := powervscloud.NewPowerVSCloud(metadata.GetCloudInstanceId(), true)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

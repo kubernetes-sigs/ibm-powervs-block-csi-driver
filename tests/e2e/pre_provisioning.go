@@ -60,7 +60,7 @@ var _ = Describe("[powervs-csi-e2e] [single-az] Pre-Provisioned", func() {
 			Skip(fmt.Sprintf("Could not get Metadata : %v", err))
 		}
 
-		cloud, err = powervscloud.NewPowerVSCloud(metadata.GetServiceInstanceId(), debug)
+		cloud, err = powervscloud.NewPowerVSCloud(metadata.GetCloudInstanceId(), debug)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
