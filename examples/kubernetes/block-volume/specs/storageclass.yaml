@@ -4,6 +4,3 @@ metadata:
   name: powervs-sc
 provisioner: powervs.csi.ibm.com
 volumeBindingMode: WaitForFirstConsumer
-parameters:
-  type: tier3
-  csi.storage.k8s.io/fstype: xfs
