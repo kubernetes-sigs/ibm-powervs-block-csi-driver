@@ -18,7 +18,7 @@ import (
 	"github.com/IBM-Cloud/power-go-client/ibmpisession"
 	"github.com/IBM-Cloud/power-go-client/power/client/p_cloud_volumes"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
