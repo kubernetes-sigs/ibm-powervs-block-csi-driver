@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package cloud
 
 import (
@@ -11,8 +27,8 @@ import (
 )
 
 const (
-	cloudInstanceIDLabel = "powervs.kubernetes.io/cloud-instance-id"
-	pvmInstanceIdLabel   = "powervs.kubernetes.io/pvm-instance-id"
+	CloudInstanceIDLabel = "powervs.kubernetes.io/cloud-instance-id"
+	PvmInstanceIdLabel   = "powervs.kubernetes.io/pvm-instance-id"
 )
 
 type KubernetesAPIClient func() (kubernetes.Interface, error)
@@ -46,14 +62,14 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 
 	// Get node labels
 	labels := node.GetLabels()
-	keysList := []string{cloudInstanceIDLabel, pvmInstanceIdLabel}
+	keysList := []string{CloudInstanceIDLabel, PvmInstanceIdLabel}
 	instanceInfo := Metadata{}
 	for _, key := range keysList {
 		if val, ok := labels[key]; ok {
 			switch key {
-			case cloudInstanceIDLabel:
+			case CloudInstanceIDLabel:
 				instanceInfo.cloudInstanceId = val
-			case pvmInstanceIdLabel:
+			case PvmInstanceIdLabel:
 				instanceInfo.pvmInstanceId = val
 			}
 		} else {

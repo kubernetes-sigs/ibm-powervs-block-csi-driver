@@ -28,6 +28,13 @@ const (
 	VolumeTypeTier3 = "tier3"
 )
 
+var (
+	ValidVolumeTypes = []string{
+		VolumeTypeTier1,
+		VolumeTypeTier3,
+	}
+)
+
 // Defaults
 const (
 	// DefaultVolumeSize represents the default volume size.
@@ -44,7 +51,7 @@ var (
 	ErrAlreadyExists = errors.New("resource already exists")
 )
 
-// Disk represents a EBS volume
+// Disk represents a PowerVS volume
 type Disk struct {
 	VolumeID    string
 	DiskType    string
@@ -54,26 +61,11 @@ type Disk struct {
 	CapacityGiB int64
 }
 
-// DiskOptions represents parameters to create an EBS volume
+// DiskOptions represents parameters to create an PowerVS volume
 type DiskOptions struct {
 	//PowerVS options
 	Shareable bool
 	//CapacityGigaBytes float64
 	CapacityBytes int64
 	VolumeType    string
-}
-
-type Cloud interface {
-	CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
-	DeleteDisk(volumeID string) (success bool, err error)
-	AttachDisk(volumeID string, nodeID string) (err error)
-	DetachDisk(volumeID string, nodeID string) (err error)
-	ResizeDisk(volumeID string, reqSize int64) (newSize int64, err error)
-	WaitForAttachmentState(volumeID, state string) error
-	GetDiskByName(name string) (disk *Disk, err error)
-	GetDiskByID(volumeID string) (disk *Disk, err error)
-	GetPVMInstanceByName(instanceName string) (instance *PVMInstance, err error)
-	GetPVMInstanceByID(instanceID string) (instance *PVMInstance, err error)
-	GetImageByID(imageID string) (image *PVMImage, err error)
-	IsAttached(volumeID string, nodeID string) (attached bool, err error)
 }
