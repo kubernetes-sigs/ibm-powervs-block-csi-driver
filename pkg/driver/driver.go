@@ -44,6 +44,8 @@ const (
 const (
 	DriverName  = "powervs.csi.ibm.com"
 	DiskTypeKey = "topology." + DriverName + "/disk-type"
+
+	TopologyKey = "topology." + DriverName + "/region"
 )
 
 type Driver struct {

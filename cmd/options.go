@@ -20,7 +20,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 
@@ -51,9 +50,9 @@ func GetOptions(fs *flag.FlagSet) *Options {
 		args = os.Args[1:]
 		mode = driver.AllMode
 
-		serverOptions     = options.ServerOptions{}
+		serverOptions = options.ServerOptions{}
 		//controllerOptions = options.ControllerOptions{}
-		nodeOptions       = options.NodeOptions{}
+		nodeOptions = options.NodeOptions{}
 	)
 
 	serverOptions.AddFlags(fs)
@@ -84,7 +83,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 			args = os.Args[1:]
 
 		default:
-			fmt.Printf("unknown command: %s: expected %q, %q or %q", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
+			klog.Errorf("unknown command: %s: expected %q, %q or %q", cmd, driver.ControllerMode, driver.NodeMode, driver.AllMode)
 			os.Exit(1)
 		}
 	}
@@ -98,15 +97,15 @@ func GetOptions(fs *flag.FlagSet) *Options {
 		if err != nil {
 			klog.Fatalln(err)
 		}
-		fmt.Println(info)
+		klog.Infoln(info)
 		osExit(0)
 	}
 
 	return &Options{
 		DriverMode: mode,
 
-		ServerOptions:     &serverOptions,
+		ServerOptions: &serverOptions,
 		//ControllerOptions: &controllerOptions,
-		NodeOptions:       &nodeOptions,
+		NodeOptions: &nodeOptions,
 	}
 }
