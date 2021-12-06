@@ -49,7 +49,7 @@ push-release:
 
 .PHONY: push
 push:
-	docker push $(IMAGE):latest
+	docker push $(IMAGE):$(VERSION)
 
 .PHONY: clean
 clean:
