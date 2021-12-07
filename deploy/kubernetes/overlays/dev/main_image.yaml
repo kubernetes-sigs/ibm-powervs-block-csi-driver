@@ -1,0 +1,29 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: powervs-csi-node
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: powervs-csi-driver
+spec:
+  template:
+    spec:
+      containers:
+        - name: powervs-plugin
+          image: quay.io/powercloud/powervs-csi-driver:dev
+          imagePullPolicy: Always
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: powervs-csi-controller
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: powervs-csi-driver
+spec:
+  template:
+    spec:
+      containers:
+        - name: powervs-plugin
+          image: quay.io/powercloud/powervs-csi-driver:dev
+          imagePullPolicy: Always
