@@ -117,7 +117,14 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	disk, err := d.cloud.CreateDisk(volName, opts)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
+		errCode := codes.Internal
+		if err == cloud.ErrNotFound {
+			errCode = codes.NotFound
+		}
+		if err == cloud.ErrIdempotentParameterMismatch {
+			errCode = codes.AlreadyExists
+		}
+		return nil, status.Errorf(errCode, "Could not create volume %q: %v", volName, err)
 	}
 	return newCreateVolumeResponse(disk), nil
 }

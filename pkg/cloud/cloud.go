@@ -49,6 +49,9 @@ var (
 
 	// ErrAlreadyExists is returned when a resource is already existent.
 	ErrAlreadyExists = errors.New("resource already exists")
+
+	// ErrIdempotentParameterMismatch is returned when another request with same idempotent token is in-flight.
+	ErrIdempotentParameterMismatch = errors.New("parameters on this idempotent request are inconsistent with parameters used in previous request(s)")
 )
 
 // Disk represents a PowerVS volume
