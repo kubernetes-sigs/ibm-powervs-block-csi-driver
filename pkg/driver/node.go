@@ -63,6 +63,7 @@ type nodeService struct {
 	cloud         cloud.Cloud
 	mounter       Mounter
 	driverOptions *Options
+	pvmInstanceId string
 }
 
 // newNodeService creates a new node service
@@ -83,6 +84,7 @@ func newNodeService(driverOptions *Options) nodeService {
 		cloud:         pvsCloud,
 		mounter:       newNodeMounter(),
 		driverOptions: driverOptions,
+		pvmInstanceId: metadata.GetPvmInstanceId(),
 	}
 }
 
@@ -365,17 +367,11 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", *req)
-	klog.V(4).Infof("retrieving node info from metadata service")
-	metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient)
-	if err != nil {
-		panic(err)
-	}
-	pvmInstanceId := metadata.GetPvmInstanceId()
 
-	in, err := d.cloud.GetPVMInstanceByID(pvmInstanceId)
+	in, err := d.cloud.GetPVMInstanceByID(d.pvmInstanceId)
 	if err != nil {
-		klog.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", pvmInstanceId, err)
-		return nil, fmt.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", pvmInstanceId, err)
+		klog.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", d.pvmInstanceId, err)
+		return nil, fmt.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", d.pvmInstanceId, err)
 	}
 	image, err := d.cloud.GetImageByID(in.ImageID)
 	if err != nil {
@@ -389,7 +385,7 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 	topology := &csi.Topology{Segments: segments}
 
 	return &csi.NodeGetInfoResponse{
-		NodeId:             pvmInstanceId,
+		NodeId:             d.pvmInstanceId,
 		MaxVolumesPerNode:  d.getVolumesLimit(),
 		AccessibleTopology: topology,
 	}, nil
