@@ -250,7 +250,7 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 		return nil, err
 	}
 
-	err = p.WaitForAttachmentState(*v.VolumeID, VolumeAvailableState)
+	err = p.WaitForVolumeState(*v.VolumeID, VolumeAvailableState)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
 		return err
 	}
 
-	err = p.WaitForAttachmentState(volumeID, VolumeInUseState)
+	err = p.WaitForVolumeState(volumeID, VolumeInUseState)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
 	if err != nil {
 		return err
 	}
-	err = p.WaitForAttachmentState(volumeID, VolumeAvailableState)
+	err = p.WaitForVolumeState(volumeID, VolumeAvailableState)
 	if err != nil {
 		return err
 	}
@@ -314,7 +314,7 @@ func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64
 	return int64(*v.Size), nil
 }
 
-func (p *powerVSCloud) WaitForAttachmentState(volumeID, state string) error {
+func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
 	err := wait.PollImmediate(PollInterval, PollTimeout, func() (bool, error) {
 		v, err := p.volClient.Get(volumeID, p.cloudInstanceID, TIMEOUT)
 		if err != nil {
