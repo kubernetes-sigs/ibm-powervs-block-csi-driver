@@ -94,7 +94,7 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 	AfterEach(func() {
 		skipManuallyDeletingVolume = true
 		if !skipManuallyDeletingVolume {
-			err := cloud.WaitForAttachmentState(volumeID, "detached")
+			err := cloud.WaitForVolumeState(volumeID, "detached")
 			if err != nil {
 				Fail(fmt.Sprintf("could not detach volume %q: %v", volumeID, err))
 			}
