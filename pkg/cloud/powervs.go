@@ -16,6 +16,7 @@ limitations under the License.
 package cloud
 
 import (
+	"context"
 	"fmt"
 	gohttp "net/http"
 	"os"
@@ -176,7 +177,7 @@ func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 	}
 
 	volClient := instance.NewIBMPIVolumeClient(piSession, cloudInstanceID)
-	pvmInstancesClient := instance.NewIBMPIInstanceClient(piSession, cloudInstanceID)
+	pvmInstancesClient := instance.NewIBMPIInstanceClient(context.Background(), piSession, cloudInstanceID)
 	imageClient := instance.NewIBMPIImageClient(piSession, cloudInstanceID)
 
 	return &powerVSCloud{
@@ -191,7 +192,7 @@ func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 }
 
 func (p *powerVSCloud) GetPVMInstanceByName(name string) (*PVMInstance, error) {
-	in, err := p.pvmInstancesClient.GetAll(p.cloudInstanceID, TIMEOUT)
+	in, err := p.pvmInstancesClient.GetAll()
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +209,7 @@ func (p *powerVSCloud) GetPVMInstanceByName(name string) (*PVMInstance, error) {
 }
 
 func (p *powerVSCloud) GetPVMInstanceByID(instanceID string) (*PVMInstance, error) {
-	in, err := p.pvmInstancesClient.Get(instanceID, p.cloudInstanceID, TIMEOUT)
+	in, err := p.pvmInstancesClient.Get(instanceID)
 	if err != nil {
 		return nil, err
 	}
