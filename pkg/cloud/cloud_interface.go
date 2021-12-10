@@ -22,7 +22,7 @@ type Cloud interface {
 	AttachDisk(volumeID string, nodeID string) (err error)
 	DetachDisk(volumeID string, nodeID string) (err error)
 	ResizeDisk(volumeID string, reqSize int64) (newSize int64, err error)
-	WaitForAttachmentState(volumeID, state string) error
+	WaitForVolumeState(volumeID, state string) error
 	GetDiskByName(name string) (disk *Disk, err error)
 	GetDiskByID(volumeID string) (disk *Disk, err error)
 	GetPVMInstanceByName(instanceName string) (instance *PVMInstance, err error)
