@@ -9,7 +9,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	google.golang.org/grpc v1.38.0
 	k8s.io/api v0.22.4
