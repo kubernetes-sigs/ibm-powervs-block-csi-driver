@@ -138,8 +138,6 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.InvalidArgument, "WWN ID is not provided or empty")
 	}
 
-	_ = d.mounter.RescanSCSIBus()
-
 	source, err := d.mounter.GetDevicePath(wwn)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to find device path %s. %v", wwn, err)
