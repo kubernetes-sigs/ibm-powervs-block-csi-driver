@@ -250,6 +250,11 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 		return nil, err
 	}
 
+	err = p.WaitForAttachmentState(*v.VolumeID, VolumeAvailableState)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Disk{CapacityGiB: capacityGiB, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
 }
 
