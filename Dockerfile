@@ -11,7 +11,7 @@ COPY ./bin/powervs-csi-driver /bin/powervs-csi-driver
 
 ENTRYPOINT ["/bin/powervs-csi-driver"]
 
-FROM --platform=linux/ppc64le registry.access.redhat.com/ubi8/ubi:8.3 AS rhel-base
+FROM --platform=linux/ppc64le registry.access.redhat.com/ubi8/ubi:8.5 AS rhel-base
 RUN yum --disableplugin=subscription-manager -y install httpd php \
   && yum --disableplugin=subscription-manager clean all
 RUN clean-install ca-certificates e2fsprogs mount udev util-linux xfsprogs
