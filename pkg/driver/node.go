@@ -109,6 +109,29 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
 
+	mounted, err := d.isDirMounted(target)
+	needsCreateDir := false
+	if mounted {
+		// Already mounted
+		klog.V(4).Infof("NodeStageVolume succeeded on volume %v to staging target path %s, mount already exists.", volumeID, target)
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			needsCreateDir = true
+		} else {
+			return nil, err
+		}
+	}
+
+	if needsCreateDir {
+		klog.V(4).Infof("NodeStageVolume attempting mkdir for path %s", target)
+		if err := os.MkdirAll(target, 0750); err != nil {
+			return nil, fmt.Errorf("mkdir failed for path %s (%v)", target, err)
+		}
+	}
+
 	volCap := req.GetVolumeCapability()
 	if volCap == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
@@ -152,23 +175,6 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	klog.V(4).Infof("NodeStageVolume: find device path for wwn %s -> %s", wwn, source)
-
-	exists, err := d.mounter.ExistsPath(target)
-	if err != nil {
-		msg := fmt.Sprintf("failed to check if target %q exists: %v", target, err)
-		return nil, status.Error(codes.Internal, msg)
-	}
-	// When exists is true it means target path was created but device isn't mounted.
-	// We don't want to do anything in that case and let the operation proceed.
-	// Otherwise we need to create the target directory.
-	if !exists {
-		// If target path does not exist we need to create the directory where volume will be staged
-		klog.V(4).Infof("NodeStageVolume: creating target dir %q", target)
-		if err = d.mounter.MakeDir(target); err != nil {
-			msg := fmt.Sprintf("could not create target dir %q: %v", target, err)
-			return nil, status.Error(codes.Internal, msg)
-		}
-	}
 
 	// Check if a device is mounted in target directory
 	device, _, err := d.mounter.GetDeviceName(target)
@@ -520,4 +526,20 @@ func hasMountOption(options []string, opt string) bool {
 		}
 	}
 	return false
+}
+
+// isDirMounted checks if the path is already a mount point
+func (d *nodeService) isDirMounted(target string) (bool, error) {
+	// Check if mount already exists
+	// TODO(msau): check why in-tree uses IsNotMountPoint
+	// something related to squash and not having permissions to lstat
+	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
+	if err != nil {
+		return false, err
+	}
+	if !notMnt {
+		// Already mounted
+		return true, nil
+	}
+	return false, nil
 }
