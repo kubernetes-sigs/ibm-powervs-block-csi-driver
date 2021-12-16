@@ -48,6 +48,7 @@ var (
 type controllerService struct {
 	cloud         cloud.Cloud
 	driverOptions *Options
+	volumeLocks   *util.VolumeLocks
 }
 
 var (
@@ -71,6 +72,7 @@ func newControllerService(driverOptions *Options) controllerService {
 	return controllerService{
 		cloud:         c,
 		driverOptions: driverOptions,
+		volumeLocks:   util.NewVolumeLocks(),
 	}
 }
 
@@ -80,6 +82,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if len(volName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volName); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volName)
+	}
+	defer d.volumeLocks.Release(volName)
 
 	volSizeBytes, err := getVolSizeBytes(req)
 	if err != nil {
@@ -129,6 +136,11 @@ func (d *controllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
+	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(volumeID)
+
 	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
 		if err == cloud.ErrNotFound {
 			klog.V(4).Info("DeleteVolume: volume not found, returning with success")
@@ -149,6 +161,11 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(volumeID)
 
 	nodeID := req.GetNodeId()
 	if len(nodeID) == 0 {
@@ -207,6 +224,11 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(volumeID)
 
 	nodeID := req.GetNodeId()
 	if len(nodeID) == 0 {
@@ -293,6 +315,11 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(volumeID)
 
 	capRange := req.GetCapacityRange()
 	if capRange == nil {
