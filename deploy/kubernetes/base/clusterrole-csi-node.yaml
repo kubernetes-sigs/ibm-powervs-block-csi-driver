@@ -4,7 +4,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: powervs-node-role
   labels:
-    app.kubernetes.io/name: powervs-csi-driver
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
 rules:
   - apiGroups: [""]
     resources: ["nodes"]

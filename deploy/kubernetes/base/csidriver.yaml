@@ -4,7 +4,7 @@ kind: CSIDriver
 metadata:
   name: powervs.csi.ibm.com
   labels:
-    app.kubernetes.io/name: powervs-csi-driver
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
 spec:
   attachRequired: true
   podInfoOnMount: false

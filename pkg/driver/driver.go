@@ -24,9 +24,9 @@ import (
 	"net"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
 // Mode is the operating mode of the CSI driver.

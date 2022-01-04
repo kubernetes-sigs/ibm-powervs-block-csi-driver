@@ -1,5 +1,5 @@
 ## E2E Testing
-E2E test verifies the funcitonality of PowerVS CSI driver in the context of Kubernetes. It exercises driver feature e2e including static provisioning, dynamic provisioning, volume scheduling, mount options, etc.
+E2E test verifies the funcitonality of IBM PowerVS Block CSI Driver in the context of Kubernetes. It exercises driver feature e2e including static provisioning, dynamic provisioning, volume scheduling, mount options, etc.
 
 ### Notes
 Some tests marked with `[env]` require specific environmental variables to be set, if not set these tests will be skipped.

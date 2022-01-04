@@ -18,7 +18,7 @@ package testsuites
 import (
 	"fmt"
 
-	"github.com/ppc64le-cloud/powervs-csi-driver/tests/e2e/driver"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
 
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"

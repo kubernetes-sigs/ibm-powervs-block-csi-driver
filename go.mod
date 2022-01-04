@@ -1,4 +1,4 @@
-module github.com/ppc64le-cloud/powervs-csi-driver
+module sigs.k8s.io/ibm-powervs-block-csi-driver
 
 go 1.17
 
