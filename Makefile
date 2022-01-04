@@ -31,6 +31,10 @@ PLATFORM=linux/ppc64le
 bin/powervs-csi-driver: | bin
 	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build -ldflags ${LDFLAGS} -o bin/powervs-csi-driver ./cmd/
 
+.PHONY: bin
+bin:
+	mkdir bin
+
 .PHONY: test
 test:
 	go test -v -race ./cmd/... ./pkg/...

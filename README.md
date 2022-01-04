@@ -106,6 +106,6 @@ Please go through [CSI Spec](https://github.com/container-storage-interface/spec
 Dependencies are managed through go module. To build the project, first turn on go mod using `export GO111MODULE=on`, then build the project using: `make`
 
 ### Testing
-* To create binary, run: `make bin/ibm-powervs-block-csi-driver`
+* To create binary, run: `make bin/powervs-csi-driver`
 * To build image, run: `make image`
 * To push image, run: `make push`
