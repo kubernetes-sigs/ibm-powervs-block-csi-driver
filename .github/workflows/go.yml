@@ -21,4 +21,4 @@ jobs:
     - name: Build
       run: |
         mkdir -p bin
-        make bin/powervs-csi-driver
+        make bin/ibm-powervs-block-csi-driver

@@ -5,17 +5,17 @@ metadata:
   name: powervs-csi-node
   namespace: kube-system
   labels:
-    app.kubernetes.io/name: powervs-csi-driver
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
 spec:
   selector:
     matchLabels:
       app: powervs-csi-node
-      app.kubernetes.io/name: powervs-csi-driver
+      app.kubernetes.io/name: ibm-powervs-block-csi-driver
   template:
     metadata:
       labels:
         app: powervs-csi-node
-        app.kubernetes.io/name: powervs-csi-driver
+        app.kubernetes.io/name: ibm-powervs-block-csi-driver
     spec:
       nodeSelector:
         kubernetes.io/os: linux
@@ -28,7 +28,7 @@ spec:
         - name: powervs-plugin
           securityContext:
             privileged: true
-          image: quay.io/powercloud/powervs-csi-driver:v0.0.1
+          image: quay.io/powercloud/ibm-powervs-block-csi-driver:v0.0.1
           imagePullPolicy: Always
           args:
             - node

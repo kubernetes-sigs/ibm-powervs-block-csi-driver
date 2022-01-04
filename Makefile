@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-PKG=github.com/ppc64le-cloud/powervs-csi-driver
-IMAGE?=quay.io/powercloud/powervs-csi-driver
+PKG=sigs.k8s.io/ibm-powervs-block-csi-driver
+IMAGE?=quay.io/powercloud/ibm-powervs-block-csi-driver
 VERSION=v0.0.1
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -27,9 +27,9 @@ PLATFORM=linux/ppc64le
 
 .EXPORT_ALL_VARIABLES:
 
-.PHONY: bin/powervs-csi-driver
-bin/powervs-csi-driver: | bin
-	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build -ldflags ${LDFLAGS} -o bin/powervs-csi-driver ./cmd/
+.PHONY: bin/ibm-powervs-block-csi-driver
+bin/ibm-powervs-block-csi-driver: | bin
+	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build -ldflags ${LDFLAGS} -o bin/ibm-powervs-block-csi-driver ./cmd/
 
 .PHONY: test
 test:
@@ -41,7 +41,7 @@ image-release:
 
 .PHONY: image
 image:
-	docker build -t $(IMAGE):latest . --target debian-base
+	docker build -t $(IMAGE):$(VERSION) . --target debian-base
 
 .PHONY: push-release
 push-release:

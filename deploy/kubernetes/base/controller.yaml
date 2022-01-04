@@ -5,18 +5,18 @@ metadata:
   name: powervs-csi-controller
   namespace: kube-system
   labels:
-    app.kubernetes.io/name: powervs-csi-driver
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: powervs-csi-controller
-      app.kubernetes.io/name: powervs-csi-driver
+      app.kubernetes.io/name: ibm-powervs-block-csi-driver
   template:
     metadata:
       labels:
         app: powervs-csi-controller
-        app.kubernetes.io/name: powervs-csi-driver
+        app.kubernetes.io/name: ibm-powervs-block-csi-driver
     spec:
       nodeSelector:
         kubernetes.io/os: linux
@@ -26,7 +26,7 @@ spec:
         - operator: Exists
       containers:
         - name: powervs-plugin
-          image: quay.io/powercloud/powervs-csi-driver:v0.0.1
+          image: quay.io/powercloud/ibm-powervs-block-csi-driver:v0.0.1
           imagePullPolicy: Always
           args:
             # - {all,controller,node} # specify the driver mode

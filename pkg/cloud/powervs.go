@@ -36,9 +36,9 @@ import (
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang-jwt/jwt"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
 var _ Cloud = &powerVSCloud{}

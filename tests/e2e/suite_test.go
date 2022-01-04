@@ -71,5 +71,5 @@ func TestE2E(t *testing.T) {
 	}
 	log.Printf("Starting e2e run %q on Ginkgo node %d", uuid.NewUUID(), config.GinkgoConfig.ParallelNode) // TODO use framework.RunID like upstream
 
-	RunSpecsWithDefaultAndCustomReporters(t, "Power VS CSI Driver End-to-End Tests", r)
+	RunSpecsWithDefaultAndCustomReporters(t, "IBM PowerVS Block CSI Driver End-to-End Tests", r)
 }

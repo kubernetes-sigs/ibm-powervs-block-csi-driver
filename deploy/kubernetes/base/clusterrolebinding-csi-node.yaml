@@ -4,7 +4,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: powervs-csi-node-getter-binding
   labels:
-    app.kubernetes.io/name: powervs-csi-driver
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
 subjects:
   - kind: ServiceAccount
     name: powervs-csi-node-sa

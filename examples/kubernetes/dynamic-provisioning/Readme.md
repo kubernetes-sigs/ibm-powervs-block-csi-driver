@@ -5,7 +5,7 @@ This example shows how to create a PowerVS volume and consume it from container 
 
 1. Kubernetes 1.13+ (CSI 1.0).
 
-2. The [powervs-ebs-csi-driver](https://github.com/ppc64le-cloud/powervs-csi-driver) is installed.
+2. The [powervs-ebs-csi-driver](https://sigs.k8s.io/ibm-powervs-block-csi-driver) is installed.
 
 ## Usage
 

@@ -18,9 +18,9 @@ package testsuites
 
 import (
 	. "github.com/onsi/ginkgo"
-	"github.com/ppc64le-cloud/powervs-csi-driver/tests/e2e/driver"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
 )
 
 // DynamicallyProvisionedCmdVolumeTest will provision required StorageClass(es), PVC(s) and Pod(s)

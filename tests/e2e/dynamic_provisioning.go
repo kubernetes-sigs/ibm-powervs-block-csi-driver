@@ -20,14 +20,14 @@ import (
 	"fmt"
 	"os"
 
-	powervscloud "github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
-	powervscsidriver "github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver"
-	"github.com/ppc64le-cloud/powervs-csi-driver/tests/e2e/driver"
-	"github.com/ppc64le-cloud/powervs-csi-driver/tests/e2e/testsuites"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
+	powervscloud "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
+	powervscsidriver "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/testsuites"
 
 	. "github.com/onsi/ginkgo"
 )

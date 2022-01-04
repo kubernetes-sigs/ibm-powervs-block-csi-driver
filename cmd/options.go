@@ -23,8 +23,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ppc64le-cloud/powervs-csi-driver/cmd/options"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/cmd/options"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 
 	"k8s.io/klog/v2"
 )
