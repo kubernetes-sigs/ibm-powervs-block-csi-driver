@@ -4,13 +4,13 @@ metadata:
   name: powervs-csi-node
   namespace: kube-system
   labels:
-    app.kubernetes.io/name: powervs-csi-driver
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
 spec:
   template:
     spec:
       containers:
         - name: powervs-plugin
-          image: quay.io/powercloud/powervs-csi-driver:dev
+          image: quay.io/powercloud/ibm-powervs-block-csi-driver:dev
           imagePullPolicy: Always
 ---
 kind: Deployment
@@ -19,11 +19,11 @@ metadata:
   name: powervs-csi-controller
   namespace: kube-system
   labels:
-    app.kubernetes.io/name: powervs-csi-driver
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
 spec:
   template:
     spec:
       containers:
         - name: powervs-plugin
-          image: quay.io/powercloud/powervs-csi-driver:dev
+          image: quay.io/powercloud/ibm-powervs-block-csi-driver:dev
           imagePullPolicy: Always

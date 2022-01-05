@@ -19,7 +19,7 @@ package cloud
 import (
 	"errors"
 
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
 // PowerVS volume types

@@ -4,7 +4,7 @@
  metadata:
    name: powervs-external-resizer-role
    labels:
-     app.kubernetes.io/name: powervs-csi-driver
+     app.kubernetes.io/name: ibm-powervs-block-csi-driver
  rules:
    # The following rule should be uncommented for plugins that require secrets
    # for provisioning.

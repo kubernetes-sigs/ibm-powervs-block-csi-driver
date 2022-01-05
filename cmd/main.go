@@ -21,13 +21,13 @@ package main
 import (
 	"flag"
 
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 
 	"k8s.io/klog/v2"
 )
 
 func main() {
-	fs := flag.NewFlagSet("powervs-csi-driver", flag.ExitOnError)
+	fs := flag.NewFlagSet("ibm-powervs-block-csi-driver", flag.ExitOnError)
 	options := GetOptions(fs)
 
 	drv, err := driver.NewDriver(

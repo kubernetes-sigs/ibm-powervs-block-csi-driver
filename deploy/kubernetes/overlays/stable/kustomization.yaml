@@ -3,7 +3,7 @@ kind: Kustomization
 bases:
   - ../../base
 images:
-  - name: quay.io/powercloud/powervs-csi-driver
+  - name: quay.io/powercloud/ibm-powervs-block-csi-driver
     newTag: v0.0.1
   - name: k8s.gcr.io/sig-storage/csi-provisioner
     newTag: v3.0.0

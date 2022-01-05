@@ -21,7 +21,7 @@ package options
 import (
 	"flag"
 
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 )
 
 // ServerOptions contains options and configuration settings for the driver server.
