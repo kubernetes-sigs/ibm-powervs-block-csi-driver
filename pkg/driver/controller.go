@@ -122,6 +122,18 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		VolumeType:    volumeType,
 	}
 
+	// check if disk exists
+	// disk exists only if previous createVolume request fails due to any network/tcp error
+	diskDetails, _ := d.cloud.GetDiskByName(volName)
+	if diskDetails != nil {
+		// wait for volume to be available as the volume already exists
+		err := d.cloud.WaitForVolumeState(diskDetails.VolumeID, cloud.VolumeAvailableState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Disk already exists and not in expected state")
+		}
+		return newCreateVolumeResponse(diskDetails), nil
+	}
+
 	disk, err := d.cloud.CreateDisk(volName, opts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
