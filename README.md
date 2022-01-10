@@ -88,10 +88,10 @@ To enable powervs debug logs, run the CSI driver with `debug=true` command line 
 
 ## Examples
 Make sure you follow the [Prerequisites](README.md#Prerequisites) before the examples:
-* [Dynamic Provisioning](../examples/kubernetes/dynamic-provisioning)
-* [Block Volume](../examples/kubernetes/block-volume)
-* [Configure StorageClass](../examples/kubernetes/storageclass)
-* [Volume Resizing](../examples/kubernetes/resizing)
+* [Dynamic Provisioning](./examples/kubernetes/dynamic-provisioning)
+* [Block Volume](./examples/kubernetes/block-volume)
+* [Configure StorageClass](./examples/kubernetes/storageclass)
+* [Volume Resizing](./examples/kubernetes/resizing)
 
 
 ## Development
