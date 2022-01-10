@@ -60,8 +60,8 @@ github.com/GoogleCloudPlatform/k8s-cloud-provider v0.0.0-20200415212048-7901bc82
 github.com/GoogleCloudPlatform/k8s-cloud-provider v1.16.1-0.20210702024009-ea6160c1d0e3/go.mod h1:8XasY4ymP2V/tn2OOV9ZadmiTE1FIB/h3W+yNlPttKw=
 github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb h1:ke+JASYimCuuAsmMWw2jmCRakGrKRQqVgIG30eiPI+Y=
 github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb/go.mod h1:gPJbH1etcDj7qS/hBRiLuYW9CY0bRcostSKusa51xR0=
-github.com/IBM-Cloud/power-go-client v1.0.87 h1:aJiecMGnlB6k6v3V+VEVSYEkiV3J9AeNoZfX/Ncx7wE=
-github.com/IBM-Cloud/power-go-client v1.0.87/go.mod h1:60o7AE2oDi/0CtoXlQhnCbC3o1fSRgaFCJO6DscmokA=
+github.com/IBM-Cloud/power-go-client v1.0.88 h1:JTIyPK5fjXDZoRGvTtegk6D9qtMwgumbzeMz8vV1TGs=
+github.com/IBM-Cloud/power-go-client v1.0.88/go.mod h1:60o7AE2oDi/0CtoXlQhnCbC3o1fSRgaFCJO6DscmokA=
 github.com/IBM/go-sdk-core/v5 v5.8.0 h1:Bn9BxTaKYKWpd+BDpVsL6XOOJl4QDgxux4gSdWi31vE=
 github.com/IBM/go-sdk-core/v5 v5.8.0/go.mod h1:+YbdhrjCHC84ls4MeBp+Hj4NZCni+tDAc0XQUqRO9Jc=
 github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab/go.mod h1:3VYc5hodBMJ5+l/7J4xAyMeuM2PNuepvHlGs8yilUCA=
