@@ -127,7 +127,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	diskDetails, _ := d.cloud.GetDiskByName(volName)
 	if diskDetails != nil {
 		// wait for volume to be available as the volume already exists
-		err := d.cloud.WaitForVolumeState(diskDetails.VolumeID, cloud.VolumeAvailableState)
+		err := verifyVolumeDetails(opts, diskDetails)
+		if err != nil {
+			return nil, err
+		}
+		err = d.cloud.WaitForVolumeState(diskDetails.VolumeID, cloud.VolumeAvailableState)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Disk already exists and not in expected state")
 		}
@@ -420,4 +424,18 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 		}
 	}
 	return volSizeBytes, nil
+}
+
+func verifyVolumeDetails(payload *cloud.DiskOptions, diskDetails *cloud.Disk) error {
+	if payload.Shareable != diskDetails.Shareable {
+		return status.Errorf(codes.Internal, "shareable in payload and shareable in disk details don't match")
+	}
+	if payload.VolumeType != diskDetails.DiskType {
+		return status.Errorf(codes.Internal, "TYPE in payload and disktype in disk details don't match")
+	}
+	capacityGIB := util.BytesToGiB(payload.CapacityBytes)
+	if capacityGIB != diskDetails.CapacityGiB {
+		return status.Errorf(codes.Internal, "capacityBytes in payload and capacityGIB in disk details don't match")
+	}
+	return nil
 }
