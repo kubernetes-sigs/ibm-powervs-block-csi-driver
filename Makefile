@@ -18,14 +18,20 @@ VERSION=v0.0.1
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
+
 GO111MODULE=on
 GOPROXY=direct
 GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
+
 PLATFORM=linux/ppc64le
 
+
 .EXPORT_ALL_VARIABLES:
+
+bin:
+	@mkdir -p $@
 
 .PHONY: bin/ibm-powervs-block-csi-driver
 bin/ibm-powervs-block-csi-driver: | bin
@@ -54,3 +60,26 @@ push:
 .PHONY: clean
 clean:
 	rm -rf bin/*
+
+bin/mockgen: | bin
+	go install github.com/golang/mock/mockgen@v1.6.0
+
+bin/golangci-lint: | bin
+	echo "Installing golangci-lint..."
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0
+
+mockgen: bin/mockgen
+	./hack/update-gomock
+
+.PHONY: verify
+verify: bin/golangci-lint
+	echo "verifying and linting files ..."
+	./hack/verify-all
+	echo "Congratulations! All Go source files have been linted."
+
+.PHONY: verify-vendor
+test: verify-vendor
+verify: verify-vendor
+verify-vendor:
+	@ echo; echo "### $@:"
+	@ ./hack/verify-vendor.sh
