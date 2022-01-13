@@ -21,10 +21,10 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
-	cloudmocks "github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud/mocks"
-	mocks "github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver/mocks"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
+	cloudmocks "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud/mocks"
+	mocks "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver/mocks"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -229,9 +229,6 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeId:          volumeID,
 			},
 			expectedCode: codes.InvalidArgument,
-			expectMock: func(mockMounter mocks.MockMounter) {
-				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-			},
 		},
 
 		{

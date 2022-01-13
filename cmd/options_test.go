@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/driver"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 )
 
 func TestGetOptions(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	cloud "github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
+	cloud "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 )
 
 // MockCloud is a mock of Cloud interface.

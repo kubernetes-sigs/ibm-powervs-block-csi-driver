@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/cloud"
-	"github.com/ppc64le-cloud/powervs-csi-driver/pkg/util"
 	"k8s.io/utils/exec"
 	"k8s.io/utils/mount"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
 func TestSanity(t *testing.T) {
