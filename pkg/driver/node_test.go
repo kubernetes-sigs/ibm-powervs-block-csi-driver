@@ -30,6 +30,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// constants of keys in PublishContext
+const (
+	// devicePathKey represents key for device path in PublishContext
+	// devicePath is the device path where the volume is attached to
+	DevicePathKey = "devicePath"
+)
+
+// constants of keys in VolumeContext
+const (
+	// VolumeAttributePartition represents key for partition config in VolumeContext
+	// this represents the partition number on a device used to mount
+	VolumeAttributePartition = "partition"
+)
+
 var (
 	volumeID = "voltest"
 )
@@ -322,6 +336,277 @@ func TestNodeExpandVolume(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNodePublishVolume(t *testing.T) {
+	targetPath := "/test/path"
+	stagingTargetPath := "/test/staging/path"
+	devicePath := "/dev/fake"
+	sourcePath := "/test/src"
+	wwnValue := "testwwn12"
+	stdVolCap := &csi.VolumeCapability{
+		AccessType: &csi.VolumeCapability_Block{
+			Block: &csi.VolumeCapability_BlockVolume{},
+		},
+		AccessMode: &csi.VolumeCapability_AccessMode{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+	}
+
+	stdVolContext := map[string]string{"partition": "1"}
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "success normal [raw block]",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				mockMounter.EXPECT().GetDevicePath(gomock.Any()).Return(sourcePath, nil)
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
+				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
+				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability:  stdVolCap,
+					VolumeId:          volumeID,
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success normal with partition [raw block]",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				mockMounter.EXPECT().GetDevicePath(gomock.Any()).Return(sourcePath, nil)
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
+				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
+				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability:  stdVolCap,
+					VolumeId:          volumeID,
+					VolumeContext:     stdVolContext,
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success normal with invalid partition config, will ignore the config [raw block]",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				mockMounter.EXPECT().GetDevicePath(gomock.Any()).Return(sourcePath, nil)
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
+				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
+				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
+
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability:  stdVolCap,
+					VolumeId:          volumeID,
+					VolumeContext:     map[string]string{VolumeAttributePartition: "0"},
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "fail no device path [raw block]",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				req := &csi.NodePublishVolumeRequest{
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability:  stdVolCap,
+					VolumeId:          volumeID,
+					VolumeContext:     map[string]string{VolumeAttributePartition: "partition1"},
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail no VolumeId",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					StagingTargetPath: stagingTargetPath,
+					TargetPath:        targetPath,
+					VolumeCapability:  stdVolCap,
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail no StagingTargetPath",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:   map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					TargetPath:       targetPath,
+					VolumeCapability: stdVolCap,
+					VolumeId:         volumeID,
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail no VolumeCapability",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					TargetPath:        targetPath,
+					StagingTargetPath: stagingTargetPath,
+					VolumeId:          volumeID,
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail no TargetPath",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					StagingTargetPath: stagingTargetPath,
+					VolumeCapability:  stdVolCap,
+					VolumeId:          volumeID,
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail invalid VolumeCapability",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+				req := &csi.NodePublishVolumeRequest{
+					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
+					TargetPath:        targetPath,
+					StagingTargetPath: stagingTargetPath,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessMode: &csi.VolumeCapability_AccessMode{
+							Mode: csi.VolumeCapability_AccessMode_UNKNOWN,
+						},
+					},
+					VolumeId: volumeID,
+				}
+
+				_, err := powervsDriver.NodePublishVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+
 }
 
 func TestNodeUnpublishVolume(t *testing.T) {
