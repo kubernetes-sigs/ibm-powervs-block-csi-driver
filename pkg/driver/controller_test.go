@@ -461,6 +461,35 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "fail locked volume request",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:               "random-vol-name",
+					CapacityRange:      stdCapRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         nil,
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				powervsDriver.volumeLocks.TryAcquire(req.Name)
+				defer powervsDriver.volumeLocks.Release(req.Name)
+
+				_, err := powervsDriver.CreateVolume(ctx, req)
+				checkExpectedErrorCode(t, err, codes.Aborted)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -573,6 +602,32 @@ func TestDeleteVolume(t *testing.T) {
 				if resp != nil {
 					t.Fatalf("Expected resp to be nil, got: %+v", resp)
 				}
+			},
+		},
+		{
+			name: "fail if volume is already locked",
+			testFunc: func(t *testing.T) {
+				req := &csi.DeleteVolumeRequest{
+					VolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				powervsDriver.volumeLocks.TryAcquire(req.VolumeId)
+				defer powervsDriver.volumeLocks.Release(req.VolumeId)
+
+				_, err := powervsDriver.DeleteVolume(ctx, req)
+				checkExpectedErrorCode(t, err, codes.Aborted)
 			},
 		},
 	}
@@ -855,6 +910,34 @@ func TestControllerPublishVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "fail if volume already locked",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					NodeId:           expInstanceID,
+					VolumeCapability: stdVolCap,
+					VolumeId:         volumeName,
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				powervsDriver.volumeLocks.TryAcquire(req.VolumeId)
+				defer powervsDriver.volumeLocks.Release(req.VolumeId)
+
+				_, err := powervsDriver.ControllerPublishVolume(ctx, req)
+				checkExpectedErrorCode(t, err, codes.Aborted)
+
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1000,6 +1083,32 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "fail if volume already locked",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerUnpublishVolumeRequest{
+					NodeId:   expInstanceID,
+					VolumeId: "vol-test",
+				}
+
+				ctx := context.Background()
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				powervsDriver.volumeLocks.TryAcquire(req.VolumeId)
+				defer powervsDriver.volumeLocks.Release(req.VolumeId)
+
+				_, err := powervsDriver.ControllerUnpublishVolume(ctx, req)
+				checkExpectedErrorCode(t, err, codes.Aborted)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1009,11 +1118,12 @@ func TestControllerUnpublishVolume(t *testing.T) {
 
 func TestControllerExpandVolume(t *testing.T) {
 	testCases := []struct {
-		name     string
-		req      *csi.ControllerExpandVolumeRequest
-		newSize  int64
-		expResp  *csi.ControllerExpandVolumeResponse
-		expError bool
+		name       string
+		req        *csi.ControllerExpandVolumeRequest
+		newSize    int64
+		expResp    *csi.ControllerExpandVolumeResponse
+		expError   bool
+		volumeLock bool
 	}{
 		{
 			name: "success normal",
@@ -1043,6 +1153,16 @@ func TestControllerExpandVolume(t *testing.T) {
 			},
 			expError: true,
 		},
+		{
+			name: "fail if volume already locked",
+			req: &csi.ControllerExpandVolumeRequest{
+				VolumeId: "vol-test",
+				CapacityRange: &csi.CapacityRange{
+					RequiredBytes: 5 * util.GiB,
+				},
+			},
+			volumeLock: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1059,34 +1179,43 @@ func TestControllerExpandVolume(t *testing.T) {
 			}
 
 			mockCloud := mocks.NewMockCloud(mockCtl)
-			mockCloud.EXPECT().ResizeDisk(gomock.Eq(tc.req.VolumeId), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
-
 			powervsDriver := controllerService{
 				cloud:         mockCloud,
 				driverOptions: &Options{},
 				volumeLocks:   util.NewVolumeLocks(),
 			}
 
-			resp, err := powervsDriver.ControllerExpandVolume(ctx, tc.req)
-			if err != nil {
-				srvErr, ok := status.FromError(err)
-				if !ok {
-					t.Fatalf("Could not get error status code from error: %v", srvErr)
-				}
-				if !tc.expError {
-					t.Fatalf("Unexpected error: %v", err)
-				}
+			if tc.volumeLock {
+				powervsDriver.volumeLocks.TryAcquire(tc.req.VolumeId)
+				defer powervsDriver.volumeLocks.Release(tc.req.VolumeId)
+
+				_, err := powervsDriver.ControllerExpandVolume(ctx, tc.req)
+				checkExpectedErrorCode(t, err, codes.Aborted)
+
 			} else {
-				if tc.expError {
-					t.Fatalf("Expected error from ControllerExpandVolume, got nothing")
+				mockCloud.EXPECT().ResizeDisk(gomock.Eq(tc.req.VolumeId), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
+				resp, err := powervsDriver.ControllerExpandVolume(ctx, tc.req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					if !tc.expError {
+						t.Fatalf("Unexpected error: %v", err)
+					}
+				} else {
+					if tc.expError {
+						t.Fatalf("Expected error from ControllerExpandVolume, got nothing")
+					}
+				}
+
+				sizeGiB := util.BytesToGiB(resp.GetCapacityBytes())
+				expSizeGiB := util.BytesToGiB(tc.expResp.GetCapacityBytes())
+				if sizeGiB != expSizeGiB {
+					t.Fatalf("Expected size %d GiB, got %d GiB", expSizeGiB, sizeGiB)
 				}
 			}
 
-			sizeGiB := util.BytesToGiB(resp.GetCapacityBytes())
-			expSizeGiB := util.BytesToGiB(tc.expResp.GetCapacityBytes())
-			if sizeGiB != expSizeGiB {
-				t.Fatalf("Expected size %d GiB, got %d GiB", expSizeGiB, sizeGiB)
-			}
 		})
 	}
 }

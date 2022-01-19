@@ -66,6 +66,7 @@ func TestNodeStageVolume(t *testing.T) {
 		request      *csi.NodeStageVolumeRequest
 		expectMock   func(mockMounter mocks.MockMounter)
 		expectedCode codes.Code
+		volumeLock   bool
 	}{
 
 		{
@@ -256,6 +257,17 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 			expectedCode: codes.InvalidArgument,
 		},
+		{
+			name: "fail_if_volume_already_locked",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{WWNKey: devicePath},
+				StagingTargetPath: targetPath,
+				VolumeCapability:  stdVolCap,
+				VolumeId:          volumeID,
+			},
+			volumeLock:   true,
+			expectedCode: codes.Aborted,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -268,6 +280,11 @@ func TestNodeStageVolume(t *testing.T) {
 			powervsDriver := &nodeService{
 				mounter:     mockMounter,
 				volumeLocks: util.NewVolumeLocks(),
+			}
+
+			if tc.volumeLock {
+				powervsDriver.volumeLocks.TryAcquire(tc.request.VolumeId)
+				defer powervsDriver.volumeLocks.Release(tc.request.VolumeId)
 			}
 
 			if tc.expectMock != nil {
@@ -291,7 +308,8 @@ func TestNodeExpandVolume(t *testing.T) {
 	mockMounter := mocks.NewMockMounter(mockCtl)
 
 	powervsDriver := &nodeService{
-		mounter: mockMounter,
+		mounter:     mockMounter,
+		volumeLocks: util.NewVolumeLocks(),
 	}
 
 	tests := []struct {
@@ -299,11 +317,20 @@ func TestNodeExpandVolume(t *testing.T) {
 		request            csi.NodeExpandVolumeRequest
 		expectResponseCode codes.Code
 		expectMock         func(mockMounter mocks.MockMounter)
+		volumeLock         bool
 	}{
 		{
 			name:               "fail missing volumeId",
 			request:            csi.NodeExpandVolumeRequest{},
 			expectResponseCode: codes.InvalidArgument,
+		},
+		{
+			name: "fail if volume already locked",
+			request: csi.NodeExpandVolumeRequest{
+				VolumeId: "test-volume-id",
+			},
+			expectResponseCode: codes.Aborted,
+			volumeLock:         true,
 		},
 	}
 
@@ -311,6 +338,11 @@ func TestNodeExpandVolume(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if test.expectMock != nil {
 				test.expectMock(*mockMounter)
+			}
+
+			if test.volumeLock {
+				powervsDriver.volumeLocks.TryAcquire(test.request.VolumeId)
+				defer powervsDriver.volumeLocks.Release(test.request.VolumeId)
 			}
 			_, err := powervsDriver.NodeExpandVolume(context.Background(), &test.request)
 			if err != nil {
@@ -419,6 +451,31 @@ func TestNodeUnpublishVolume(t *testing.T) {
 				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(errors.New("test Unmount error"))
 				_, err := powervsDriver.NodeUnpublishVolume(context.TODO(), req)
 				expectErr(t, err, codes.Internal)
+			},
+		},
+		{
+			name: "fail if volume already locked",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				req := &csi.NodeUnpublishVolumeRequest{
+					TargetPath: targetPath,
+					VolumeId:   "vol-test",
+				}
+
+				powervsDriver.volumeLocks.TryAcquire(req.TargetPath)
+				defer powervsDriver.volumeLocks.Release(req.TargetPath)
+
+				_, err := powervsDriver.NodeUnpublishVolume(context.TODO(), req)
+				checkExpectedErrorCode(t, err, codes.Aborted)
 			},
 		},
 	}
