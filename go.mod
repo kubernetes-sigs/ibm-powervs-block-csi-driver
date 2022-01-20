@@ -18,7 +18,7 @@ require (
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v1.22.4
 	k8s.io/klog/v2 v2.40.1
-	k8s.io/kubernetes v1.23.1
+	k8s.io/kubernetes v1.23.2
 	k8s.io/mount-utils v0.22.4
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 )
@@ -118,7 +118,7 @@ require (
 	k8s.io/kubectl v0.0.0 // indirect
 	k8s.io/kubelet v0.0.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.22 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
