@@ -34,6 +34,7 @@ import (
 	"github.com/IBM-Cloud/power-go-client/ibmpisession"
 	"github.com/IBM-Cloud/power-go-client/power/client/p_cloud_volumes"
 	"github.com/IBM-Cloud/power-go-client/power/models"
+	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang-jwt/jwt"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -173,7 +174,10 @@ func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 	if err != nil {
 		return nil, err
 	}
-	piSession, err := ibmpisession.New(bxSess.Config.IAMAccessToken, region, debug, user.Account, zone)
+
+	authenticator := &core.IamAuthenticator{ApiKey: apikey}
+	piOptions := ibmpisession.IBMPIOptions{Authenticator: authenticator, Debug: debug, Region: region, UserAccount: user.Account, Zone: zone}
+	piSession, err := ibmpisession.NewIBMPISession(&piOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +354,7 @@ func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
 func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
 	//TODO: remove capacityBytes
 	params := p_cloud_volumes.NewPcloudCloudinstancesVolumesGetallParamsWithTimeout(TIMEOUT).WithCloudInstanceID(p.cloudInstanceID)
-	resp, err := p.piSession.Power.PCloudVolumes.PcloudCloudinstancesVolumesGetall(params, ibmpisession.NewAuth(p.piSession, p.cloudInstanceID))
+	resp, err := p.piSession.Power.PCloudVolumes.PcloudCloudinstancesVolumesGetall(params, p.piSession.AuthInfo(p.cloudInstanceID))
 	if err != nil {
 		return nil, errors.ToError(err)
 	}
