@@ -43,7 +43,6 @@ type Connector struct {
 	TargetWWNs []string
 	Lun        string
 	WWIDs      []string
-	io         ioHandler
 }
 
 //OSioHandler is a wrapper that includes all the necessary io functions used for (Should be used as default io handler)
@@ -108,15 +107,19 @@ func findDeviceForPath(path string, io ioHandler) (string, error) {
 	return "", errors.New("Illegal path for device " + devicePath)
 }
 
-func scsiHostRescan(io ioHandler) {
+func scsiHostRescan(io ioHandler) error {
 	scsiPath := "/sys/class/scsi_host/"
 	if dirs, err := io.ReadDir(scsiPath); err == nil {
 		for _, f := range dirs {
 			name := scsiPath + f.Name() + "/scan"
 			data := []byte("- - -")
-			io.WriteFile(name, data, 0666)
+			err := io.WriteFile(name, data, 0666)
+			if err != nil {
+				return fmt.Errorf("scsi host rescan failed : error: %v", err)
+			}
 		}
 	}
+	return nil
 }
 
 //func fcHostIssueLip(io ioHandler) {
@@ -145,7 +148,7 @@ func searchDisk(c Connector, io ioHandler) (string, error) {
 	// two-phase search:
 	// first phase, search existing device path, if a multipath dm is found, exit loop
 	// otherwise, in second phase, rescan scsi bus and search again, return with any findings
-	for true {
+	for {
 
 		for _, diskID := range diskIds {
 			if len(c.TargetWWNs) != 0 {
@@ -165,7 +168,11 @@ func searchDisk(c Connector, io ioHandler) (string, error) {
 		}
 		// rescan and search again
 		// rescan scsi bus
-		scsiHostRescan(io)
+
+		err := scsiHostRescan(io)
+		if err != nil {
+			return "", err
+		}
 		//fcHostIssueLip(io)
 		rescaned = true
 	}
@@ -320,16 +327,20 @@ func detachFCDisk(devicePath string, io ioHandler) error {
 	}
 	arr := strings.Split(devicePath, "/")
 	dev := arr[len(arr)-1]
-	removeFromScsiSubsystem(dev, io)
-	return nil
+	err := removeFromScsiSubsystem(dev, io)
+	return err
 }
 
 // Removes a scsi device based upon /dev/sdX name
-func removeFromScsiSubsystem(deviceName string, io ioHandler) {
+func removeFromScsiSubsystem(deviceName string, io ioHandler) error {
 	fileName := "/sys/block/" + deviceName + "/device/delete"
 	glog.Infof("fc: remove device from scsi-subsystem: path: %s", fileName)
 	data := []byte("1")
-	io.WriteFile(fileName, data, 0666)
+	err := io.WriteFile(fileName, data, 0666)
+	if err != nil {
+		return fmt.Errorf("failed remove from scsi subsystem : error: %v", err)
+	}
+	return nil
 }
 
 func RemoveMultipathDevice(device string) error {
