@@ -57,12 +57,11 @@ type Driver struct {
 }
 
 type Options struct {
-	endpoint            string
-	extraTags           map[string]string
-	mode                Mode
-	volumeAttachLimit   int64
-	kubernetesClusterID string
-	debug               bool
+	endpoint          string
+	extraTags         map[string]string
+	mode              Mode
+	volumeAttachLimit int64
+	debug             bool
 }
 
 func NewDriver(options ...func(*Options)) (*Driver, error) {
