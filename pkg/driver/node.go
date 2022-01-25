@@ -56,6 +56,7 @@ var (
 	nodeCaps = []csi.NodeServiceCapability_RPC_Type{
 		csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 		csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
+		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
 	}
 )
 
@@ -66,6 +67,7 @@ type nodeService struct {
 	driverOptions *Options
 	pvmInstanceId string
 	volumeLocks   *util.VolumeLocks
+	stats         StatsUtils
 }
 
 // newNodeService creates a new node service
@@ -88,6 +90,7 @@ func newNodeService(driverOptions *Options) nodeService {
 		driverOptions: driverOptions,
 		pvmInstanceId: metadata.GetPvmInstanceId(),
 		volumeLocks:   util.NewVolumeLocks(),
+		stats:         &VolumeStatUtils{},
 	}
 }
 
@@ -380,7 +383,72 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 }
 
 func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "NodeGetVolumeStats is not implemented yet")
+	klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", *req)
+	var resp *csi.NodeGetVolumeStatsResponse
+
+	if req == nil || req.VolumeId == "" {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	if req.VolumePath == "" {
+		return nil, status.Error(codes.InvalidArgument, "VolumePath not provided")
+	}
+
+	volumePath := req.VolumePath
+	// return if path does not exist
+	if d.stats.IsPathNotExist(volumePath) {
+		return nil, status.Error(codes.NotFound, "VolumePath not exist")
+	}
+
+	// check if volume mode is raw volume mode
+	isBlock, err := d.stats.IsBlockDevice(volumePath)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to check volume %s is block device or not: %v", req.VolumeId, err))
+	}
+	// if block device, get deviceStats
+	if isBlock {
+		capacity, err := d.stats.DeviceInfo(volumePath)
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to collect block device info: %v", err))
+		}
+
+		resp = &csi.NodeGetVolumeStatsResponse{
+			Usage: []*csi.VolumeUsage{
+				{
+					Total: capacity,
+					Unit:  csi.VolumeUsage_BYTES,
+				},
+			},
+		}
+
+		klog.V(4).Infof("Block Device Volume stats collected: %+v\n", resp)
+		return resp, nil
+	}
+
+	// else get the file system stats
+	available, capacity, usage, inodes, inodesFree, inodesUsed, err := d.stats.FSInfo(volumePath)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to collect FSInfo: %v", err))
+	}
+	resp = &csi.NodeGetVolumeStatsResponse{
+		Usage: []*csi.VolumeUsage{
+			{
+				Available: available,
+				Total:     capacity,
+				Used:      usage,
+				Unit:      csi.VolumeUsage_BYTES,
+			},
+			{
+				Available: inodesFree,
+				Total:     inodes,
+				Used:      inodesUsed,
+				Unit:      csi.VolumeUsage_INODES,
+			},
+		},
+	}
+
+	klog.V(4).Infof("FS Volume stats collected: %+v\n", resp)
+	return resp, nil
 }
 
 func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
