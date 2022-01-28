@@ -16,6 +16,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -879,6 +880,117 @@ func TestNodeGetInfo(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestNodeGetVolumeStats(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{name: "success block device volume",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockStatUtils := mocks.NewMockStatsUtils(mockCtl)
+
+				volumePath := "./test"
+				var mockCapacity int64 = 100
+				mockStatUtils.EXPECT().IsPathNotExist(volumePath).Return(false)
+				mockStatUtils.EXPECT().IsBlockDevice(volumePath).Return(true, nil)
+				mockStatUtils.EXPECT().DeviceInfo(volumePath).Return(mockCapacity, nil)
+				driver := &nodeService{stats: mockStatUtils}
+
+				req := csi.NodeGetVolumeStatsRequest{VolumeId: volumeID, VolumePath: volumePath}
+
+				resp, err := driver.NodeGetVolumeStats(context.TODO(), &req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+
+				if resp.Usage[0].Total != mockCapacity {
+					t.Fatalf("Expected total capacity as %d, got %d", mockCapacity, resp.Usage[0].Total)
+				}
+			},
+		}, {
+			name: "failure path not exist",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockStatUtils := mocks.NewMockStatsUtils(mockCtl)
+
+				volumePath := "./test"
+				mockStatUtils.EXPECT().IsPathNotExist(volumePath).Return(true)
+				driver := &nodeService{stats: mockStatUtils}
+
+				req := csi.NodeGetVolumeStatsRequest{VolumeId: volumeID, VolumePath: volumePath}
+
+				_, err := driver.NodeGetVolumeStats(context.TODO(), &req)
+				expectErr(t, err, codes.NotFound)
+			},
+		}, {
+			name: "failure checking for block device",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockStatUtils := mocks.NewMockStatsUtils(mockCtl)
+
+				volumePath := "./test"
+				mockStatUtils.EXPECT().IsPathNotExist(volumePath).Return(false)
+				mockStatUtils.EXPECT().IsBlockDevice(volumePath).Return(false, errors.New("Error checking for block device"))
+				driver := &nodeService{stats: mockStatUtils}
+
+				req := csi.NodeGetVolumeStatsRequest{VolumeId: volumeID, VolumePath: volumePath}
+
+				_, err := driver.NodeGetVolumeStats(context.TODO(), &req)
+				expectErr(t, err, codes.Internal)
+			},
+		}, {
+			name: "failure collecting block device info",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockStatUtils := mocks.NewMockStatsUtils(mockCtl)
+
+				volumePath := "./test"
+				mockStatUtils.EXPECT().IsPathNotExist(volumePath).Return(false)
+				mockStatUtils.EXPECT().IsBlockDevice(volumePath).Return(true, nil)
+				mockStatUtils.EXPECT().DeviceInfo(volumePath).Return(int64(0), errors.New("Error collecting block device info"))
+
+				driver := &nodeService{stats: mockStatUtils}
+
+				req := csi.NodeGetVolumeStatsRequest{VolumeId: volumeID, VolumePath: volumePath}
+
+				_, err := driver.NodeGetVolumeStats(context.TODO(), &req)
+				fmt.Println(err)
+				expectErr(t, err, codes.Internal)
+			},
+		},
+		{
+			name: "failure collecting fs info",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+				mockStatUtils := mocks.NewMockStatsUtils(mockCtl)
+
+				volumePath := "./test"
+				mockStatUtils.EXPECT().IsPathNotExist(volumePath).Return(false)
+				mockStatUtils.EXPECT().IsBlockDevice(volumePath).Return(false, nil)
+				var statUnit int64 = 0
+				mockStatUtils.EXPECT().FSInfo(volumePath).Return(statUnit, statUnit, statUnit, statUnit, statUnit, statUnit, errors.New("Error collecting FS Info"))
+				driver := &nodeService{stats: mockStatUtils}
+
+				req := csi.NodeGetVolumeStatsRequest{VolumeId: volumeID, VolumePath: volumePath}
+
+				_, err := driver.NodeGetVolumeStats(context.TODO(), &req)
+				fmt.Println(err)
+
+				expectErr(t, err, codes.Internal)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
