@@ -60,8 +60,9 @@ github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb h1:ke+JASYimC
 github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb/go.mod h1:gPJbH1etcDj7qS/hBRiLuYW9CY0bRcostSKusa51xR0=
 github.com/IBM-Cloud/power-go-client v1.1.0 h1:wHkQsiiHDG1/g4MnLiiZjFwu+fSqGxoLCrTEm4LFppY=
 github.com/IBM-Cloud/power-go-client v1.1.0/go.mod h1:Ky1qQYJ7WPS4OO3J80sTf+sMcBb92bulVwsDg1cPCuI=
-github.com/IBM/go-sdk-core/v5 v5.9.1 h1:06pXbD9Rgmqqe2HA5YAeQbB4eYRRFgIoOT+Kh3cp1zo=
 github.com/IBM/go-sdk-core/v5 v5.9.1/go.mod h1:axE2JrRq79gIJTjKPBwV6gWHswvVptBjbcvvCPIxARM=
+github.com/IBM/go-sdk-core/v5 v5.9.2 h1:QKB5JwhlZfRvFHqcOwMeu/Dis/Q7qCBxrQLhx04onMc=
+github.com/IBM/go-sdk-core/v5 v5.9.2/go.mod h1:YlOwV9LeuclmT/qi/LAK2AsobbAP42veV0j68/rlZsE=
 github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab/go.mod h1:3VYc5hodBMJ5+l/7J4xAyMeuM2PNuepvHlGs8yilUCA=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd/go.mod h1:64YHyfSL2R96J44Nlwm39UHepQbyR5q10x7iYa1ks2E=
 github.com/Microsoft/go-winio v0.4.15/go.mod h1:tTuCMEN+UleMWgg9dVx4Hu52b1bJo+59jBh3ajtinzw=
