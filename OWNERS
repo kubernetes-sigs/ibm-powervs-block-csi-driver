@@ -1,7 +1,4 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 
 approvers:
-  - github-admin-team
-
-reviewers:
-  - github-admin-team
+  - mkumatag
