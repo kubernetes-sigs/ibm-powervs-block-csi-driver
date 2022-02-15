@@ -30,6 +30,9 @@ PLATFORM=linux/ppc64le
 
 .EXPORT_ALL_VARIABLES:
 
+.PHONY: all
+all: verify test bin/ibm-powervs-block-csi-driver image
+
 bin:
 	@mkdir -p $@
 
