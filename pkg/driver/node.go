@@ -383,8 +383,10 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 }
 
 func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-	klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", *req)
 	var resp *csi.NodeGetVolumeStatsResponse
+	if req != nil {
+		klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", *req)
+	}
 
 	if req == nil || req.VolumeId == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
