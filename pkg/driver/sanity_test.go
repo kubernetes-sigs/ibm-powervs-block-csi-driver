@@ -20,7 +20,7 @@ import (
 
 func TestSanity(t *testing.T) {
 	// Setup the full driver and its environment
-	dir, err := ioutil.TempDir("", "sanity-ebs-csi")
+	dir, err := ioutil.TempDir("", "sanity-powervs-csi")
 	if err != nil {
 		t.Fatalf("error creating directory %v", err)
 	}
@@ -43,6 +43,10 @@ func TestSanity(t *testing.T) {
 		mode:     AllMode,
 	}
 
+	statsUtil := MockStatSanity{
+		targetPath: targetPath,
+	}
+
 	drv := &Driver{
 		options: driverOptions,
 		controllerService: controllerService{
@@ -56,6 +60,7 @@ func TestSanity(t *testing.T) {
 			driverOptions: &Options{},
 			pvmInstanceId: "test1234",
 			volumeLocks:   util.NewVolumeLocks(),
+			stats:         &statsUtil,
 		},
 	}
 	defer func() {
@@ -80,6 +85,34 @@ func createDir(targetPath string) (string, error) {
 		}
 	}
 	return targetPath, nil
+}
+
+// Fake State interface methods implementation for getting
+type MockStatSanity struct {
+	targetPath string
+}
+
+// FSInfo ...
+func (su *MockStatSanity) FSInfo(path string) (int64, int64, int64, int64, int64, int64, error) {
+	return 1, 1, 1, 1, 1, 1, nil
+}
+
+// DeviceInfo ...
+func (su *MockStatSanity) DeviceInfo(path string) (int64, error) {
+	return 1, nil
+}
+
+// IsBlockDevice ..
+func (su *MockStatSanity) IsBlockDevice(devicePath string) (bool, error) {
+	if !strings.Contains(devicePath, su.targetPath) {
+		return false, errors.New("not a valid path")
+	}
+	return true, nil
+}
+
+func (su *MockStatSanity) IsPathNotExist(devicePath string) bool {
+	// return true if not matched
+	return !strings.Contains(devicePath, su.targetPath)
 }
 
 type fakeCloudProvider struct {
