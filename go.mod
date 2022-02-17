@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb
-	github.com/IBM-Cloud/power-go-client v1.1.2
+	github.com/IBM-Cloud/power-go-client v1.1.3
 	github.com/IBM/go-sdk-core/v5 v5.9.2
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/davecgh/go-spew v1.1.1
