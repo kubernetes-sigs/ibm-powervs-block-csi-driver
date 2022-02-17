@@ -1,0 +1,18 @@
+# A configuration file for multi-arch image building with the Google cloud build service.
+#
+# See https://github.com/kubernetes/test-infra/blob/master/config/jobs/image-pushing/README.md
+# for more details on image pushing process in Kubernetes.
+
+# This must be specified in seconds. If omitted, defaults to 600s (10 mins).
+timeout: 1200s
+options:
+  substitution_option: ALLOW_LOOSE
+steps:
+  - name: 'gcr.io/k8s-testimages/gcb-docker-gcloud:v20210722-085d930'
+    entrypoint: make
+    env:
+    - PULL_BASE_REF=${_PULL_BASE_REF}
+    - TAG=${_GIT_TAG}
+    - HOME=/root
+    args:
+    - build-and-push-multi-arch
