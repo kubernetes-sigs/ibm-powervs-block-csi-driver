@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-{{.Iteration}}-{{.Replica}}
+spec:
+  containers:
+    - name: app-{{.Iteration}}-{{.Replica}}
+      image: k8s.gcr.io/pause:3.6
+      command: ["/pause"]
+      volumeMounts:
+        - name: persistent-storage-{{.Iteration}}-{{.Replica}}
+          mountPath: /data
+  volumes:
+    - name: persistent-storage-{{.Iteration}}-{{.Replica}}
+      persistentVolumeClaim:
+        claimName: powervs-claim-{{.Iteration}}-{{.Replica}}

@@ -1,0 +1,43 @@
+---
+global:
+  writeToFile: true
+  metricsDirectory: collected-metrics
+  measurements:
+    - name: podLatency
+      esIndex: kube-burner
+
+jobs:
+  - name: api-intensive-create
+    jobIterations: 10
+    qps: 10
+    burst: 10
+    jobType: create
+    namespacedIterations: false
+    namespace: kube-system-test
+    podWait: true
+    cleanup: true
+    waitFor: []
+    waitWhenFinished: true
+    objects:
+      - objectTemplate: templates/pvc.yaml
+        replicas: 10
+      - objectTemplate: templates/pod.yaml
+        replicas: 10
+
+  - name: ensure-pods-removal
+    qps: 10
+    burst: 10
+    jobType: delete
+    waitForDeletion: true
+    objects:
+      - kind: Pod
+        labelSelector: {kube-burner-job: api-intensive-create}
+
+  - name: remove-pvc
+    qps: 10
+    burst: 10
+    jobType: delete
+    waitForDeletion: true
+    objects:
+      - kind: PersistentVolumeClaim
+        labelSelector: {kube-burner-job: api-intensive-create}
