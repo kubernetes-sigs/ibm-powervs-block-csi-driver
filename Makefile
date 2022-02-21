@@ -13,11 +13,12 @@
 # limitations under the License.
 
 PKG=sigs.k8s.io/ibm-powervs-block-csi-driver
-IMAGE?=quay.io/powercloud/ibm-powervs-block-csi-driver
-VERSION=v0.0.1
-GIT_COMMIT?=$(shell git rev-parse HEAD)
+GIT_COMMIT?=$(shell git rev-parse --short HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${VERSION} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
+REGISTRY?=gcr.io/k8s-staging-cloud-provider-ibm
+IMAGE?=ibm-powervs-block-csi-driver
+TAG?=$(GIT_COMMIT)
+LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${TAG} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 
 GO111MODULE=on
 GOPROXY=direct
@@ -25,37 +26,47 @@ GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
 
-PLATFORM=linux/ppc64le
-
-
 .EXPORT_ALL_VARIABLES:
 
 bin:
 	@mkdir -p $@
 
-.PHONY: bin/ibm-powervs-block-csi-driver
-bin/ibm-powervs-block-csi-driver: | bin
-	CGO_ENABLED=0 GOOS=linux GOARCH=ppc64le go build -ldflags ${LDFLAGS} -o bin/ibm-powervs-block-csi-driver ./cmd/
+.PHONY: driver
+bin/ibm-powervs-block-csi-driver:
+driver: | bin
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -ldflags ${LDFLAGS} -o bin/ibm-powervs-block-csi-driver ./cmd/
 
 .PHONY: test
 test:
 	go test -v -race ./cmd/... ./pkg/...
 
-.PHONY: image-release
-image-release:
-	docker buildx build -t $(IMAGE):$(VERSION) . --target debian-base
-
 .PHONY: image
 image:
-	docker build -t $(IMAGE):$(VERSION) . --target debian-base
-
-.PHONY: push-release
-push-release:
-	docker push $(IMAGE):$(VERSION)
+	docker build -t $(REGISTRY)/$(IMAGE):$(TAG) . --target debian-base
 
 .PHONY: push
 push:
-	docker push $(IMAGE):$(VERSION)
+	docker push $(REGISTRY)/$(IMAGE):$(TAG)
+
+build-image-and-push-linux-amd64: init-buildx
+	{                                                                   \
+	set -e ;                                                            \
+	docker buildx build \
+		--build-arg TARGETPLATFORM=linux/amd64 \
+		-t $(REGISTRY)/$(IMAGE):$(TAG)_linux_amd64 --push . --target debian-base; \
+	}
+
+build-image-and-push-linux-ppc64le: init-buildx
+	{                                                                   \
+	set -e ;                                                            \
+	docker buildx build \
+		--build-arg TARGETPLATFORM=linux/ppc64le \
+		-t $(REGISTRY)/$(IMAGE):$(TAG)_linux_ppc64le --push . --target debian-base; \
+	}
+
+build-and-push-multi-arch: build-image-and-push-linux-amd64 build-image-and-push-linux-ppc64le
+	docker manifest create --amend $(REGISTRY)/$(IMAGE):$(TAG) $(REGISTRY)/$(IMAGE):$(TAG)_linux_amd64 $(REGISTRY)/$(IMAGE):$(TAG)_linux_ppc64le
+	docker manifest push -p $(REGISTRY)/$(IMAGE):$(TAG)
 
 .PHONY: clean
 clean:
@@ -83,3 +94,9 @@ verify: verify-vendor
 verify-vendor:
 	@ echo; echo "### $@:"
 	@ ./hack/verify-vendor.sh
+
+init-buildx:
+	# Ensure we use a builder that can leverage it (the default on linux will not)
+	-docker buildx rm multiarch-multiplatform-builder
+	docker buildx create --use --name=multiarch-multiplatform-builder
+	docker run --rm --privileged multiarch/qemu-user-static --reset --credential yes --persistent yes
