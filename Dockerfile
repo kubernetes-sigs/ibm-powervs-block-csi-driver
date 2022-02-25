@@ -15,8 +15,7 @@
 FROM golang:1.17 AS builder
 WORKDIR /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver
 ADD . .
-ARG TARGETPLATFORM
-RUN ARCH=$(echo $TARGETPLATFORM | cut -f2 -d '/') make driver
+RUN make driver
 
 FROM k8s.gcr.io/build-image/debian-base:v2.1.3 AS debian-base
 RUN clean-install ca-certificates e2fsprogs mount udev util-linux xfsprogs bash multipath-tools sg3-utils
