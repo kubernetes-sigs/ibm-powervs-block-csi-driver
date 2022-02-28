@@ -16,7 +16,7 @@ PKG=sigs.k8s.io/ibm-powervs-block-csi-driver
 GIT_COMMIT?=$(shell git rev-parse --short HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 REGISTRY?=gcr.io/k8s-staging-cloud-provider-ibm
-IMAGE?=ibm-powervs-block-csi-driver
+IMG?=ibm-powervs-block-csi-driver
 TAG?=$(GIT_COMMIT)
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${TAG} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
 
@@ -32,9 +32,8 @@ bin:
 	@mkdir -p $@
 
 .PHONY: driver
-bin/ibm-powervs-block-csi-driver:
 driver: | bin
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -ldflags ${LDFLAGS} -o bin/ibm-powervs-block-csi-driver ./cmd/
+	CGO_ENABLED=0 go build -ldflags ${LDFLAGS} -o bin/ibm-powervs-block-csi-driver ./cmd/
 
 .PHONY: test
 test:
@@ -42,31 +41,31 @@ test:
 
 .PHONY: image
 image:
-	docker build -t $(REGISTRY)/$(IMAGE):$(TAG) . --target debian-base
+	docker build -t $(REGISTRY)/$(IMG):$(TAG) . --target debian-base
 
 .PHONY: push
 push:
-	docker push $(REGISTRY)/$(IMAGE):$(TAG)
+	docker push $(REGISTRY)/$(IMG):$(TAG)
 
 build-image-and-push-linux-amd64: init-buildx
 	{                                                                   \
 	set -e ;                                                            \
 	docker buildx build \
-		--build-arg TARGETPLATFORM=linux/amd64 \
-		-t $(REGISTRY)/$(IMAGE):$(TAG)_linux_amd64 --push . --target debian-base; \
+		--platform linux/amd64 \
+		-t $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 --push . --target debian-base; \
 	}
 
 build-image-and-push-linux-ppc64le: init-buildx
 	{                                                                   \
 	set -e ;                                                            \
 	docker buildx build \
-		--build-arg TARGETPLATFORM=linux/ppc64le \
-		-t $(REGISTRY)/$(IMAGE):$(TAG)_linux_ppc64le --push . --target debian-base; \
+		--platform linux/ppc64le \
+		-t $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le --push . --target debian-base; \
 	}
 
 build-and-push-multi-arch: build-image-and-push-linux-amd64 build-image-and-push-linux-ppc64le
-	docker manifest create --amend $(REGISTRY)/$(IMAGE):$(TAG) $(REGISTRY)/$(IMAGE):$(TAG)_linux_amd64 $(REGISTRY)/$(IMAGE):$(TAG)_linux_ppc64le
-	docker manifest push -p $(REGISTRY)/$(IMAGE):$(TAG)
+	docker manifest create --amend $(REGISTRY)/$(IMG):$(TAG) $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le
+	docker manifest push -p $(REGISTRY)/$(IMG):$(TAG)
 
 .PHONY: clean
 clean:
