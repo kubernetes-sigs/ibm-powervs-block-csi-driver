@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: powervs-claim-{{.Iteration}}-{{.Replica}}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: powervs-sc
+  resources:
+    requests:
+      storage: 1G
