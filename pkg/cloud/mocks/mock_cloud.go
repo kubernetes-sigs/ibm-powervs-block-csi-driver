@@ -7,6 +7,7 @@ package mocks
 import (
 	reflect "reflect"
 
+	models "github.com/IBM-Cloud/power-go-client/power/models"
 	gomock "github.com/golang/mock/gomock"
 	cloud "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 )
@@ -167,6 +168,21 @@ func (mr *MockCloudMockRecorder) GetPVMInstanceByName(instanceName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPVMInstanceByName", reflect.TypeOf((*MockCloud)(nil).GetPVMInstanceByName), instanceName)
 }
 
+// GetPVMInstanceDetails mocks base method.
+func (m *MockCloud) GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPVMInstanceDetails", instanceID)
+	ret0, _ := ret[0].(*models.PVMInstance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPVMInstanceDetails indicates an expected call of GetPVMInstanceDetails.
+func (mr *MockCloudMockRecorder) GetPVMInstanceDetails(instanceID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPVMInstanceDetails", reflect.TypeOf((*MockCloud)(nil).GetPVMInstanceDetails), instanceID)
+}
+
 // IsAttached mocks base method.
 func (m *MockCloud) IsAttached(volumeID, nodeID string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -195,6 +211,20 @@ func (m *MockCloud) ResizeDisk(volumeID string, reqSize int64) (int64, error) {
 func (mr *MockCloudMockRecorder) ResizeDisk(volumeID, reqSize interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeDisk", reflect.TypeOf((*MockCloud)(nil).ResizeDisk), volumeID, reqSize)
+}
+
+// UpdateStoragePoolAffinity mocks base method.
+func (m *MockCloud) UpdateStoragePoolAffinity(instanceID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStoragePoolAffinity", instanceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateStoragePoolAffinity indicates an expected call of UpdateStoragePoolAffinity.
+func (mr *MockCloudMockRecorder) UpdateStoragePoolAffinity(instanceID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStoragePoolAffinity", reflect.TypeOf((*MockCloud)(nil).UpdateStoragePoolAffinity), instanceID)
 }
 
 // WaitForVolumeState mocks base method.

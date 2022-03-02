@@ -1,0 +1,122 @@
+/*
+Copyright 2022.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controllers
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
+)
+
+// NodeUpdateReconciler reconciles a NodeUpdate object
+type NodeUpdateReconciler struct {
+	Client client.Client
+	Scheme *runtime.Scheme
+}
+
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
+func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (ctrl.Result, error) {
+
+	// Fetch the Node instance
+	node := corev1.Node{}
+	err := r.Client.Get(context.Background(), req.NamespacedName, &node)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// req object not found, could have been deleted after reconcile req.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			klog.Infof("%s: Node not found - do nothing", req.NamespacedName)
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the req.
+		return ctrl.Result{}, fmt.Errorf("error getting node: %v", err)
+	}
+
+	// ProviderID format: ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>
+	if node.Spec.ProviderID != "" {
+		klog.Infof("PROVIDER-ID: %s", node.Spec.ProviderID)
+		data := strings.Split(node.Spec.ProviderID, "/")
+		if len(data) != cloud.ProviderIDValidLength {
+			return ctrl.Result{}, fmt.Errorf("invalid ProviderID format - %v, expected format - ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>", node.Spec.ProviderID)
+		}
+
+		nodeUpdateScope, err := cloud.NewNodeUpdateScope(cloud.NodeUpdateScopeParams{
+			ServiceInstanceId: data[4],
+			InstanceId:        data[5],
+		})
+
+		if err != nil {
+			return ctrl.Result{}, errors.Errorf("failed to create nodeUpdateScope: %+v", err)
+		}
+
+		instance, err := nodeUpdateScope.Cloud.GetPVMInstanceDetails(nodeUpdateScope.InstanceId)
+		if err != nil {
+			klog.Infof("Unable to fetch Instance Details %v", err)
+			return ctrl.Result{}, nil
+		}
+
+		if instance != nil {
+			klog.Infof("StoragePoolAffinity: %v", *instance.StoragePoolAffinity)
+			if *instance.StoragePoolAffinity {
+				switch *instance.Status {
+				case cloud.PowerVSInstanceStateSHUTOFF, cloud.PowerVSInstanceStateACTIVE:
+					switch instance.Health.Status {
+					case cloud.PowerVSInstanceHealthOK:
+						err := r.getOrUpdate(nodeUpdateScope)
+						if err != nil {
+							klog.Infof("unable to update instance StoragePoolAffinity %v", err)
+							return ctrl.Result{}, errors.Wrapf(err, "failed to reconcile VSI for IBMPowerVSMachine %s/%s", node.Namespace, node.Name)
+						}
+					default:
+						klog.Infof("PowerVS instance - %v health not OK yet", instance.PvmInstanceID)
+					}
+				default:
+					klog.Infof("PowerVS instance - %v state not ACTIVE/SHUTOFF yet", instance.PvmInstanceID)
+				}
+			}
+		}
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *NodeUpdateReconciler) getOrUpdate(scope *cloud.NodeUpdateScope) error {
+	if err := scope.Cloud.UpdateStoragePoolAffinity(scope.InstanceId); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *NodeUpdateReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&corev1.Node{}).
+		Complete(r)
+}

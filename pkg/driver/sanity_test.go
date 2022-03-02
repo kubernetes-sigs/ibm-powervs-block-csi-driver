@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
 	"k8s.io/utils/exec"
 	"k8s.io/utils/mount"
@@ -150,6 +151,20 @@ func (p *fakeCloudProvider) GetPVMInstanceByID(instanceID string) (*cloud.PVMIns
 		ImageID: strings.Split(instanceID, "-")[0] + "-" + "image",
 		Name:    strings.Split(instanceID, "-")[0],
 	}, nil
+}
+
+func (p *fakeCloudProvider) GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error) {
+
+	return &models.PVMInstance{
+		PvmInstanceID: &instanceID,
+		ServerName:    &strings.Split(instanceID, "-")[0],
+	}, nil
+
+}
+
+func (p *fakeCloudProvider) UpdateStoragePoolAffinity(instanceID string) error {
+
+	return nil
 }
 
 func (p *fakeCloudProvider) GetImageByID(imageID string) (*cloud.PVMImage, error) {
