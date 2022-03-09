@@ -16,6 +16,10 @@ limitations under the License.
 
 package cloud
 
+import (
+	"github.com/IBM-Cloud/power-go-client/power/models"
+)
+
 type Cloud interface {
 	CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
 	DeleteDisk(volumeID string) (success bool, err error)
@@ -27,6 +31,8 @@ type Cloud interface {
 	GetDiskByID(volumeID string) (disk *Disk, err error)
 	GetPVMInstanceByName(instanceName string) (instance *PVMInstance, err error)
 	GetPVMInstanceByID(instanceID string) (instance *PVMInstance, err error)
+	GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error)
+	UpdateStoragePoolAffinity(instanceID string) error
 	GetImageByID(imageID string) (image *PVMImage, err error)
 	IsAttached(volumeID string, nodeID string) (attached bool, err error)
 }
