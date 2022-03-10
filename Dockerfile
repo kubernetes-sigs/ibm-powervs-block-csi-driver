@@ -23,9 +23,7 @@ COPY --from=builder /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver/bin/ibm-pow
 ENTRYPOINT ["/ibm-powervs-block-csi-driver"]
 
 
-FROM registry.access.redhat.com/ubi8/ubi:8.5 AS rhel-base
-RUN yum --disableplugin=subscription-manager -y install httpd php \
-  && yum --disableplugin=subscription-manager clean all
-RUN clean-install ca-certificates e2fsprogs mount udev util-linux xfsprogs
-COPY --from=builder /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver /ibm-powervs-block-csi-driver
+FROM quay.io/centos/centos:stream8 AS centos-base
+RUN yum install -y util-linux nfs-utils e2fsprogs xfsprogs ca-certificates && yum clean all && rm -rf /var/cache/yum
+COPY --from=builder /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver/bin/ibm-powervs-block-csi-driver /ibm-powervs-block-csi-driver
 ENTRYPOINT ["/ibm-powervs-block-csi-driver"]
