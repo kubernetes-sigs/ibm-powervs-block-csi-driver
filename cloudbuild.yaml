@@ -4,7 +4,7 @@
 # for more details on image pushing process in Kubernetes.
 
 # This must be specified in seconds. If omitted, defaults to 600s (10 mins).
-timeout: 3600s
+timeout: 7200s
 options:
   substitution_option: ALLOW_LOOSE
 steps:
