@@ -35,6 +35,10 @@ bin:
 driver: | bin
 	CGO_ENABLED=0 go build -ldflags ${LDFLAGS} -o bin/ibm-powervs-block-csi-driver ./cmd/
 
+.PHONY: node-update-controller
+node-update-controller: | bin
+	CGO_ENABLED=0 go build -ldflags ${LDFLAGS} -o bin/node-update-controller ./adhoc-controllers/
+
 .PHONY: test
 test:
 	go test -v -race ./cmd/... ./pkg/...
