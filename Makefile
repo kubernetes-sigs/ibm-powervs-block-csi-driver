@@ -45,7 +45,7 @@ test:
 
 .PHONY: image
 image:
-	docker build -t $(REGISTRY)/$(IMG):$(TAG) . --target debian-base
+	docker build -t $(REGISTRY)/$(IMG):$(TAG) . --target centos-base
 
 .PHONY: push
 push:
@@ -55,16 +55,16 @@ build-image-and-push-linux-amd64: init-buildx
 	{                                                                   \
 	set -e ;                                                            \
 	docker buildx build \
-		--platform linux/amd64 \
-		-t $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 --push . --target debian-base; \
+		--build-arg TARGETPLATFORM=linux/amd64 \
+		-t $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 --push . --target centos-base; \
 	}
 
 build-image-and-push-linux-ppc64le: init-buildx
 	{                                                                   \
 	set -e ;                                                            \
 	docker buildx build \
-		--platform linux/ppc64le \
-		-t $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le --push . --target debian-base; \
+		--build-arg TARGETPLATFORM=linux/ppc64le \
+		-t $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le --push . --target centos-base; \
 	}
 
 build-and-push-multi-arch: build-image-and-push-linux-amd64 build-image-and-push-linux-ppc64le
