@@ -15,7 +15,7 @@
 # Initialized TARGETPLATFORM with default value
 ARG TARGETPLATFORM=linux/amd64
 
-FROM golang:1.17 AS builder
+FROM golang:1.18.0 AS builder
 WORKDIR /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver
 ADD . .
 RUN GOARCH=$(echo $TARGETPLATFORM | cut -f2 -d '/') make driver node-update-controller
