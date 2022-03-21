@@ -3,8 +3,8 @@ kind: Kustomization
 bases:
   - ../../base
 images:
-  - name: quay.io/powercloud/ibm-powervs-block-csi-driver
-    newTag: v0.0.1
+  - name: gcr.io/k8s-staging-cloud-provider-ibm/ibm-powervs-block-csi-driver
+    newTag: main
   - name: k8s.gcr.io/sig-storage/csi-provisioner
     newTag: v3.1.0
   - name: k8s.gcr.io/sig-storage/csi-attacher

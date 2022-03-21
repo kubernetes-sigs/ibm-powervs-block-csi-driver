@@ -28,7 +28,7 @@ spec:
         - name: powervs-plugin
           securityContext:
             privileged: true
-          image: quay.io/powercloud/ibm-powervs-block-csi-driver:v0.0.1
+          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           imagePullPolicy: Always
           args:
             - node
