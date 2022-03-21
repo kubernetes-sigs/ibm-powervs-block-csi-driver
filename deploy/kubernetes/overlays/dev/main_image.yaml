@@ -27,3 +27,6 @@ spec:
         - name: powervs-plugin
           image: quay.io/powercloud/ibm-powervs-block-csi-driver:dev
           imagePullPolicy: Always
+        - name: node-update-controller
+          image: quay.io/powercloud/ibm-powervs-block-csi-driver:dev
+          imagePullPolicy: Always
