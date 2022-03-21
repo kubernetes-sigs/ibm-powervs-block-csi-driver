@@ -72,6 +72,14 @@ spec:
             - name: healthz
               containerPort: 8082
               protocol: TCP
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 5
+            timeoutSeconds: 10
+            periodSeconds: 30
           env:
             - name: IBMCLOUD_API_KEY
               valueFrom:
