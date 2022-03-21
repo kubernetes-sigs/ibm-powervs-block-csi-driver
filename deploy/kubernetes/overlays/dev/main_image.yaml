@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
         - name: powervs-plugin
-          image: quay.io/powercloud/ibm-powervs-block-csi-driver:dev
+          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           imagePullPolicy: Always
 ---
 kind: Deployment
@@ -25,8 +25,8 @@ spec:
     spec:
       containers:
         - name: powervs-plugin
-          image: quay.io/powercloud/ibm-powervs-block-csi-driver:dev
+          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           imagePullPolicy: Always
         - name: node-update-controller
-          image: quay.io/powercloud/ibm-powervs-block-csi-driver:dev
+          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           imagePullPolicy: Always
