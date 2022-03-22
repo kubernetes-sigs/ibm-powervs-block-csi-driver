@@ -331,7 +331,7 @@ var _ = Describe("[powervs-csi-e2e]Dynamic Provisioning", func() {
 			},
 		}
 
-		cloudInstanceId, err := testsuites.GetCloudInstanceIdFromNodeLabels(cs)
+		cloudInstanceId, err := testsuites.GetCloudInstanceIdFromNodeSpec(cs)
 		if err != nil {
 			Skip(fmt.Sprintf("Could not get cloudInstanceId : %v", err))
 		}
