@@ -20,15 +20,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-)
-
-const (
-	CloudInstanceIDLabel = "powervs.kubernetes.io/cloud-instance-id"
-	PvmInstanceIdLabel   = "powervs.kubernetes.io/pvm-instance-id"
+	"k8s.io/klog/v2"
 )
 
 type KubernetesAPIClient func() (kubernetes.Interface, error)
@@ -54,27 +51,29 @@ func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error
 	if nodeName == "" {
 		return nil, fmt.Errorf("CSI_NODE_NAME env var not set")
 	}
+	return GetInstanceInfoFromProviderID(clientset, nodeName)
+}
+
+func GetInstanceInfoFromProviderID(clientset kubernetes.Interface, nodeName string) (*Metadata, error) {
 	// get node with k8s API
 	node, err := clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting Node %s: %v", nodeName, err)
 	}
 
-	// Get node labels
-	labels := node.GetLabels()
-	keysList := []string{CloudInstanceIDLabel, PvmInstanceIdLabel}
 	instanceInfo := Metadata{}
-	for _, key := range keysList {
-		if val, ok := labels[key]; ok {
-			switch key {
-			case CloudInstanceIDLabel:
-				instanceInfo.cloudInstanceId = val
-			case PvmInstanceIdLabel:
-				instanceInfo.pvmInstanceId = val
-			}
-		} else {
-			return nil, fmt.Errorf("error getting label %s for node Node %s", key, nodeName)
+	// ProviderID format: ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>
+	if node.Spec.ProviderID != "" {
+		providerId := node.Spec.ProviderID
+		klog.Infof("Node Name: %s, Provider ID: %s", nodeName, providerId)
+		data := strings.Split(providerId, "/")
+		if len(data) != ProviderIDValidLength {
+			return nil, fmt.Errorf("invalid ProviderID format - %v, expected format - ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>", providerId)
 		}
+		instanceInfo.cloudInstanceId = data[4]
+		instanceInfo.pvmInstanceId = data[5]
+	} else {
+		return nil, fmt.Errorf("ProviderID is empty for the node: %s", nodeName)
 	}
 
 	return &instanceInfo, nil

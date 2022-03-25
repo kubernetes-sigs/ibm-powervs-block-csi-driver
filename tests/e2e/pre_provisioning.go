@@ -70,7 +70,7 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 			Skip(fmt.Sprintf("env %q not set", apiKeyEnv))
 		}
 		var err error
-		cloudInstanceId, err := testsuites.GetCloudInstanceIdFromNodeLabels(cs)
+		cloudInstanceId, err := testsuites.GetCloudInstanceIdFromNodeSpec(cs)
 		if err != nil {
 			Skip(fmt.Sprintf("Could not get cloudInstanceId : %v", err))
 		}
