@@ -62,7 +62,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 
 * Using secret object - Generate IBMCLOUD_APIKEY from the UI, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml), then deploy the secret
 ```sh
-curl https://raw.githubusercontent.com/kubernetes-sigs/ibm-powervs-block-csi-driver/blob/main/deploy/kubernetes/secret.yaml > secret.yaml 
+curl https://raw.githubusercontent.com/kubernetes-sigs/ibm-powervs-block-csi-driver/main/deploy/kubernetes/secret.yaml > secret.yaml
 # Edit the IBMCLOUD_API_KEY
 # Edit the secret with user credentials
 kubectl apply -f secret.yaml
