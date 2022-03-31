@@ -15,4 +15,4 @@ steps:
     - TAG=${_GIT_TAG}
     - HOME=/root
     args:
-    - build-and-push-multi-arch
+    - release-staging
