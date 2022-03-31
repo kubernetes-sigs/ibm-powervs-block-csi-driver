@@ -19,6 +19,9 @@ REGISTRY?=gcr.io/k8s-staging-cloud-provider-ibm
 IMG?=ibm-powervs-block-csi-driver
 TAG?=$(GIT_COMMIT)
 LDFLAGS?="-X ${PKG}/pkg/driver.driverVersion=${TAG} -X ${PKG}/pkg/driver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/driver.buildDate=${BUILD_DATE} -s -w"
+RELEASE_TAG ?= $(shell git describe --abbrev=0 2>/dev/null)
+PULL_BASE_REF ?= $(RELEASE_TAG) # PULL_BASE_REF will be provided by Prow
+RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 
 GO111MODULE=on
 GOPROXY=direct
@@ -70,6 +73,17 @@ build-image-and-push-linux-ppc64le: init-buildx
 build-and-push-multi-arch: build-image-and-push-linux-amd64 build-image-and-push-linux-ppc64le
 	docker manifest create --amend $(REGISTRY)/$(IMG):$(TAG) $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le
 	docker manifest push -p $(REGISTRY)/$(IMG):$(TAG)
+
+.PHONY: release-alias-tag
+release-alias-tag: # Adds the tag to the last build tag.
+	docker pull $(REGISTRY)/$(IMG):$(TAG)
+	docker tag $(REGISTRY)/$(IMG):$(TAG) $(REGISTRY)/$(IMG):$(RELEASE_ALIAS_TAG)
+	docker push $(REGISTRY)/$(IMG):$(RELEASE_ALIAS_TAG)
+
+.PHONY: release-staging
+release-staging: ## Builds and push container images to the staging image registry.
+	$(MAKE) build-and-push-multi-arch
+	$(MAKE) release-alias-tag
 
 .PHONY: clean
 clean:
