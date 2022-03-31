@@ -76,9 +76,7 @@ build-and-push-multi-arch: build-image-and-push-linux-amd64 build-image-and-push
 
 .PHONY: release-alias-tag
 release-alias-tag: # Adds the tag to the last build tag.
-	docker pull $(REGISTRY)/$(IMG):$(TAG)
-	docker tag $(REGISTRY)/$(IMG):$(TAG) $(REGISTRY)/$(IMG):$(RELEASE_ALIAS_TAG)
-	docker push $(REGISTRY)/$(IMG):$(RELEASE_ALIAS_TAG)
+	gcloud container images add-tag -q $(REGISTRY)/$(IMG):$(TAG) $(REGISTRY)/$(IMG):$(RELEASE_ALIAS_TAG)
 
 .PHONY: release-staging
 release-staging: ## Builds and push container images to the staging image registry.
