@@ -39,7 +39,7 @@ There are couple driver options that can be passed as arguments when starting dr
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
 ## Kubernetes Version Compatibility Matrix
-| PowerVS CSI Driver \ Kubernetes Version| v1.22 |
+| PowerVS CSI Driver \ Kubernetes Version| v1.23 |
 |----------------------------------------|-------|
 | main branch                          | yes   |
 
@@ -60,7 +60,7 @@ Following sections are Kubernetes specific. If you are Kubernetes user, use foll
 ## Installation
 #### Set up driver permission
 
-* Using secret object - Generate IBMCLOUD_APIKEY from the UI, put that user's credentials in [secret manifest](../deploy/kubernetes/secret.yaml), then deploy the secret
+* Using secret object - Generate IBMCLOUD_APIKEY from the UI, put that user's credentials in [secret manifest](deploy/kubernetes/secret.yaml), then deploy the secret
 ```sh
 curl https://raw.githubusercontent.com/kubernetes-sigs/ibm-powervs-block-csi-driver/main/deploy/kubernetes/secret.yaml > secret.yaml
 # Edit the IBMCLOUD_API_KEY
@@ -102,10 +102,6 @@ Please go through [CSI Spec](https://github.com/container-storage-interface/spec
 * [Ginkgo](https://github.com/onsi/ginkgo) in your PATH for integration testing and end-to-end testing
 * Docker 20.10+ for releasing
 
-### Dependency
-Dependencies are managed through go module. To build the project, first turn on go mod using `export GO111MODULE=on`, then build the project using: `make`
-
 ### Testing
-* To create binary, run: `make bin/ibm-powervs-block-csi-driver`
 * To build image, run: `make image`
 * To push image, run: `make push`
