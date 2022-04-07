@@ -29,10 +29,27 @@ import (
 )
 
 var (
-	// TODO: explore multi-node attach
+
+	// Supported volume capabilities
 	volumeCaps = []csi.VolumeCapability_AccessMode{
 		{
 			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+		{
+			Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+		},
+		{
+			Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
+		},
+	}
+
+	// Shareable volume capabilities
+	shareableVolumeCaps = []csi.VolumeCapability_AccessMode{
+		{
+			Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+		},
+		{
+			Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
 		},
 	}
 
@@ -101,7 +118,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if !isValidVolumeCapabilities(volCaps) {
 		modes := util.GetAccessModes(volCaps)
 		stringModes := strings.Join(*modes, ", ")
-		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes[ReadWriteOnce] supported."
+		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes [ReadWriteOnce], [ReadWriteMany], [ReadOnlyMany] supported."
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
@@ -116,8 +133,9 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}
 
+	shareable := isShareableVolume(volCaps)
 	opts := &cloud.DiskOptions{
-		Shareable:     false,
+		Shareable:     shareable,
 		CapacityBytes: volSizeBytes,
 		VolumeType:    volumeType,
 	}
@@ -197,7 +215,7 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 	if !isValidVolumeCapabilities(caps) {
 		modes := util.GetAccessModes(caps)
 		stringModes := strings.Join(*modes, ", ")
-		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes[ReadWriteOnce] supported."
+		errString := "Volume capabilities " + stringModes + " not supported. Only AccessModes [ReadWriteOnce], [ReadWriteMany], [ReadOnlyMany] supported."
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
@@ -381,6 +399,25 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 		}
 	}
 	return foundAll
+}
+
+// Check if the volume is shareable
+func isShareableVolume(volCaps []*csi.VolumeCapability) bool {
+	isShareable := func(cap *csi.VolumeCapability) bool {
+		for _, c := range shareableVolumeCaps {
+			if c.GetMode() == cap.AccessMode.GetMode() {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, c := range volCaps {
+		if isShareable(c) {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *controllerService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
