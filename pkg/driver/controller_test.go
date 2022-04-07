@@ -94,6 +94,169 @@ func TestCreateVolume(t *testing.T) {
 		},
 
 		{
+			name: "csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:          "random-vol-name",
+					CapacityRange: stdCapRange,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+							},
+						},
+					},
+					Parameters: nil,
+				}
+
+				ctx := context.Background()
+				mockDisk := &cloud.Disk{
+					VolumeID:    req.Name,
+					CapacityGiB: util.BytesToGiB(stdVolSize),
+					Shareable:   true,
+				}
+				mockDiskOpts := &cloud.DiskOptions{
+					Shareable:     true,
+					CapacityBytes: stdVolSize,
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(req.Name)).Return(nil, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), mockDiskOpts).Return(mockDisk, nil)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				_, err := powervsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+			},
+		},
+		{
+			name: "csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:          "random-vol-name",
+					CapacityRange: stdCapRange,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
+							},
+						},
+					},
+					Parameters: nil,
+				}
+
+				ctx := context.Background()
+				mockDisk := &cloud.Disk{
+					VolumeID:    req.Name,
+					CapacityGiB: util.BytesToGiB(stdVolSize),
+					Shareable:   true,
+				}
+				mockDiskOpts := &cloud.DiskOptions{
+					Shareable:     true,
+					CapacityBytes: stdVolSize,
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(req.Name)).Return(nil, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), mockDiskOpts).Return(mockDisk, nil)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				_, err := powervsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+			},
+		},
+		{
+			name: "csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER",
+			testFunc: func(t *testing.T) {
+				req := &csi.CreateVolumeRequest{
+					Name:          "random-vol-name",
+					CapacityRange: stdCapRange,
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
+							},
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
+						},
+					},
+					Parameters: nil,
+				}
+
+				ctx := context.Background()
+				mockDisk := &cloud.Disk{
+					VolumeID:    req.Name,
+					CapacityGiB: util.BytesToGiB(stdVolSize),
+					Shareable:   false,
+				}
+				mockDiskOpts := &cloud.DiskOptions{
+					Shareable:     false,
+					CapacityBytes: stdVolSize,
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(req.Name)).Return(nil, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), mockDiskOpts).Return(mockDisk, nil)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				_, err := powervsDriver.CreateVolume(ctx, req)
+				if err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+
+			},
+		},
+
+		{
 			name: "fail no name",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
@@ -1218,6 +1381,66 @@ func TestControllerExpandVolume(t *testing.T) {
 
 		})
 	}
+}
+
+func TestIsShareableVolume(t *testing.T) {
+	testCases := []struct {
+		name              string
+		expectedShareable bool
+		testVolCap        []*csi.VolumeCapability
+	}{
+		{
+			name:              "Test csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER",
+			expectedShareable: false,
+			testVolCap: []*csi.VolumeCapability{
+				{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+			},
+		},
+		{
+			name:              "Test csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER",
+			expectedShareable: true,
+			testVolCap: []*csi.VolumeCapability{
+				{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+					},
+				},
+			},
+		},
+		{
+			name:              "Test csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY",
+			expectedShareable: true,
+			testVolCap: []*csi.VolumeCapability{
+				{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if res := isShareableVolume(tc.testVolCap); res != tc.expectedShareable {
+				t.Fatalf("Volume capability: %s expected value for shareable : %t got: %t", tc.testVolCap[0].AccessMode.GetMode().String(), tc.expectedShareable, res)
+			}
+		})
+	}
+
 }
 
 func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
