@@ -4,7 +4,7 @@ COPY . .
 RUN make driver
 
 FROM registry.ci.openshift.org/ocp/4.11:base
-COPY --from=builder /go/bin/ibm-powervs-block-csi-driver /bin/ibm-powervs-block-csi-driver
+COPY --from=builder /go/src/github.com/openshift/ibm-powervs-block-csi-drivern/bin/ibm-powervs-block-csi-driver /bin/ibm-powervs-block-csi-driver
 RUN yum install -y util-linux nfs-utils e2fsprogs xfsprogs ca-certificates && yum clean all && rm -rf /var/cache/yum
 
 LABEL description="IBM PowerVS Block CSI Driver"
