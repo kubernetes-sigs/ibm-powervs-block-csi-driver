@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb
 	github.com/IBM-Cloud/power-go-client v1.1.5
-	github.com/IBM/go-sdk-core/v5 v5.9.5
+	github.com/IBM/go-sdk-core/v5 v5.10.0
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -15,7 +15,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
+	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f
 	google.golang.org/grpc v1.46.0
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
