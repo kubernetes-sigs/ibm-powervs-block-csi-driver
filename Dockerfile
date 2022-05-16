@@ -15,7 +15,7 @@
 # Initialized TARGETPLATFORM with default value
 ARG TARGETPLATFORM=linux/amd64
 
-FROM golang:1.18.1 AS builder
+FROM golang:1.18.2 AS builder
 ARG TARGETPLATFORM
 WORKDIR /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver
 ADD . .
