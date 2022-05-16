@@ -36,9 +36,8 @@ var _ = Describe("[powervs-csi-e2e]Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("powervs")
 
 	var (
-		cs clientset.Interface
-		ns *v1.Namespace
-		//powervsDriver driver.PreProvisionedVolumeTestDriver
+		cs           clientset.Interface
+		ns           *v1.Namespace
 		pvTestDriver driver.DynamicPVTestDriver
 		volumeTypes  = powervscloud.ValidVolumeTypes
 		fsTypes      = []string{powervscsidriver.FSTypeXfs}
