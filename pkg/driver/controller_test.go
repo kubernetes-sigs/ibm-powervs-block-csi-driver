@@ -46,7 +46,9 @@ func TestCreateVolume(t *testing.T) {
 
 	stdVolSize := int64(5 * 1024 * 1024 * 1024)
 	stdCapRange := &csi.CapacityRange{RequiredBytes: stdVolSize}
-	stdParams := map[string]string{}
+	stdParams := map[string]string{
+		"type": cloud.DefaultVolumeType,
+	}
 
 	testCases := []struct {
 		name     string
@@ -60,7 +62,7 @@ func TestCreateVolume(t *testing.T) {
 					Name:               "random-vol-name",
 					CapacityRange:      stdCapRange,
 					VolumeCapabilities: stdVolCap,
-					Parameters:         nil,
+					Parameters:         stdParams,
 				}
 
 				ctx := context.Background()
@@ -68,6 +70,7 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(stdVolSize),
+					DiskType:    cloud.DefaultVolumeType,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -109,7 +112,7 @@ func TestCreateVolume(t *testing.T) {
 							},
 						},
 					},
-					Parameters: nil,
+					Parameters: stdParams,
 				}
 
 				ctx := context.Background()
@@ -121,6 +124,7 @@ func TestCreateVolume(t *testing.T) {
 				mockDiskOpts := &cloud.DiskOptions{
 					Shareable:     true,
 					CapacityBytes: stdVolSize,
+					VolumeType:    cloud.DefaultVolumeType,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -163,7 +167,7 @@ func TestCreateVolume(t *testing.T) {
 							},
 						},
 					},
-					Parameters: nil,
+					Parameters: stdParams,
 				}
 
 				ctx := context.Background()
@@ -171,10 +175,12 @@ func TestCreateVolume(t *testing.T) {
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(stdVolSize),
 					Shareable:   true,
+					DiskType:    cloud.DefaultVolumeType,
 				}
 				mockDiskOpts := &cloud.DiskOptions{
 					Shareable:     true,
 					CapacityBytes: stdVolSize,
+					VolumeType:    cloud.DefaultVolumeType,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -217,7 +223,7 @@ func TestCreateVolume(t *testing.T) {
 							},
 						},
 					},
-					Parameters: nil,
+					Parameters: stdParams,
 				}
 
 				ctx := context.Background()
@@ -225,10 +231,12 @@ func TestCreateVolume(t *testing.T) {
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(stdVolSize),
 					Shareable:   false,
+					DiskType:    cloud.DefaultVolumeType,
 				}
 				mockDiskOpts := &cloud.DiskOptions{
 					Shareable:     false,
 					CapacityBytes: stdVolSize,
+					VolumeType:    cloud.DefaultVolumeType,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -319,6 +327,7 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(stdVolSize),
+					DiskType:    cloud.DefaultVolumeType,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -401,6 +410,7 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(cloud.DefaultVolumeSize),
+					DiskType:    cloud.DefaultVolumeType,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -449,7 +459,7 @@ func TestCreateVolume(t *testing.T) {
 					Name:               "vol-test",
 					CapacityRange:      &csi.CapacityRange{RequiredBytes: 1073741825},
 					VolumeCapabilities: stdVolCap,
-					Parameters:         nil,
+					Parameters:         stdParams,
 				}
 				expVol := &csi.Volume{
 					CapacityBytes: 2147483648, // 1 GiB + 1 byte = 2 GiB
@@ -462,6 +472,7 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(expVol.CapacityBytes),
+					DiskType:    cloud.DefaultVolumeType,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -516,14 +527,19 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(volSize),
+					DiskType:    cloud.VolumeTypeTier1,
 				}
 
+				mockDiskOpts := &cloud.DiskOptions{
+					CapacityBytes: volSize,
+					VolumeType:    cloud.VolumeTypeTier1,
+				}
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(req.Name)).Return(nil, nil)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), mockDiskOpts).Return(mockDisk, nil)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -560,6 +576,11 @@ func TestCreateVolume(t *testing.T) {
 				mockDisk := &cloud.Disk{
 					VolumeID:    req.Name,
 					CapacityGiB: util.BytesToGiB(volSize),
+					DiskType:    cloud.VolumeTypeTier3,
+				}
+				mockDiskOpts := &cloud.DiskOptions{
+					CapacityBytes: volSize,
+					VolumeType:    cloud.VolumeTypeTier3,
 				}
 
 				mockCtl := gomock.NewController(t)
@@ -567,7 +588,7 @@ func TestCreateVolume(t *testing.T) {
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetDiskByName(gomock.Eq(req.Name)).Return(nil, nil)
-				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), gomock.Any()).Return(mockDisk, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), mockDiskOpts).Return(mockDisk, nil)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -621,6 +642,54 @@ func TestCreateVolume(t *testing.T) {
 				}
 				if srvErr.Code() != codes.InvalidArgument {
 					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
+				}
+			},
+		},
+		{
+			name: "Pass with no volume type parameter",
+			testFunc: func(t *testing.T) {
+				// iops 5000 requires at least 10GB
+				volSize := int64(20 * 1024 * 1024 * 1024)
+				capRange := &csi.CapacityRange{RequiredBytes: volSize}
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      capRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters:         map[string]string{},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:    req.Name,
+					CapacityGiB: util.BytesToGiB(volSize),
+					DiskType:    cloud.DefaultVolumeType,
+				}
+
+				mockDiskOpts := &cloud.DiskOptions{
+					CapacityBytes: volSize,
+					VolumeType:    cloud.DefaultVolumeType,
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(req.Name)).Return(nil, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), mockDiskOpts).Return(mockDisk, nil)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				if _, err := powervsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
 			},
 		},
