@@ -87,15 +87,14 @@ func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 			if *instance.StoragePoolAffinity {
 				switch *instance.Status {
 				case cloud.PowerVSInstanceStateSHUTOFF, cloud.PowerVSInstanceStateACTIVE:
-					switch instance.Health.Status {
-					case cloud.PowerVSInstanceHealthOK:
+					if *instance.StoragePoolAffinity == cloud.StoragePoolAffinity {
+						klog.Infof("PowerVS instance - %v Storage pool affinity already %t", instance.PvmInstanceID, cloud.StoragePoolAffinity)
+					} else {
 						err := r.getOrUpdate(nodeUpdateScope)
 						if err != nil {
 							klog.Infof("unable to update instance StoragePoolAffinity %v", err)
 							return ctrl.Result{}, errors.Wrapf(err, "failed to reconcile VSI for IBMPowerVSMachine %s/%s", node.Namespace, node.Name)
 						}
-					default:
-						klog.Infof("PowerVS instance - %v health not OK yet", instance.PvmInstanceID)
 					}
 				default:
 					klog.Infof("PowerVS instance - %v state not ACTIVE/SHUTOFF yet", instance.PvmInstanceID)

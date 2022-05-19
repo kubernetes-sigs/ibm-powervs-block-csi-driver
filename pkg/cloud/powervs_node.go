@@ -25,7 +25,6 @@ import (
 const (
 	PowerVSInstanceStateSHUTOFF = "SHUTOFF"
 	PowerVSInstanceStateACTIVE  = "ACTIVE"
-	PowerVSInstanceHealthOK     = "OK"
 	StoragePoolAffinity         = false
 	ProviderIDValidLength       = 6
 )
