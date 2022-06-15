@@ -409,6 +409,14 @@ func getRegion(zone string) (region string, err error) {
 		region = "syd"
 	case strings.HasPrefix(zone, "mon"):
 		region = "mon"
+	case strings.HasPrefix(zone, "osa"):
+		region = "osa"
+	case strings.HasPrefix(zone, "dal"):
+		region = "dal"
+	case strings.HasPrefix(zone, "sao"):
+		region = "sao"
+	case strings.HasPrefix(zone, "tok"):
+		region = "tok"
 	default:
 		return "", fmt.Errorf("region not found for the zone, talk to the developer to add the support into the tool: %s", zone)
 	}
