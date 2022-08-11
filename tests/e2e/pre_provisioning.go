@@ -27,6 +27,7 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	powervscloud "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
+	powervscsidriver "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/testsuites"
 )
@@ -51,6 +52,7 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 		cloud                      powervscloud.Cloud
 		volumeID                   string
 		diskSize                   string
+		powervsDriver              driver.PreProvisionedVolumeTestDriver
 		pvTestDriver               driver.PVTestDriver
 		skipManuallyDeletingVolume bool
 	)
@@ -58,7 +60,7 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 	BeforeEach(func() {
 		cs = f.ClientSet
 		ns = f.Namespace
-
+		powervsDriver = driver.InitPowervsCSIDriver()
 		diskOptions := &powervscloud.DiskOptions{
 			CapacityBytes: defaultDiskSizeBytes,
 			VolumeType:    defaultVolumeType,
@@ -124,6 +126,66 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 		test := testsuites.PreProvisionedVolumeTest{
 			CSIDriver: pvTestDriver,
 			Pods:      pods,
+		}
+		test.Run(cs, ns)
+	})
+
+	It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeID:  volumeID,
+						FSType:    powervscsidriver.FSTypeExt4,
+						ClaimSize: diskSize,
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+							ReadOnly:          true,
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.PreProvisionedReadOnlyVolumeTest{
+			CSIDriver: powervsDriver,
+			Pods:      pods,
+		}
+		test.Run(cs, ns)
+	})
+
+	It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
+		reclaimPolicy := v1.PersistentVolumeReclaimRetain
+		volumes := []testsuites.VolumeDetails{
+			{
+				VolumeID:      volumeID,
+				FSType:        powervscsidriver.FSTypeExt4,
+				ClaimSize:     diskSize,
+				ReclaimPolicy: &reclaimPolicy,
+			},
+		}
+		test := testsuites.PreProvisionedReclaimPolicyTest{
+			CSIDriver: powervsDriver,
+			Volumes:   volumes,
+		}
+		test.Run(cs, ns)
+	})
+
+	It(fmt.Sprintf("[env] should use a pre-provisioned volume and delete PV with reclaimPolicy %q", v1.PersistentVolumeReclaimDelete), func() {
+		reclaimPolicy := v1.PersistentVolumeReclaimDelete
+		skipManuallyDeletingVolume = true
+		volumes := []testsuites.VolumeDetails{
+			{
+				VolumeID:      volumeID,
+				FSType:        powervscsidriver.FSTypeExt4,
+				ClaimSize:     diskSize,
+				ReclaimPolicy: &reclaimPolicy,
+			},
+		}
+		test := testsuites.PreProvisionedReclaimPolicyTest{
+			CSIDriver: powervsDriver,
+			Volumes:   volumes,
 		}
 		test.Run(cs, ns)
 	})

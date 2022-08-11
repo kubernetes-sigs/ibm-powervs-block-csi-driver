@@ -22,6 +22,7 @@ There are several optional parameters that could be passed into ``` CreateVolume
 
 | **Parameters** | **Values** | **Default** | **Description**|
 | ----------------------------- | ----------------------------- | ----------- | ----------------------------- |
+| "type" | tier1, tier3 | tier1 | PowerVS Disk type that will be created during volume creation |
 | "csi.storage.k8s.io/fstype" | xfs, ext2, ext3, ext4 | ext4 | File system type that will be formatted during volume creation. This parameter is case sensitive! |
 
 
@@ -73,7 +74,7 @@ Please see the compatibility matrix above before you deploy the driver
 
 To deploy the CSI driver:
 ```sh
-kubectl apply -k "https://github.com/kubernetes-sigs/ibm-powervs-block-csi-driver/deploy/kubernetes/overlays/stable/?ref=v0.1.0"
+kubectl apply -k "https://github.com/kubernetes-sigs/ibm-powervs-block-csi-driver/deploy/kubernetes/overlays/stable/?ref=v0.1.1"
 ```
 
 Verify driver is running:

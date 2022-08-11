@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb
-	github.com/IBM-Cloud/power-go-client v1.1.5
-	github.com/IBM/go-sdk-core/v5 v5.9.5
+	github.com/IBM-Cloud/power-go-client v1.1.11
+	github.com/IBM/go-sdk-core/v5 v5.10.1
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -15,13 +15,13 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
-	google.golang.org/grpc v1.45.0
+	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f
+	google.golang.org/grpc v1.48.0
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v1.23.5
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.60.1
+	k8s.io/klog/v2 v2.70.1
 	k8s.io/kubernetes v1.23.5
 	k8s.io/mount-utils v0.23.5
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
@@ -67,13 +67,13 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.1 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect

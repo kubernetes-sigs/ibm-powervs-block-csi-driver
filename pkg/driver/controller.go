@@ -122,7 +122,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
 
-	var volumeType string
+	volumeType := cloud.DefaultVolumeType
 
 	for key, value := range req.GetParameters() {
 		switch strings.ToLower(key) {
