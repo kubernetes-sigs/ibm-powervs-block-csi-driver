@@ -6,3 +6,6 @@ approvers:
 reviewers:
   - mkumatag
   - Madhan-SWE
+
+component: "Storage"
+subcomponent: Kubernetes External Components
