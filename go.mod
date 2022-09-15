@@ -16,12 +16,12 @@ require (
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.49.0
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v1.23.5
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.70.1
+	k8s.io/klog/v2 v2.80.1
 	k8s.io/kubernetes v1.23.5
 	k8s.io/mount-utils v0.23.5
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
