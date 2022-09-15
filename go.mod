@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20201019071904-51caa09553fb
-	github.com/IBM-Cloud/power-go-client v1.1.12
+	github.com/IBM-Cloud/power-go-client v1.2.1
 	github.com/IBM/go-sdk-core/v5 v5.10.1
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/davecgh/go-spew v1.1.1
@@ -21,7 +21,7 @@ require (
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v1.23.5
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.70.1
+	k8s.io/klog/v2 v2.80.1
 	k8s.io/kubernetes v1.23.5
 	k8s.io/mount-utils v0.23.5
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
