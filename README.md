@@ -6,9 +6,11 @@ The IBM Power Virtual Systems Container Storage Interface (CSI) Driver provides 
 
 
 # CSI Specification Compatibility Matrix
-| PowerVS CSI Driver \ CSI Version | v1.5.0 |
-| ----------------------------- | -------|
-| main branch | yes |
+| PowerVS CSI Driver | Kubernetes | CSI | Golang |
+| ----------------------------- | ----------- | -------- | -------- |
+| main | 1.24 | 1.5.0 | 1.18 |
+| 0.2.0 | 1.24 | 1.5.0 | 1.18 |
+| 0.1.0 | 1.23 | 1.5.0 | 1.17 |
 
 # Features
 The following CSI gRPC calls are implemented:
