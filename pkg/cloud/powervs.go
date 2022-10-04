@@ -72,15 +72,6 @@ type powerVSCloud struct {
 	volClient          *instance.IBMPIVolumeClient
 }
 
-type User struct {
-	ID         string
-	Email      string
-	Account    string
-	cloudName  string `default:"bluemix"`
-	cloudType  string `default:"public"`
-	generation int    `default:"2"`
-}
-
 type PVMInstance struct {
 	ID      string
 	ImageID string
@@ -107,7 +98,7 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 	if err != nil {
 		return nil, fmt.Errorf("errored while creating NewResourceControllerV2UsingExternalConfig: %v", err)
 	}
-	list, _, err := serviceClient.ListResourceInstances(&resourcecontrollerv2.ListResourceInstancesOptions{
+	resourceInstanceList, _, err := serviceClient.ListResourceInstances(&resourcecontrollerv2.ListResourceInstancesOptions{
 		GUID:           &cloudInstanceID,
 		ResourceID:     &powerVSServiceID,
 		ResourcePlanID: &powerVSPlanID,
@@ -116,12 +107,12 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 		return nil, fmt.Errorf("errored while listing the Power VS service instance with ID: %s, err: %v", cloudInstanceID, err)
 	}
 
-	if len(list.Resources) == 0 {
+	if len(resourceInstanceList.Resources) == 0 {
 		return nil, fmt.Errorf("no Power VS service instance found with ID: %s", cloudInstanceID)
 	}
 
 	authenticator := &core.IamAuthenticator{ApiKey: apikey}
-	piOptions := ibmpisession.IBMPIOptions{Authenticator: authenticator, Debug: debug, UserAccount: *list.Resources[0].AccountID, Zone: zone}
+	piOptions := ibmpisession.IBMPIOptions{Authenticator: authenticator, Debug: debug, UserAccount: *resourceInstanceList.Resources[0].AccountID, Zone: zone}
 	piSession, err := ibmpisession.NewIBMPISession(&piOptions)
 	if err != nil {
 		return nil, err

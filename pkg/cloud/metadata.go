@@ -63,7 +63,7 @@ func TokenizeProviderID(providerID string) (*Metadata, error) {
 	data := strings.Split(providerID, "/")
 	errFormat := "invalid ProviderID format - %v, expected format - ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>, err: %s"
 	if len(data) != ProviderIDValidLength {
-		return nil, fmt.Errorf(errFormat, providerID, "invalid lenght")
+		return nil, fmt.Errorf(errFormat, providerID, "invalid length")
 	}
 	if data[2] == "" {
 		return nil, fmt.Errorf(errFormat, providerID, "region can't be empty")
