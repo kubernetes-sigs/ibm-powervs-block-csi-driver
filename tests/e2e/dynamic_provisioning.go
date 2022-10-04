@@ -330,12 +330,12 @@ var _ = Describe("[powervs-csi-e2e]Dynamic Provisioning", func() {
 			},
 		}
 
-		cloudInstanceId, err := testsuites.GetCloudInstanceIdFromNodeSpec(cs)
+		metadata, err := testsuites.GetInstanceMetadataFromNodeSpec(cs)
 		if err != nil {
 			Skip(fmt.Sprintf("Could not get cloudInstanceId : %v", err))
 		}
 
-		cloud, err := powervscloud.NewPowerVSCloud(cloudInstanceId, debug)
+		cloud, err := powervscloud.NewPowerVSCloud(metadata.GetCloudInstanceId(), debug)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

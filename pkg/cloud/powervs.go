@@ -18,31 +18,38 @@ package cloud
 import (
 	"context"
 	"fmt"
-	gohttp "net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/IBM-Cloud/bluemix-go"
-	"github.com/IBM-Cloud/bluemix-go/api/resource/resourcev2/controllerv2"
-	"github.com/IBM-Cloud/bluemix-go/authentication"
-	"github.com/IBM-Cloud/bluemix-go/http"
-	"github.com/IBM-Cloud/bluemix-go/rest"
-	bxsession "github.com/IBM-Cloud/bluemix-go/session"
 	"github.com/IBM-Cloud/power-go-client/clients/instance"
 	"github.com/IBM-Cloud/power-go-client/errors"
 	"github.com/IBM-Cloud/power-go-client/ibmpisession"
 	"github.com/IBM-Cloud/power-go-client/power/client/p_cloud_volumes"
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/IBM/go-sdk-core/v5/core"
+	"github.com/IBM/platform-services-go-sdk/resourcecontrollerv2"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/golang-jwt/jwt"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
 var _ Cloud = &powerVSCloud{}
+
+var (
+	// TODO: Never seen these catalog values changing, lets add code to get these values in future for the sake of better design.
+
+	// This can be found in the IBM Cloud catalog, command used to get this information is
+	// $ ibmcloud catalog service-marketplace| grep power-iaas
+	// abd259f0-9990-11e8-acc8-b9f54a8f1661 power-iaas
+	powerVSServiceID = "abd259f0-9990-11e8-acc8-b9f54a8f1661"
+
+	// PlanID can be fetched via command:
+	// $ ibmcloud catalog service abd259f0-9990-11e8-acc8-b9f54a8f1661 | grep plan
+	//                 power-virtual-server-group                    plan         f165dd34-3a40-423b-9d95-e90a23f724dd
+	powerVSPlanID = "f165dd34-3a40-423b-9d95-e90a23f724dd"
+)
 
 const (
 	PollTimeout          = 120 * time.Second
@@ -56,14 +63,12 @@ type PowerVSClient interface {
 }
 
 type powerVSCloud struct {
-	bxSess    *bxsession.Session
 	piSession *ibmpisession.IBMPISession
 
 	cloudInstanceID string
 
 	imageClient        *instance.IBMPIImageClient
 	pvmInstancesClient *instance.IBMPIInstanceClient
-	resourceClient     controllerv2.ResourceServiceInstanceRepository
 	volClient          *instance.IBMPIVolumeClient
 }
 
@@ -88,95 +93,35 @@ type PVMImage struct {
 	DiskType string
 }
 
-func authenticateAPIKey(sess *bxsession.Session) error {
-	config := sess.Config
-	tokenRefresher, err := authentication.NewIAMAuthRepository(config, &rest.Client{
-		DefaultHeader: gohttp.Header{
-			"User-Agent": []string{http.UserAgent()},
-		},
-	})
-	if err != nil {
-		return err
-	}
-	return tokenRefresher.AuthenticateAPIKey(config.BluemixAPIKey)
+func NewPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
+	return newPowerVSCloud(cloudInstanceID, zone, debug)
 }
 
-func fetchUserDetails(sess *bxsession.Session, generation int) (*User, error) {
-	config := sess.Config
-	user := User{}
-	var bluemixToken string
-
-	if strings.HasPrefix(config.IAMAccessToken, "Bearer") {
-		bluemixToken = config.IAMAccessToken[7:len(config.IAMAccessToken)]
-	} else {
-		bluemixToken = config.IAMAccessToken
-	}
-
-	token, err := jwt.Parse(bluemixToken, func(token *jwt.Token) (interface{}, error) {
-		return "", nil
-	})
-	if err != nil && !strings.Contains(err.Error(), "key is of invalid type") {
-		return &user, err
-	}
-
-	claims := token.Claims.(jwt.MapClaims)
-	if email, ok := claims["email"]; ok {
-		user.Email = email.(string)
-	}
-	user.ID = claims["id"].(string)
-	user.Account = claims["account"].(map[string]interface{})["bss"].(string)
-	iss := claims["iss"].(string)
-	if strings.Contains(iss, "https://iam.cloud.ibm.com") {
-		user.cloudName = "bluemix"
-	} else {
-		user.cloudName = "staging"
-	}
-	user.cloudType = "public"
-
-	user.generation = generation
-	return &user, nil
-}
-
-func NewPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
-	return newPowerVSCloud(cloudInstanceID, debug)
-}
-
-func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
+func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 	apikey := os.Getenv("IBMCLOUD_API_KEY")
-	bxSess, err := bxsession.New(&bluemix.Config{BluemixAPIKey: apikey})
+
+	serviceClientOptions := &resourcecontrollerv2.ResourceControllerV2Options{
+		Authenticator: &core.IamAuthenticator{ApiKey: apikey},
+	}
+	serviceClient, err := resourcecontrollerv2.NewResourceControllerV2UsingExternalConfig(serviceClientOptions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("errored while creating NewResourceControllerV2UsingExternalConfig: %v", err)
+	}
+	list, _, err := serviceClient.ListResourceInstances(&resourcecontrollerv2.ListResourceInstancesOptions{
+		GUID:           &cloudInstanceID,
+		ResourceID:     &powerVSServiceID,
+		ResourcePlanID: &powerVSPlanID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("errored while listing the Power VS service instance with ID: %s, err: %v", cloudInstanceID, err)
 	}
 
-	err = authenticateAPIKey(bxSess)
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := fetchUserDetails(bxSess, 2)
-	if err != nil {
-		return nil, err
-	}
-
-	ctrlv2, err := controllerv2.New(bxSess)
-	if err != nil {
-		return nil, err
-	}
-
-	resourceClient := ctrlv2.ResourceServiceInstanceV2()
-	in, err := resourceClient.GetInstance(cloudInstanceID)
-	if err != nil {
-		return nil, err
-	}
-
-	zone := in.RegionID
-	region, err := getRegion(zone)
-	if err != nil {
-		return nil, err
+	if len(list.Resources) == 0 {
+		return nil, fmt.Errorf("no Power VS service instance found with ID: %s", cloudInstanceID)
 	}
 
 	authenticator := &core.IamAuthenticator{ApiKey: apikey}
-	piOptions := ibmpisession.IBMPIOptions{Authenticator: authenticator, Debug: debug, Region: region, UserAccount: user.Account, Zone: zone}
+	piOptions := ibmpisession.IBMPIOptions{Authenticator: authenticator, Debug: debug, UserAccount: *list.Resources[0].AccountID, Zone: zone}
 	piSession, err := ibmpisession.NewIBMPISession(&piOptions)
 	if err != nil {
 		return nil, err
@@ -188,12 +133,10 @@ func newPowerVSCloud(cloudInstanceID string, debug bool) (Cloud, error) {
 	imageClient := instance.NewIBMPIImageClient(backgroundContext, piSession, cloudInstanceID)
 
 	return &powerVSCloud{
-		bxSess:             bxSess,
 		piSession:          piSession,
 		cloudInstanceID:    cloudInstanceID,
 		imageClient:        imageClient,
 		pvmInstancesClient: pvmInstancesClient,
-		resourceClient:     resourceClient,
 		volClient:          volClient,
 	}, nil
 }
@@ -390,35 +333,4 @@ func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 		Shareable:   *v.Shareable,
 		CapacityGiB: int64(*v.Size),
 	}, nil
-}
-
-func getRegion(zone string) (region string, err error) {
-	err = nil
-	switch {
-	case strings.HasPrefix(zone, "us-south"):
-		region = "us-south"
-	case strings.HasPrefix(zone, "us-east"):
-		region = "us-east"
-	case strings.HasPrefix(zone, "tor"):
-		region = "tor"
-	case strings.HasPrefix(zone, "eu-de-"):
-		region = "eu-de"
-	case strings.HasPrefix(zone, "lon"):
-		region = "lon"
-	case strings.HasPrefix(zone, "syd"):
-		region = "syd"
-	case strings.HasPrefix(zone, "mon"):
-		region = "mon"
-	case strings.HasPrefix(zone, "osa"):
-		region = "osa"
-	case strings.HasPrefix(zone, "dal"):
-		region = "dal"
-	case strings.HasPrefix(zone, "sao"):
-		region = "sao"
-	case strings.HasPrefix(zone, "tok"):
-		region = "tok"
-	default:
-		return "", fmt.Errorf("region not found for the zone, talk to the developer to add the support into the tool: %s", zone)
-	}
-	return
 }
