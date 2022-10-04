@@ -77,7 +77,7 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 			Skip(fmt.Sprintf("Could not get cloudInstanceId : %v", err))
 		}
 
-		cloud, err = powervscloud.NewPowerVSCloud(metadata.GetCloudInstanceId(), debug)
+		cloud, err = powervscloud.NewPowerVSCloud(metadata.GetCloudInstanceId(), metadata.GetZone(), debug)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}
