@@ -27,18 +27,19 @@ const (
 	PowerVSInstanceStateSHUTOFF = "SHUTOFF"
 	PowerVSInstanceStateACTIVE  = "ACTIVE"
 	StoragePoolAffinity         = false
-	ProviderIDValidLength       = 6
 )
 
 type NodeUpdateScopeParams struct {
 	ServiceInstanceId string
 	InstanceId        string
+	Zone              string
 }
 
 type NodeUpdateScope struct {
 	Cloud
 	ServiceInstanceId string
 	InstanceId        string
+	Zone              string
 }
 
 func NewNodeUpdateScope(params NodeUpdateScopeParams) (scope *NodeUpdateScope, err error) {
@@ -56,7 +57,13 @@ func NewNodeUpdateScope(params NodeUpdateScopeParams) (scope *NodeUpdateScope, e
 	}
 	scope.InstanceId = params.InstanceId
 
-	c, err := NewPowerVSCloud(scope.ServiceInstanceId, false)
+	if params.Zone == "" {
+		err = errors.New("zone is required when creating a NodeUpdateScope")
+		return
+	}
+	scope.Zone = params.Zone
+
+	c, err := NewPowerVSCloud(scope.ServiceInstanceId, scope.Zone, false)
 	if err != nil {
 		panic(err)
 	}

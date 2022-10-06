@@ -79,7 +79,7 @@ func newNodeService(driverOptions *Options) nodeService {
 		panic(err)
 	}
 
-	pvsCloud, err := NewPowerVSCloudFunc(metadata.GetCloudInstanceId(), driverOptions.debug)
+	pvsCloud, err := NewPowerVSCloudFunc(metadata.GetCloudInstanceId(), metadata.GetZone(), driverOptions.debug)
 	if err != nil {
 		panic(err)
 	}
