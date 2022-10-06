@@ -15,7 +15,7 @@ require (
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sys v0.0.0-20220330033206-e17cdc41300f
-	google.golang.org/grpc v1.49.0
+	google.golang.org/grpc v1.50.0
 	k8s.io/api v0.24.6
 	k8s.io/apimachinery v0.24.6
 	k8s.io/client-go v1.24.6
