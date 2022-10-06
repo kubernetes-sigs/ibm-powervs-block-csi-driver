@@ -18,6 +18,8 @@ package cloud
 
 // MetadataService represents Power VS metadata service.
 type MetadataService interface {
+	GetRegion() string
+	GetZone() string
 	GetCloudInstanceId() string
 	GetPvmInstanceId() string
 }

@@ -544,14 +544,10 @@ func podLogs(client clientset.Interface, name, namespace string) ([]byte, error)
 }
 
 // Method to get cloudInstanceId from Node Labels
-func GetCloudInstanceIdFromNodeSpec(client clientset.Interface) (string, error) {
+func GetInstanceMetadataFromNodeSpec(client clientset.Interface) (*powervscloud.Metadata, error) {
 	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		return "", fmt.Errorf("error getting cloudInstanceId: %+v", err)
+		return nil, fmt.Errorf("error listing nodes: %+v", err)
 	}
-	instanceInfo, err := powervscloud.GetInstanceInfoFromProviderID(client, nodes.Items[0].Name)
-	if err != nil {
-		return "", fmt.Errorf("error getting Node Info From Provider ID: %+v", err)
-	}
-	return instanceInfo.GetCloudInstanceId(), nil
+	return powervscloud.GetInstanceInfoFromProviderID(client, nodes.Items[0].Name)
 }

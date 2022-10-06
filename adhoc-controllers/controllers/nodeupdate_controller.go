@@ -19,8 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -62,14 +60,15 @@ func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 	// ProviderID format: ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>
 	if node.Spec.ProviderID != "" {
 		klog.Infof("PROVIDER-ID: %s", node.Spec.ProviderID)
-		data := strings.Split(node.Spec.ProviderID, "/")
-		if len(data) != cloud.ProviderIDValidLength {
-			return ctrl.Result{}, fmt.Errorf("invalid ProviderID format - %v, expected format - ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>", node.Spec.ProviderID)
+		metadata, err := cloud.TokenizeProviderID(node.Spec.ProviderID)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to tokenize the providerID and err: %v", err)
 		}
 
 		nodeUpdateScope, err := cloud.NewNodeUpdateScope(cloud.NodeUpdateScopeParams{
-			ServiceInstanceId: data[4],
-			InstanceId:        data[5],
+			ServiceInstanceId: metadata.GetCloudInstanceId(),
+			InstanceId:        metadata.GetPvmInstanceId(),
+			Zone:              metadata.GetZone(),
 		})
 
 		if err != nil {
