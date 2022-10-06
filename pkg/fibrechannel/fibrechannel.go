@@ -37,7 +37,7 @@ type ioHandler interface {
 	WriteFile(filename string, data []byte, perm os.FileMode) error
 }
 
-//Connector provides a struct to hold all of the needed parameters to make our Fibre Channel connection
+// Connector provides a struct to hold all of the needed parameters to make our Fibre Channel connection
 type Connector struct {
 	VolumeName string
 	TargetWWNs []string
@@ -45,25 +45,25 @@ type Connector struct {
 	WWIDs      []string
 }
 
-//OSioHandler is a wrapper that includes all the necessary io functions used for (Should be used as default io handler)
+// OSioHandler is a wrapper that includes all the necessary io functions used for (Should be used as default io handler)
 type OSioHandler struct{}
 
-//ReadDir calls the ReadDir function from ioutil package
+// ReadDir calls the ReadDir function from ioutil package
 func (handler *OSioHandler) ReadDir(dirname string) ([]os.FileInfo, error) {
 	return ioutil.ReadDir(dirname)
 }
 
-//Lstat calls the Lstat function from os package
+// Lstat calls the Lstat function from os package
 func (handler *OSioHandler) Lstat(name string) (os.FileInfo, error) {
 	return os.Lstat(name)
 }
 
-//EvalSymlinks calls EvalSymlinks from filepath package
+// EvalSymlinks calls EvalSymlinks from filepath package
 func (handler *OSioHandler) EvalSymlinks(path string) (string, error) {
 	return filepath.EvalSymlinks(path)
 }
 
-//WriteFile calls WriteFile from ioutil package
+// WriteFile calls WriteFile from ioutil package
 func (handler *OSioHandler) WriteFile(filename string, data []byte, perm os.FileMode) error {
 	return ioutil.WriteFile(filename, data, perm)
 }
@@ -301,7 +301,7 @@ func Detach(devicePath string, io ioHandler) error {
 	return nil
 }
 
-//FindSlaveDevicesOnMultipath returns all slaves on the multipath device given the device path
+// FindSlaveDevicesOnMultipath returns all slaves on the multipath device given the device path
 func FindSlaveDevicesOnMultipath(dm string, io ioHandler) []string {
 	var devices []string
 	// Split path /dev/dm-1 into "", "dev", "dm-1"
