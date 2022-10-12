@@ -41,10 +41,6 @@ There are couple driver options that can be passed as arguments when starting dr
 # IBM PowerVS Block CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
-## Kubernetes Version Compatibility Matrix
-| PowerVS CSI Driver \ Kubernetes Version| v1.23 |
-|----------------------------------------|-------|
-| main branch                          | yes   |
 
 ## Features
 * **Static Provisioning** - create a new or migrating existing PowerVS volumes, then create persistence volume (PV) from the PowerVS volume and consume the PV from container using persistence volume claim (PVC).
