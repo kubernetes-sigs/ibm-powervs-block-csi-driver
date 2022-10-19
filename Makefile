@@ -44,7 +44,7 @@ node-update-controller: | bin
 
 .PHONY: test
 test:
-	go test -v -race ./cmd/... ./pkg/...
+	./hack/test.sh
 
 .PHONY: image
 image:
