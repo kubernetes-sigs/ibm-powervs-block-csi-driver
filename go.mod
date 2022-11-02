@@ -12,7 +12,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.23.0
+	github.com/onsi/gomega v1.24.0
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sys v0.1.0
 	google.golang.org/grpc v1.50.1
