@@ -61,7 +61,7 @@ func (su *VolumeStatUtils) DeviceInfo(devicePath string) (int64, error) {
 	return gotSizeBytes, nil
 }
 
-//FSInfo ...
+// FSInfo ...
 func (su *VolumeStatUtils) FSInfo(path string) (int64, int64, int64, int64, int64, int64, error) {
 	return fs.Info(path)
 }

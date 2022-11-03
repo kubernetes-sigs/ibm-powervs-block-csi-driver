@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -61,20 +60,11 @@ func GetInstanceInfoFromProviderID(clientset kubernetes.Interface, nodeName stri
 		return nil, fmt.Errorf("error getting Node %s: %v", nodeName, err)
 	}
 
-	instanceInfo := Metadata{}
-	// ProviderID format: ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>
 	if node.Spec.ProviderID != "" {
 		providerId := node.Spec.ProviderID
 		klog.Infof("Node Name: %s, Provider ID: %s", nodeName, providerId)
-		data := strings.Split(providerId, "/")
-		if len(data) != ProviderIDValidLength {
-			return nil, fmt.Errorf("invalid ProviderID format - %v, expected format - ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>", providerId)
-		}
-		instanceInfo.cloudInstanceId = data[4]
-		instanceInfo.pvmInstanceId = data[5]
+		return TokenizeProviderID(providerId)
 	} else {
 		return nil, fmt.Errorf("ProviderID is empty for the node: %s", nodeName)
 	}
-
-	return &instanceInfo, nil
 }

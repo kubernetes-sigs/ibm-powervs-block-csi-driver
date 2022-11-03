@@ -72,12 +72,12 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 			Skip(fmt.Sprintf("env %q not set", apiKeyEnv))
 		}
 		var err error
-		cloudInstanceId, err := testsuites.GetCloudInstanceIdFromNodeSpec(cs)
+		metadata, err := testsuites.GetInstanceMetadataFromNodeSpec(cs)
 		if err != nil {
 			Skip(fmt.Sprintf("Could not get cloudInstanceId : %v", err))
 		}
 
-		cloud, err = powervscloud.NewPowerVSCloud(cloudInstanceId, debug)
+		cloud, err = powervscloud.NewPowerVSCloud(metadata.GetCloudInstanceId(), metadata.GetZone(), debug)
 		if err != nil {
 			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
 		}

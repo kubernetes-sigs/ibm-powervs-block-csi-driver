@@ -35,6 +35,10 @@ type TransitGatewayInstance struct {
 	// Example: crn:v1:bluemix:public:power-iaas:dal12:a/2bc3df23c0d14ebe921397bd8aa2573a:3a5798f1-4d2b-4e0a-9311-9b0fd6b94698::
 	ServiceCrn string `json:"serviceCrn,omitempty"`
 
+	// The PowerVS Service Instance ID
+	// Example: 3a5798f1-4d2b-4e0a-9311-9b0fd6b94698
+	ServiceID string `json:"serviceId,omitempty"`
+
 	// transit connection error
 	// Required: true
 	TransitConnectionError *TransitConnectionError `json:"transitConnectionError"`

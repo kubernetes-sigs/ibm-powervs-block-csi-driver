@@ -6,9 +6,11 @@ The IBM Power Virtual Systems Container Storage Interface (CSI) Driver provides 
 
 
 # CSI Specification Compatibility Matrix
-| PowerVS CSI Driver \ CSI Version | v1.5.0 |
-| ----------------------------- | -------|
-| main branch | yes |
+| PowerVS CSI Driver | Kubernetes | CSI | Golang |
+| ----------------------------- | ----------- | -------- | -------- |
+| main | 1.24 | 1.5.0 | 1.18 |
+| 0.2.0 | 1.24 | 1.5.0 | 1.18 |
+| 0.1.0 | 1.23 | 1.5.0 | 1.17 |
 
 # Features
 The following CSI gRPC calls are implemented:
@@ -39,10 +41,6 @@ There are couple driver options that can be passed as arguments when starting dr
 # IBM PowerVS Block CSI Driver on Kubernetes
 Following sections are Kubernetes specific. If you are Kubernetes user, use followings for driver features, installation steps and examples.
 
-## Kubernetes Version Compatibility Matrix
-| PowerVS CSI Driver \ Kubernetes Version| v1.23 |
-|----------------------------------------|-------|
-| main branch                          | yes   |
 
 ## Features
 * **Static Provisioning** - create a new or migrating existing PowerVS volumes, then create persistence volume (PV) from the PowerVS volume and consume the PV from container using persistence volume claim (PVC).
@@ -74,7 +72,7 @@ Please see the compatibility matrix above before you deploy the driver
 
 To deploy the CSI driver:
 ```sh
-kubectl apply -k "https://github.com/kubernetes-sigs/ibm-powervs-block-csi-driver/deploy/kubernetes/overlays/stable/?ref=v0.1.1"
+kubectl apply -k "https://github.com/kubernetes-sigs/ibm-powervs-block-csi-driver/deploy/kubernetes/overlays/stable/?ref=v0.2.0"
 ```
 
 Verify driver is running:
