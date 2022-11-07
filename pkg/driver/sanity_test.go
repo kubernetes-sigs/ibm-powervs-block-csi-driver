@@ -218,11 +218,19 @@ func (c *fakeCloudProvider) DetachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
+func (c *fakeCloudProvider) CloneDisk(sourceVolumeName string, cloneVolumeName string) (disk *cloud.Disk, err error) {
+	return nil, nil
+}
+
 func (c *fakeCloudProvider) IsAttached(volumeID string, nodeID string) (attached bool, err error) {
 	return true, nil
 }
 
 func (c *fakeCloudProvider) WaitForVolumeState(volumeID, expectedState string) error {
+	return nil
+}
+
+func (c *fakeCloudProvider) WaitForCloneStatus(cloneTaskId string) error {
 	return nil
 }
 
@@ -237,6 +245,10 @@ func (c *fakeCloudProvider) GetDiskByName(name string) (*cloud.Disk, error) {
 
 		return disks[0].Disk, nil
 	}
+	return nil, nil
+}
+
+func (c *fakeCloudProvider) GetDiskByNamePrefix(namePrefix string) (*cloud.Disk, error) {
 	return nil, nil
 }
 
