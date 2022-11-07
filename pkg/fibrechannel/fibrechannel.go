@@ -18,7 +18,6 @@ package fibrechannel
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -31,7 +30,7 @@ import (
 )
 
 type ioHandler interface {
-	ReadDir(dirname string) ([]os.FileInfo, error)
+	ReadDir(dirname string) ([]os.DirEntry, error)
 	Lstat(name string) (os.FileInfo, error)
 	EvalSymlinks(path string) (string, error)
 	WriteFile(filename string, data []byte, perm os.FileMode) error
@@ -49,8 +48,8 @@ type Connector struct {
 type OSioHandler struct{}
 
 // ReadDir calls the ReadDir function from ioutil package
-func (handler *OSioHandler) ReadDir(dirname string) ([]os.FileInfo, error) {
-	return ioutil.ReadDir(dirname)
+func (handler *OSioHandler) ReadDir(dirname string) ([]os.DirEntry, error) {
+	return os.ReadDir(dirname)
 }
 
 // Lstat calls the Lstat function from os package
@@ -65,7 +64,7 @@ func (handler *OSioHandler) EvalSymlinks(path string) (string, error) {
 
 // WriteFile calls WriteFile from ioutil package
 func (handler *OSioHandler) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	return ioutil.WriteFile(filename, data, perm)
+	return os.WriteFile(filename, data, perm)
 }
 
 // FindMultipathDeviceForDevice given a device name like /dev/sdx, find the devicemapper parent
