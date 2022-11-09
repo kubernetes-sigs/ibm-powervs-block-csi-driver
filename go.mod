@@ -8,7 +8,6 @@ require (
 	github.com/IBM/platform-services-go-sdk v0.29.1
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/golang/glog v1.0.0
 	github.com/golang/mock v1.6.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/onsi/ginkgo v1.16.5
