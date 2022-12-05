@@ -22,10 +22,11 @@ import (
 	"os"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
+	admissionapi "k8s.io/pod-security-admission/api"
 	powervscloud "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	powervscsidriver "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
@@ -45,6 +46,7 @@ var (
 
 var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("powervs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		cs                         clientset.Interface

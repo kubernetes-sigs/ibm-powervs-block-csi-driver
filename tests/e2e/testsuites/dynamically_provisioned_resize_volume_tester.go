@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	clientset "k8s.io/client-go/kubernetes"
 )
 
