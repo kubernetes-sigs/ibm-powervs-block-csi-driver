@@ -24,16 +24,18 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
+	admissionapi "k8s.io/pod-security-admission/api"
 	powervscloud "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	powervscsidriver "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/testsuites"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 var _ = Describe("[powervs-csi-e2e]Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("powervs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		cs           clientset.Interface
@@ -403,6 +405,7 @@ var _ = Describe("[powervs-csi-e2e]Dynamic Provisioning", func() {
 
 var _ = Describe("[powervs-csi-e2e] Volume binding mode test Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("powervs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	var (
 		cs           clientset.Interface

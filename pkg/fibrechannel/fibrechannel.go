@@ -18,11 +18,10 @@ package fibrechannel
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 
 	"errors"
 	"path"
@@ -31,7 +30,7 @@ import (
 )
 
 type ioHandler interface {
-	ReadDir(dirname string) ([]os.FileInfo, error)
+	ReadDir(dirname string) ([]os.DirEntry, error)
 	Lstat(name string) (os.FileInfo, error)
 	EvalSymlinks(path string) (string, error)
 	WriteFile(filename string, data []byte, perm os.FileMode) error
@@ -49,8 +48,8 @@ type Connector struct {
 type OSioHandler struct{}
 
 // ReadDir calls the ReadDir function from ioutil package
-func (handler *OSioHandler) ReadDir(dirname string) ([]os.FileInfo, error) {
-	return ioutil.ReadDir(dirname)
+func (handler *OSioHandler) ReadDir(dirname string) ([]os.DirEntry, error) {
+	return os.ReadDir(dirname)
 }
 
 // Lstat calls the Lstat function from os package
@@ -65,7 +64,7 @@ func (handler *OSioHandler) EvalSymlinks(path string) (string, error) {
 
 // WriteFile calls WriteFile from ioutil package
 func (handler *OSioHandler) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	return ioutil.WriteFile(filename, data, perm)
+	return os.WriteFile(filename, data, perm)
 }
 
 // FindMultipathDeviceForDevice given a device name like /dev/sdx, find the devicemapper parent
@@ -227,19 +226,19 @@ func findDiskWWIDs(wwid string, io ioHandler) (string, string) {
 			if name == FcPath {
 				disk, err := io.EvalSymlinks(DevID + name)
 				if err != nil {
-					glog.Errorf("fc: failed to find a corresponding disk from symlink[%s], error %v", DevID+name, err)
+					klog.Errorf("fc: failed to find a corresponding disk from symlink[%s], error %v", DevID+name, err)
 					return "", ""
 				}
 				dm, err1 := FindMultipathDeviceForDevice(disk, io)
 				if err1 != nil {
-					glog.Errorf("fc: failed to find a multipath disk for %s, error %v", disk, err)
+					klog.Errorf("fc: failed to find a multipath disk for %s, error %v", disk, err)
 					return disk, ""
 				}
 				return disk, dm
 			}
 		}
 	}
-	glog.Errorf("fc: failed to find a disk [%s]", DevID+FcPath)
+	klog.Errorf("fc: failed to find a disk [%s]", DevID+FcPath)
 	return "", ""
 }
 
@@ -249,11 +248,11 @@ func Attach(c Connector, io ioHandler) (string, error) {
 		io = &OSioHandler{}
 	}
 
-	glog.Infof("Attaching fibre channel volume")
+	klog.Infof("Attaching fibre channel volume")
 	devicePath, err := searchDisk(c, io)
 
 	if err != nil {
-		glog.Infof("unable to find disk given WWNN or WWIDs")
+		klog.Infof("unable to find disk given WWNN or WWIDs")
 		return "", err
 	}
 
@@ -266,7 +265,7 @@ func Detach(devicePath string, io ioHandler) error {
 		io = &OSioHandler{}
 	}
 
-	glog.Infof("Detaching fibre channel volume")
+	klog.Infof("Detaching fibre channel volume")
 	var devices []string
 	dstPath, err := io.EvalSymlinks(devicePath)
 
@@ -281,20 +280,20 @@ func Detach(devicePath string, io ioHandler) error {
 		devices = append(devices, dstPath)
 	}
 
-	glog.Infof("fc: DetachDisk devicePath: %v, dstPath: %v, devices: %v", devicePath, dstPath, devices)
+	klog.Infof("fc: DetachDisk devicePath: %v, dstPath: %v, devices: %v", devicePath, dstPath, devices)
 
 	var lastErr error
 
 	for _, device := range devices {
 		err := detachFCDisk(device, io)
 		if err != nil {
-			glog.Errorf("fc: detachFCDisk failed. device: %v err: %v", device, err)
+			klog.Errorf("fc: detachFCDisk failed. device: %v err: %v", device, err)
 			lastErr = fmt.Errorf("fc: detachFCDisk failed. device: %v err: %v", device, err)
 		}
 	}
 
 	if lastErr != nil {
-		glog.Errorf("fc: last error occurred during detach disk:\n%v", lastErr)
+		klog.Errorf("fc: last error occurred during detach disk:\n%v", lastErr)
 		return lastErr
 	}
 
@@ -334,7 +333,7 @@ func detachFCDisk(devicePath string, io ioHandler) error {
 // Removes a scsi device based upon /dev/sdX name
 func removeFromScsiSubsystem(deviceName string, io ioHandler) error {
 	fileName := "/sys/block/" + deviceName + "/device/delete"
-	glog.Infof("fc: remove device from scsi-subsystem: path: %s", fileName)
+	klog.Infof("fc: remove device from scsi-subsystem: path: %s", fileName)
 	data := []byte("1")
 	err := io.WriteFile(fileName, data, 0666)
 	if err != nil {
@@ -349,6 +348,6 @@ func RemoveMultipathDevice(device string) error {
 	if err != nil {
 		return fmt.Errorf("failed remove multipath device: %s err: %v", device, err)
 	}
-	glog.Infof("output of multipath device remove command: %s", stdoutStderr)
+	klog.Infof("output of multipath device remove command: %s", stdoutStderr)
 	return nil
 }
