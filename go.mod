@@ -10,8 +10,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/mock v1.6.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
-	github.com/onsi/ginkgo/v2 v2.1.6
-	github.com/onsi/gomega v1.20.1
+	github.com/onsi/ginkgo/v2 v2.6.0
+	github.com/onsi/gomega v1.24.0
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sys v0.3.0
 	google.golang.org/grpc v1.51.0
