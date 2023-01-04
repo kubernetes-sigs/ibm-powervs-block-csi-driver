@@ -32,12 +32,11 @@ func main() {
 
 	drv, err := driver.NewDriver(
 		driver.WithEndpoint(options.ServerOptions.Endpoint),
-		//driver.WithExtraTags(options.ControllerOptions.ExtraTags),
-		//river.WithExtraVolumeTags(options.ControllerOptions.ExtraVolumeTags),
 		driver.WithMode(options.DriverMode),
 		driver.WithDebug(options.ServerOptions.Debug),
 		driver.WithVolumeAttachLimit(options.NodeOptions.VolumeAttachLimit),
-		//driver.WithKubernetesClusterID(options.ControllerOptions.KubernetesClusterID),
+		driver.WithKubeConfig(options.ServerOptions.Kubeconfig),
+		driver.WithCloudConfig(options.ServerOptions.Cloudconfig),
 	)
 	if err != nil {
 		klog.Fatalln(err)

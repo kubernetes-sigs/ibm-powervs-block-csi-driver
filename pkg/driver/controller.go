@@ -18,11 +18,13 @@ package driver
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	gcfg "gopkg.in/gcfg.v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
@@ -68,6 +70,20 @@ type controllerService struct {
 	volumeLocks   *util.VolumeLocks
 }
 
+// Provider holds information from the cloud provider.
+type Provider struct {
+	// PowerVSCloudInstanceID is IBM Power VS service instance id
+	PowerVSCloudInstanceID string `gcfg:"powerVSCloudInstanceID"`
+	// PowerVSZone is IBM Power VS service zone
+	PowerVSZone string `gcfg:"powerVSZone"`
+}
+
+// CloudConfig is the ibm cloud provider config data.
+type CloudConfig struct {
+	// [provider] section
+	Prov Provider `gcfg:"provider"`
+}
+
 var (
 	NewPowerVSCloudFunc = cloud.NewPowerVSCloud
 )
@@ -75,13 +91,37 @@ var (
 // newControllerService creates a new controller service
 // it panics if failed to create the service
 func newControllerService(driverOptions *Options) controllerService {
-	klog.V(4).Infof("retrieving node info from metadata service")
-	metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient)
-	if err != nil {
-		panic(err)
+	var (
+		cloudInstanceId string
+		zone            string
+	)
+	if driverOptions.cloudconfig != "" {
+		var cloudConfig CloudConfig
+		config, err := os.Open(driverOptions.cloudconfig)
+		if nil != err {
+			panic(err)
+		}
+		defer config.Close()
+
+		if err := gcfg.FatalOnly(gcfg.ReadInto(&cloudConfig, config)); err != nil {
+			panic(err)
+		}
+		cloudInstanceId = cloudConfig.Prov.PowerVSCloudInstanceID
+		zone = cloudConfig.Prov.PowerVSZone
+		if cloudInstanceId == "" || zone == "" {
+			panic(status.Errorf(codes.NotFound, "cloud instance id or zone is empty"))
+		}
+	} else {
+		klog.V(4).Infof("retrieving node info from metadata service")
+		metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient, driverOptions.kubeconfig)
+		if err != nil {
+			panic(err)
+		}
+		cloudInstanceId = metadata.GetCloudInstanceId()
+		zone = metadata.GetZone()
 	}
 
-	c, err := NewPowerVSCloudFunc(metadata.GetCloudInstanceId(), metadata.GetZone(), driverOptions.debug)
+	c, err := NewPowerVSCloudFunc(cloudInstanceId, zone, driverOptions.debug)
 	if err != nil {
 		panic(err)
 	}
