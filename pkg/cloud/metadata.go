@@ -86,9 +86,9 @@ func TokenizeProviderID(providerID string) (*Metadata, error) {
 }
 
 // Get New Metadata Service
-func NewMetadataService(k8sAPIClient KubernetesAPIClient) (MetadataService, error) {
+func NewMetadataService(k8sAPIClient KubernetesAPIClient, kubeconfig string) (MetadataService, error) {
 	klog.Infof("retrieving instance data from kubernetes api")
-	clientset, err := k8sAPIClient()
+	clientset, err := k8sAPIClient(kubeconfig)
 	if err != nil {
 		klog.Warningf("error creating kubernetes api client: %v", err)
 	} else {

@@ -30,9 +30,15 @@ type ServerOptions struct {
 	Endpoint string
 	// Debug
 	Debug bool
+	// Kubeconfig
+	Kubeconfig string
+	// Cloudconfig
+	Cloudconfig string
 }
 
 func (s *ServerOptions) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&s.Endpoint, "endpoint", driver.DefaultCSIEndpoint, "Endpoint for the CSI driver server")
 	fs.BoolVar(&s.Debug, "debug", false, "Debug option PowerVS client(Prints API requests and replies)")
+	fs.StringVar(&s.Kubeconfig, "kubeconfig", "", "Kubeconfig of the cluster")
+	fs.StringVar(&s.Cloudconfig, "cloud-config", "", "The path to the cloud provider configuration file. Empty string for no configuration file.")
 }
