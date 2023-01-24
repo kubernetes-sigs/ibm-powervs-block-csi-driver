@@ -23,16 +23,15 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 )
 
-type KubernetesAPIClient func() (kubernetes.Interface, error)
+type KubernetesAPIClient func(kubeconfig string) (kubernetes.Interface, error)
 
 // Get default kubernetes API client
-var DefaultKubernetesAPIClient = func() (kubernetes.Interface, error) {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
+var DefaultKubernetesAPIClient = func(kubeconfig string) (kubernetes.Interface, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		return nil, err
 	}

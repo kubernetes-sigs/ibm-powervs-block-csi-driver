@@ -62,6 +62,8 @@ type Options struct {
 	mode              Mode
 	volumeAttachLimit int64
 	debug             bool
+	kubeconfig        string
+	cloudconfig       string
 }
 
 func NewDriver(options ...func(*Options)) (*Driver, error) {
@@ -165,5 +167,17 @@ func WithDebug(debug bool) func(*Options) {
 func WithVolumeAttachLimit(volumeAttachLimit int64) func(*Options) {
 	return func(o *Options) {
 		o.volumeAttachLimit = volumeAttachLimit
+	}
+}
+
+func WithKubeConfig(kubeconfig string) func(*Options) {
+	return func(o *Options) {
+		o.kubeconfig = kubeconfig
+	}
+}
+
+func WithCloudConfig(cloudconfig string) func(*Options) {
+	return func(o *Options) {
+		o.cloudconfig = cloudconfig
 	}
 }
