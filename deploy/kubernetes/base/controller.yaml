@@ -26,7 +26,7 @@ spec:
         - operator: Exists
       containers:
         - name: powervs-plugin
-          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-powervs-block-csi-driver:main
+          image: k8s.gcr.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           imagePullPolicy: Always
           args:
             # - {all,controller,node} # specify the driver mode
@@ -63,7 +63,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-update-controller
-          image: gcr.io/k8s-staging-cloud-provider-ibm/ibm-powervs-block-csi-driver:main
+          image: k8s.gcr.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           command: ["/node-update-controller"]
           ports:
             - name: metrics
