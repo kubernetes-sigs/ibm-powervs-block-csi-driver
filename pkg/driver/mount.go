@@ -24,7 +24,6 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/mount-utils"
 	"k8s.io/utils/exec"
-	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/fibrechannel"
 )
 
 // Mounter is an interface for mount operations
@@ -37,7 +36,6 @@ type Mounter interface {
 	MakeDir(pathname string) error
 	ExistsPath(filename string) (bool, error)
 	RescanSCSIBus() error
-	GetDevicePath(wwn string) (string, error)
 }
 
 type NodeMounter struct {
@@ -63,14 +61,6 @@ func (m *NodeMounter) RescanSCSIBus() error {
 	}
 	klog.V(5).Infof("output of rescan-scsi-bus.sh: %s", stdoutStderr)
 	return nil
-}
-
-func (m *NodeMounter) GetDevicePath(wwn string) (devicePath string, err error) {
-	c := fibrechannel.Connector{}
-	// Prepending the 3 which is missing in the wwn getting it from the PowerVS infra
-	c.WWIDs = []string{"3" + wwn}
-
-	return fibrechannel.Attach(c, &fibrechannel.OSioHandler{})
 }
 
 func (m *NodeMounter) GetDeviceName(mountPath string) (string, int, error) {
