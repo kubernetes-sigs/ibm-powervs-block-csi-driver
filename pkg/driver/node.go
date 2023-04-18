@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
-	mountutils "k8s.io/mount-utils"
+	"k8s.io/mount-utils"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/fibrechannel"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
@@ -294,7 +294,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 	}
 
 	// TODO: refactor Mounter to expose a mount.SafeFormatAndMount object
-	r := mountutils.NewResizeFs(d.mounter.(*NodeMounter).Exec)
+	r := mount.NewResizeFs(d.mounter.(*NodeMounter).Exec)
 
 	// TODO: lock per volume ID to have some idempotency
 	if _, err := r.Resize(devicePath, req.GetVolumePath()); err != nil {

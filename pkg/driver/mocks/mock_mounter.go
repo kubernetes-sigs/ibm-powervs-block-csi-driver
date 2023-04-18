@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	mount "k8s.io/mount-utils"
 	exec "k8s.io/utils/exec"
-	mount "k8s.io/utils/mount"
 )
 
 // MockMounter is a mock of Mounter interface.
@@ -164,6 +164,21 @@ func (mr *MockMounterMockRecorder) IsLikelyNotMountPoint(file interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLikelyNotMountPoint", reflect.TypeOf((*MockMounter)(nil).IsLikelyNotMountPoint), file)
 }
 
+// IsMountPoint mocks base method.
+func (m *MockMounter) IsMountPoint(file string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsMountPoint", file)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsMountPoint indicates an expected call of IsMountPoint.
+func (mr *MockMounterMockRecorder) IsMountPoint(file interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMountPoint", reflect.TypeOf((*MockMounter)(nil).IsMountPoint), file)
+}
+
 // List mocks base method.
 func (m *MockMounter) List() ([]mount.MountPoint, error) {
 	m.ctrl.T.Helper()
@@ -250,6 +265,34 @@ func (mr *MockMounterMockRecorder) MountSensitive(source, target, fstype, option
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MountSensitive", reflect.TypeOf((*MockMounter)(nil).MountSensitive), source, target, fstype, options, sensitiveOptions)
 }
 
+// MountSensitiveWithoutSystemd mocks base method.
+func (m *MockMounter) MountSensitiveWithoutSystemd(source, target, fstype string, options, sensitiveOptions []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MountSensitiveWithoutSystemd", source, target, fstype, options, sensitiveOptions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MountSensitiveWithoutSystemd indicates an expected call of MountSensitiveWithoutSystemd.
+func (mr *MockMounterMockRecorder) MountSensitiveWithoutSystemd(source, target, fstype, options, sensitiveOptions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MountSensitiveWithoutSystemd", reflect.TypeOf((*MockMounter)(nil).MountSensitiveWithoutSystemd), source, target, fstype, options, sensitiveOptions)
+}
+
+// MountSensitiveWithoutSystemdWithMountFlags mocks base method.
+func (m *MockMounter) MountSensitiveWithoutSystemdWithMountFlags(source, target, fstype string, options, sensitiveOptions, mountFlags []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MountSensitiveWithoutSystemdWithMountFlags", source, target, fstype, options, sensitiveOptions, mountFlags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MountSensitiveWithoutSystemdWithMountFlags indicates an expected call of MountSensitiveWithoutSystemdWithMountFlags.
+func (mr *MockMounterMockRecorder) MountSensitiveWithoutSystemdWithMountFlags(source, target, fstype, options, sensitiveOptions, mountFlags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MountSensitiveWithoutSystemdWithMountFlags", reflect.TypeOf((*MockMounter)(nil).MountSensitiveWithoutSystemdWithMountFlags), source, target, fstype, options, sensitiveOptions, mountFlags)
+}
+
 // RescanSCSIBus mocks base method.
 func (m *MockMounter) RescanSCSIBus() error {
 	m.ctrl.T.Helper()
@@ -276,4 +319,18 @@ func (m *MockMounter) Unmount(target string) error {
 func (mr *MockMounterMockRecorder) Unmount(target interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unmount", reflect.TypeOf((*MockMounter)(nil).Unmount), target)
+}
+
+// canSafelySkipMountPointCheck mocks base method.
+func (m *MockMounter) canSafelySkipMountPointCheck() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "canSafelySkipMountPointCheck")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// canSafelySkipMountPointCheck indicates an expected call of canSafelySkipMountPointCheck.
+func (mr *MockMounterMockRecorder) canSafelySkipMountPointCheck() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "canSafelySkipMountPointCheck", reflect.TypeOf((*MockMounter)(nil).canSafelySkipMountPointCheck))
 }
