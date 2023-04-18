@@ -38,8 +38,11 @@ const (
 )
 
 var (
-	showPathsFormat = []string{"show", "paths", "format", "%w %d %t %i %o %T %z %s %m"}
-	showMapsFormat  = []string{"show", "maps", "format", "%w %d %n %s"}
+	showPathsFormat  = []string{"show", "paths", "format", "%w %d %t %i %o %T %z %s %m"}
+	showMapsFormat   = []string{"show", "maps", "format", "%w %d %n %s"}
+	errorMapRegex    = regexp.MustCompile(errorMapPattern)
+	orphanPathRegexp = regexp.MustCompile(orphanPathsPattern)
+	faultyPathRegexp = regexp.MustCompile(faultyPathsPattern)
 )
 
 // PathInfo : struct for multipathd show paths
@@ -258,6 +261,123 @@ func deleteSdDevice(path string) (err error) {
 	if err != nil {
 		err = fmt.Errorf("error writing to file %s : %v", deletePath, err)
 		return err
+	}
+	return nil
+}
+
+func cleanupErrorMultipathMaps() (err error) {
+	// run dmsetup table and fetch error maps
+	args := []string{"table"}
+	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
+	if err != nil {
+		return err
+	}
+	out := string(outBytes)
+	listErrorMaps := errorMapRegex.FindAllString(out, -1)
+	for _, errorMap := range listErrorMaps {
+		result := findStringSubmatchMap(errorMap, errorMapRegex)
+		if mapName, ok := result["mapname"]; ok {
+			args := []string{"remove", mapName}
+			_, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
+			if err != nil {
+				// ignore errors as its a best effort to cleanup all error maps
+				continue
+			}
+		}
+	}
+	return nil
+}
+
+func cleanupOrphanPaths() (err error) {
+	// run multipathd show paths and fetch orphan maps
+	outBytes, err := exec.Command(multipathd, showPathsFormat...).CombinedOutput()
+	if err != nil {
+		return err
+	}
+	out := string(outBytes)
+	// rc can be 0 on the below error conditions as well
+	if isMultipathTimeoutError(out) {
+		err = fmt.Errorf("failed to get multipathd %v, out %s", showPathsFormat, out)
+		return err
+	}
+
+	listOrphanPaths := orphanPathRegexp.FindAllString(out, -1)
+	for _, orphanPath := range listOrphanPaths {
+		result := findStringSubmatchMap(orphanPath, orphanPathRegexp)
+		err := deleteSdDeviceByHctl(result["host"], result["channel"], result["target"], result["lun"])
+		if err != nil {
+			// ignore errors as its a best effort to cleanup all orphan maps
+			continue
+		}
+	}
+	return nil
+}
+
+// nolint as we want to keep updatePathSerialByHctl separate
+func deleteSdDeviceByHctl(h string, c string, t string, l string) (err error) {
+	deletePath := fmt.Sprintf("/sys/class/scsi_device/%s:%s:%s:%s/device/delete", h, c, t, l)
+	is, _, _ := FileExists(deletePath)
+	if is {
+		err := os.WriteFile(deletePath, []byte("1"), 0644)
+		if err != nil {
+			err = fmt.Errorf("error writing to file %s : %v", deletePath, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// cleanupStaleMaps cleanup maps which are not attached to a vend/prod/rev
+func cleanupStaleMaps() (err error) {
+	klog.Info("inside cleanupStaleMaps")
+	outBytes, err := exec.Command(multipathd, showMapsFormat...).CombinedOutput()
+	if err != nil {
+		return err
+	}
+	out := string(outBytes)
+	// rc can be 0 on the below error conditions as well
+	if isMultipathTimeoutError(out) {
+		err = fmt.Errorf("failed to get multipathd %v, out %s", showMapsFormat, out)
+		return err
+	}
+	r, err := regexp.Compile("(?m)^.*##,##")
+	if err != nil {
+		return err
+	}
+	staleMultipaths := r.FindAllString(out, -1)
+	klog.Infof("inside cleanupStaleMaps: found %d stale paths", len(staleMultipaths))
+	for _, line := range staleMultipaths {
+		entry := strings.Fields(line)
+		args := []string{"remove", "--force", entry[2]} // entry[2]: map name
+		_, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
+		if err != nil {
+			continue
+		}
+	}
+	return nil
+}
+
+func cleanupFaultyPaths() (err error) {
+	// run multipathd show paths and fetch orphan maps
+	outBytes, err := exec.Command(multipathd, showPathsFormat...).CombinedOutput()
+	if err != nil {
+		return err
+	}
+	out := string(outBytes)
+	// rc can be 0 on the below error conditions as well
+	if isMultipathTimeoutError(out) {
+		err = fmt.Errorf("failed to get multipathd %v, out %s", showPathsFormat, out)
+		return err
+	}
+
+	listFaultyPaths := faultyPathRegexp.FindAllString(out, -1)
+	for _, faultyPath := range listFaultyPaths {
+		result := findStringSubmatchMap(faultyPath, faultyPathRegexp)
+		err := deleteSdDeviceByHctl(result["host"], result["channel"], result["target"], result["lun"])
+		if err != nil {
+			// ignore errors as its a best effort to cleanup all fulty paths
+			continue
+		}
 	}
 	return nil
 }

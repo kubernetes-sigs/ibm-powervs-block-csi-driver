@@ -213,6 +213,14 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 				return d, nil
 			}
 		}
+		// handle faulty maps
+		cleanupFaultyPaths()
+		// handle stale maps
+		cleanupStaleMaps()
+		// handle orphan paths
+		cleanupOrphanPaths()
+		// handle error mappers
+		cleanupErrorMultipathMaps()
 
 		// sleeping for 5 seconds waiting for device to appear after rescan
 		time.Sleep(time.Second * 5)
