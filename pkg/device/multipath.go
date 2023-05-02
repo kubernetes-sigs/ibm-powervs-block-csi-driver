@@ -125,13 +125,8 @@ func multipathdShowCmd(search string, args []string) (output []string, err error
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
 
-	out, err := exec.Command(multipathd, args...).CombinedOutput()
+	out, err := exec.Command(multipathd, args...).Output()
 	if err != nil {
-		return nil, err
-	}
-	// rc can be 0 on the below error conditions as well
-	if isMultipathTimeoutError(string(out)) {
-		err = fmt.Errorf("failed to get multipathd %v, out %s", args, out)
 		return nil, err
 	}
 	r, err := regexp.Compile("(?m)^.*" + search + ".*$")

@@ -28,6 +28,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var (
+	lastCleanExecuted      time.Time
+	lastStaleCleanExecuted time.Time
+)
+
 // Device struct
 type Device struct {
 	Pathname string   `json:"pathname,omitempty"`
@@ -196,47 +201,35 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 
 	// find multipath devices after the rescan and login
 	// Start a Countdown ticker
-	var devices []*Device
-	for i := 0; i <= 5; i++ {
-		devices, err = getLinuxDmDevices(wwn, true)
-		if err != nil {
-			return nil, err
+	for i := 0; i <= 8; i++ {
+		// ignore devices with no paths
+		// Match wwn
+		dev, err := findDevice(wwn)
+		if dev != nil || err != nil {
+			return dev, err
 		}
-		for _, d := range devices {
-			// ignore devices with no paths
-			if len(d.Slaves) == 0 {
-				continue
-			}
-			// Match wwn
-			if strings.EqualFold(d.WWN, wwn) {
-				klog.V(5).Infof("createLinuxDevice FOUND for wwn %s and slaves %+v", d.WWN, d.Slaves)
-				return d, nil
-			}
+		// try cleaning up faulty, orphan, stale paths/maps
+		tmpTime := time.Now().Add(-10 * time.Second)
+		if lastCleanExecuted.Before(tmpTime) {
+			klog.Info("running cleanup")
+			tryCleaningFaultyAndOrphan()
+			lastCleanExecuted = time.Now()
 		}
-		// handle faulty maps
-		err = cleanupFaultyPaths()
-		if err != nil {
-			klog.Warning(err)
+		// search again before removing stale scsi disks
+		dev, err = findDevice(wwn)
+		if dev != nil || err != nil {
+			return dev, err
 		}
-		// handle stale maps
-		err = cleanupStaleMaps()
-		if err != nil {
-			klog.Warning(err)
-		}
-		// handle orphan paths
-		err = cleanupOrphanPaths()
-		if err != nil {
-			klog.Warning(err)
-		}
-		// handle error mappers
-		err = cleanupErrorMultipathMaps()
-		if err != nil {
-			klog.Warning(err)
-		}
+
 		// handle stale paths
-		err = cleanupStalePaths()
-		if err != nil {
-			klog.Warning(err)
+		// heavy operation hence try only between 25 secs
+		tmpTime = time.Now().Add(-25 * time.Second)
+		if lastStaleCleanExecuted.Before(tmpTime) {
+			err = cleanupStalePaths()
+			if err != nil {
+				klog.Warning(err)
+			}
+			lastStaleCleanExecuted = time.Now()
 		}
 
 		// sleeping for 5 seconds waiting for device to appear after rescan
@@ -245,6 +238,42 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 
 	// Reached here signifies the device was not found, throw an error
 	return nil, fmt.Errorf("fc device not found for wwn %s", wwn)
+}
+
+func findDevice(wwn string) (*Device, error) {
+	devices, err := getLinuxDmDevices(wwn, true)
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range devices {
+		if len(d.Slaves) > 0 && strings.EqualFold(d.WWN, wwn) {
+			klog.V(5).Infof("createLinuxDevice FOUND for wwn %s and slaves %+v", d.WWN, d.Slaves)
+			return d, nil
+		}
+	}
+	return nil, nil
+}
+func tryCleaningFaultyAndOrphan() {
+	// handle faulty maps
+	err := cleanupFaultyPaths()
+	if err != nil {
+		klog.Warning(err)
+	}
+	// handle orphan paths
+	err = cleanupOrphanPaths()
+	if err != nil {
+		klog.Warning(err)
+	}
+	// handle stale maps
+	err = cleanupStaleMaps()
+	if err != nil {
+		klog.Warning(err)
+	}
+	// handle error mappers
+	err = cleanupErrorMultipathMaps()
+	if err != nil {
+		klog.Warning(err)
+	}
 }
 
 func scsiHostRescan() error {
