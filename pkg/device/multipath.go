@@ -121,7 +121,7 @@ func multipathGetPathsOfDevice(dev *Device, needActivePath bool) (paths []*PathI
 	return paths, nil
 }
 
-func multipathdShowCmd(wwid string, args []string) (output []string, err error) {
+func multipathdShowCmd(search string, args []string) (output []string, err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
 
@@ -134,7 +134,7 @@ func multipathdShowCmd(wwid string, args []string) (output []string, err error) 
 		err = fmt.Errorf("failed to get multipathd %v, out %s", args, out)
 		return nil, err
 	}
-	r, err := regexp.Compile("(?m)^.*" + wwid + ".*$")
+	r, err := regexp.Compile("(?m)^.*" + search + ".*$")
 	if err != nil {
 		return nil, err
 	}
@@ -334,6 +334,7 @@ func cleanupOrphanPaths() (err error) {
 		err := deleteSdDeviceByHctl(result["host"], result["channel"], result["target"], result["lun"])
 		if err != nil {
 			// ignore errors as its a best effort to cleanup all orphan maps
+			klog.Warningf("error while deleting device: %v", err)
 			continue
 		}
 	}
@@ -359,7 +360,6 @@ func cleanupStaleMaps() (err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
 
-	klog.Info("inside cleanupStaleMaps")
 	outBytes, err := exec.Command(multipathd, showMapsFormat...).CombinedOutput()
 	if err != nil {
 		return err
@@ -375,7 +375,7 @@ func cleanupStaleMaps() (err error) {
 		return err
 	}
 	staleMultipaths := r.FindAllString(out, -1)
-	klog.Infof("inside cleanupStaleMaps: found %d stale paths", len(staleMultipaths))
+
 	for _, line := range staleMultipaths {
 		entry := strings.Fields(line)
 		args := []string{"remove", "--force", entry[2]} // entry[2]: map name
@@ -409,8 +409,51 @@ func cleanupFaultyPaths() (err error) {
 		err := deleteSdDeviceByHctl(result["host"], result["channel"], result["target"], result["lun"])
 		if err != nil {
 			// ignore errors as its a best effort to cleanup all fulty paths
+			klog.Warningf("error while deleting device: %v", err)
 			continue
 		}
 	}
+	return nil
+}
+
+func cleanupStalePaths() (err error) {
+	// get all maps (.*mpath.*) to clean stale paths in `/sys/class/scsi_device`
+	lines, err := multipathdShowCmd("mpath", showMapsFormat)
+	if err != nil {
+		klog.Info(err)
+		return err
+	}
+	klog.Info(lines)
+
+	scsiPath := "/sys/class/scsi_device/"
+	if dirs, err := os.ReadDir(scsiPath); err == nil {
+		for _, f := range dirs {
+			found := false
+			wwidPath := scsiPath + f.Name() + "/device/wwid"
+			wwid, err := readFirstLine(wwidPath)
+			if err != nil {
+				return err
+			}
+			entries := strings.Split(wwid, ".")
+			if len(entries) > 1 {
+				wwn := entries[1]
+				for _, line := range lines {
+					if strings.Contains(line, wwn) {
+						found = true
+						break
+					}
+				}
+			}
+			if !found {
+				hctl := strings.Split(f.Name(), ":")
+				err := deleteSdDeviceByHctl(hctl[0], hctl[1], hctl[2], hctl[3])
+				if err != nil {
+					// ignore errors as its a best effort to cleanup all stale paths
+					klog.Warningf("error while deleting device: %v", err)
+				}
+			}
+		}
+	}
+
 	return nil
 }

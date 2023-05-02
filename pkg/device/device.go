@@ -97,7 +97,7 @@ func getLinuxDmDevices(wwn string, needActivePath bool) ([]*Device, error) {
 		tmpWWN := tmpWWID[1:] // truncate scsi-id prefix
 
 		if strings.EqualFold(wwn, tmpWWN) {
-			klog.V(5).Infof("getLinuxDmDevices FOUND for wwn %s", dev.WWN)
+			klog.V(5).Infof("getLinuxDmDevices FOUND for wwn %s", tmpWWN)
 			dev.WWN = tmpWWN
 			dev.WWID = tmpWWID
 			devSize, err := getSizeOfDeviceInMiB(dev.Pathname)
@@ -214,13 +214,30 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 			}
 		}
 		// handle faulty maps
-		cleanupFaultyPaths()
+		err = cleanupFaultyPaths()
+		if err != nil {
+			klog.Warning(err)
+		}
 		// handle stale maps
-		cleanupStaleMaps()
+		err = cleanupStaleMaps()
+		if err != nil {
+			klog.Warning(err)
+		}
 		// handle orphan paths
-		cleanupOrphanPaths()
+		err = cleanupOrphanPaths()
+		if err != nil {
+			klog.Warning(err)
+		}
 		// handle error mappers
-		cleanupErrorMultipathMaps()
+		err = cleanupErrorMultipathMaps()
+		if err != nil {
+			klog.Warning(err)
+		}
+		// handle stale paths
+		err = cleanupStalePaths()
+		if err != nil {
+			klog.Warning(err)
+		}
 
 		// sleeping for 5 seconds waiting for device to appear after rescan
 		time.Sleep(time.Second * 5)
