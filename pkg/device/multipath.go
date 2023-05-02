@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"k8s.io/klog"
@@ -43,6 +44,7 @@ var (
 	errorMapRegex    = regexp.MustCompile(errorMapPattern)
 	orphanPathRegexp = regexp.MustCompile(orphanPathsPattern)
 	faultyPathRegexp = regexp.MustCompile(faultyPathsPattern)
+	multipathMutex   sync.Mutex
 )
 
 // PathInfo : struct for multipathd show paths
@@ -120,6 +122,9 @@ func multipathGetPathsOfDevice(dev *Device, needActivePath bool) (paths []*PathI
 }
 
 func multipathdShowCmd(wwid string, args []string) (output []string, err error) {
+	multipathMutex.Lock()
+	defer multipathMutex.Unlock()
+
 	out, err := exec.Command(multipathd, args...).CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -139,6 +144,9 @@ func multipathdShowCmd(wwid string, args []string) (output []string, err error) 
 
 func isMultipathTimeoutError(msg string) bool {
 	return strings.Contains(msg, "timeout") || strings.Contains(msg, "receiving packet")
+}
+func isMultipathBusyError(msg string) bool {
+	return strings.Contains(msg, "Device or resource busy")
 }
 
 // tearDownMultipathDevice : tear down the hiearchy of multipath device and scsi paths
@@ -182,6 +190,11 @@ func retryCleanupDeviceAndSlaves(dev *Device) error {
 
 // cleanupDeviceAndSlaves : remove the multipath devices and its slaves and logout iscsi targets
 func cleanupDeviceAndSlaves(dev *Device) (err error) {
+	// check for all paths again and make sure we have all paths for cleanup
+	allPaths, err := multipathGetPathsOfDevice(dev, false)
+	if err != nil {
+		return err
+	}
 
 	// disable queuing on multipath
 	_ = multipathDisableQueuing(dev)
@@ -189,11 +202,6 @@ func cleanupDeviceAndSlaves(dev *Device) (err error) {
 	// remove dm device
 	removeErr := multipathRemoveDmDevice(dev)
 
-	// check for all paths again and make sure we have all paths for cleanup
-	allPaths, err := multipathGetPathsOfDevice(dev, false)
-	if err != nil {
-		return err
-	}
 	// delete scsi devices
 	err = deleteSdDevices(allPaths)
 	if err != nil {
@@ -209,6 +217,9 @@ func cleanupDeviceAndSlaves(dev *Device) (err error) {
 
 // multipathDisableQueuing : disable queueing on the multipath device
 func multipathDisableQueuing(dev *Device) (err error) {
+	multipathMutex.Lock()
+	defer multipathMutex.Unlock()
+
 	args := []string{"message", dev.Mapper, "0", "fail_if_no_path"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
 	if err != nil {
@@ -223,6 +234,9 @@ func multipathDisableQueuing(dev *Device) (err error) {
 
 // multipathRemoveDmDevice : remove multipath device ps via dmsetup
 func multipathRemoveDmDevice(dev *Device) (err error) {
+	multipathMutex.Lock()
+	defer multipathMutex.Unlock()
+
 	args := []string{"remove", "--force", dev.Mapper}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
 	if err != nil {
@@ -266,6 +280,9 @@ func deleteSdDevice(path string) (err error) {
 }
 
 func cleanupErrorMultipathMaps() (err error) {
+	multipathMutex.Lock()
+	defer multipathMutex.Unlock()
+
 	// run dmsetup table and fetch error maps
 	args := []string{"table"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
@@ -277,9 +294,16 @@ func cleanupErrorMultipathMaps() (err error) {
 	for _, errorMap := range listErrorMaps {
 		result := findStringSubmatchMap(errorMap, errorMapRegex)
 		if mapName, ok := result["mapname"]; ok {
-			args := []string{"remove", mapName}
-			_, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
+			args := []string{"remove", "--force", mapName}
+			removeOut, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
 			if err != nil {
+				// if device or resource busy
+				// simply try umount and then remove (best effort run only)
+				if isMultipathBusyError(string(removeOut)) {
+					umountArgs := []string{fmt.Sprintf("/dev/mapper/%s", mapName)}
+					exec.Command("umount", umountArgs...).Run()
+					exec.Command(dmsetupcommand, args...).Run()
+				}
 				// ignore errors as its a best effort to cleanup all error maps
 				continue
 			}
@@ -289,6 +313,9 @@ func cleanupErrorMultipathMaps() (err error) {
 }
 
 func cleanupOrphanPaths() (err error) {
+	multipathMutex.Lock()
+	defer multipathMutex.Unlock()
+
 	// run multipathd show paths and fetch orphan maps
 	outBytes, err := exec.Command(multipathd, showPathsFormat...).CombinedOutput()
 	if err != nil {
@@ -329,6 +356,9 @@ func deleteSdDeviceByHctl(h string, c string, t string, l string) (err error) {
 
 // cleanupStaleMaps cleanup maps which are not attached to a vend/prod/rev
 func cleanupStaleMaps() (err error) {
+	multipathMutex.Lock()
+	defer multipathMutex.Unlock()
+
 	klog.Info("inside cleanupStaleMaps")
 	outBytes, err := exec.Command(multipathd, showMapsFormat...).CombinedOutput()
 	if err != nil {
@@ -358,6 +388,9 @@ func cleanupStaleMaps() (err error) {
 }
 
 func cleanupFaultyPaths() (err error) {
+	multipathMutex.Lock()
+	defer multipathMutex.Unlock()
+
 	// run multipathd show paths and fetch orphan maps
 	outBytes, err := exec.Command(multipathd, showPathsFormat...).CombinedOutput()
 	if err != nil {
