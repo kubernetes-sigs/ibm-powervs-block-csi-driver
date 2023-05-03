@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -39,7 +38,6 @@ type Device struct {
 	Mapper   string   `json:"mapper,omitempty"`
 	WWID     string   `json:"wwid,omitempty"`
 	WWN      string   `json:"wwn,omitempty"`
-	Size     int64    `json:"size,omitempty"` // size in MiB
 	Slaves   []string `json:"slaves,omitempty"`
 }
 
@@ -59,15 +57,17 @@ type Mount struct {
 	FSType     string   `json:"fstype,omitempty"`
 }
 
-func GetDeviceFromVolume(wwn string) *Device {
+// GetDevice: find the device with given wwn
+func GetDevice(wwn string) *Device {
 	devices, err := getLinuxDmDevices(wwn, false)
-	// ignore any error as this is before scan
+	// ignore any errors
 	if err != nil || len(devices) == 0 {
 		return nil
 	}
 	return devices[0]
 }
 
+// getLinuxDmDevices: get all linux Devices
 func getLinuxDmDevices(wwn string, needActivePath bool) ([]*Device, error) {
 	args := []string{"ls", "--target", "multipath"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
@@ -102,14 +102,11 @@ func getLinuxDmDevices(wwn string, needActivePath bool) ([]*Device, error) {
 		tmpWWN := tmpWWID[1:] // truncate scsi-id prefix
 
 		if strings.EqualFold(wwn, tmpWWN) {
-			klog.V(5).Infof("getLinuxDmDevices FOUND for wwn %s", tmpWWN)
 			dev.WWN = tmpWWN
 			dev.WWID = tmpWWID
-			devSize, err := getSizeOfDeviceInMiB(dev.Pathname)
 			if err != nil {
 				return nil, err
 			}
-			dev.Size = devSize
 			multipathdShowPaths, err := retryGetPathOfDevice(dev, needActivePath)
 			if err != nil {
 				err = fmt.Errorf("unable to get scsi slaves for device %s: %v", dev.WWN, err)
@@ -132,74 +129,30 @@ func getLinuxDmDevices(wwn string, needActivePath bool) ([]*Device, error) {
 	return devices, nil
 }
 
-func getMpathName(pathname string) (string, error) {
-	fileName := fmt.Sprintf("/sys/block/%s/dm/name", pathname)
-	return readFirstLine(fileName)
-}
-
-func getUUID(pathname string) (string, error) {
-	fileName := fmt.Sprintf("/sys/block/%s/dm/uuid", pathname)
-	return readFirstLine(fileName)
-}
-
-func getSizeOfDeviceInMiB(pathname string) (int64, error) {
-	fileName := fmt.Sprintf("/sys/block/%s/size", pathname)
-	size, err := readFirstLine(fileName)
-	if err != nil {
-		err = fmt.Errorf("unable to get size for device: %s Err: %v", pathname, err)
-		return -1, err
-	}
-	sizeInSector, err := strconv.ParseInt(size, 10, 0)
-	if err != nil {
-		err = fmt.Errorf("unable to parse size for device: %s Err: %v", pathname, err)
-		return -1, err
-	}
-	return sizeInSector / 2 * 1024, nil
-}
-
-// DeleteDevice : delete the multipath device
+// DeleteDevice: delete the multipath device
 func DeleteDevice(dev *Device) (err error) {
-	try := 0
-	maxTries := 3
-	for {
-		err := tearDownMultipathDevice(dev)
-		if err != nil {
-			if try < maxTries {
-				try++
-				time.Sleep(time.Duration(try) * time.Second)
-				continue
-			}
-			return err
-		}
-		return nil
-	}
+	return tearDownMultipathDevice(dev)
 }
 
-// CreateDevice : attach and create linux devices to host
+// CreateDevice: attach and create linux devices to host
 func CreateDevice(wwn string) (dev *Device, err error) {
-	device, err := createLinuxDevice(wwn)
-	if err != nil {
-		klog.Errorf("unable to create device for wwn %v", wwn)
-		// If we encounter an error, there may be some devices created and some not.
-		// If we fail the operation , then we need to rollback all the created device
-		//TODO : cleanup all the devices created
-		return nil, err
-	}
-
-	return device, nil
-}
-
-// createLinuxDevice : attaches and creates a new linux device
-func createLinuxDevice(wwn string) (dev *Device, err error) {
 	err = scsiHostRescan()
 	if err != nil {
 		return nil, err
 	}
-
-	// sleeping for 1 second waiting for device %s to appear after rescan
+	// wait for device to appear after rescan
 	time.Sleep(time.Second * 1)
 
-	// find multipath devices after the rescan and login
+	device, err := createLinuxDevice(wwn)
+	if err != nil {
+		klog.Errorf("unable to create device for wwn %v", wwn)
+		return nil, err
+	}
+	return device, nil
+}
+
+// createLinuxDevice: attaches and creates a new linux device
+func createLinuxDevice(wwn string) (dev *Device, err error) {
 	// Start a Countdown ticker
 	for i := 0; i <= 8; i++ {
 		// ignore devices with no paths
@@ -211,11 +164,11 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 		// try cleaning up faulty, orphan, stale paths/maps
 		tmpTime := time.Now().Add(-10 * time.Second)
 		if lastCleanExecuted.Before(tmpTime) {
-			klog.Info("running cleanup")
 			tryCleaningFaultyAndOrphan()
 			lastCleanExecuted = time.Now()
 		}
-		// search again before removing stale scsi disks
+
+		// search again before removing stale/remapped scsi disks
 		dev, err = findDevice(wwn)
 		if dev != nil || err != nil {
 			return dev, err
@@ -232,7 +185,7 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 			lastStaleCleanExecuted = time.Now()
 		}
 
-		// sleeping for 5 seconds waiting for device to appear after rescan
+		// some resting time
 		time.Sleep(time.Second * 5)
 	}
 
@@ -240,6 +193,7 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 	return nil, fmt.Errorf("fc device not found for wwn %s", wwn)
 }
 
+// findDevice: find the device with given wwn and having atleast 1 slave disk
 func findDevice(wwn string) (*Device, error) {
 	devices, err := getLinuxDmDevices(wwn, true)
 	if err != nil {
@@ -247,12 +201,13 @@ func findDevice(wwn string) (*Device, error) {
 	}
 	for _, d := range devices {
 		if len(d.Slaves) > 0 && strings.EqualFold(d.WWN, wwn) {
-			klog.V(5).Infof("createLinuxDevice FOUND for wwn %s and slaves %+v", d.WWN, d.Slaves)
 			return d, nil
 		}
 	}
 	return nil, nil
 }
+
+// tryCleaningFaultyAndOrphan: house keeping when device cannot be found once
 func tryCleaningFaultyAndOrphan() {
 	// handle faulty maps
 	err := cleanupFaultyPaths()
@@ -276,6 +231,7 @@ func tryCleaningFaultyAndOrphan() {
 	}
 }
 
+// scsiHostRescan: scans all scsi hosts
 func scsiHostRescan() error {
 	scsiPath := "/sys/class/scsi_host/"
 	if dirs, err := os.ReadDir(scsiPath); err == nil {
@@ -284,7 +240,7 @@ func scsiHostRescan() error {
 			data := []byte("- - -")
 			err := os.WriteFile(name, data, 0666)
 			if err != nil {
-				return fmt.Errorf("scsi host rescan failed : error: %v", err)
+				return fmt.Errorf("scsi host rescan failed: %v", err)
 			}
 		}
 	}

@@ -119,21 +119,6 @@ func (mr *MockMounterMockRecorder) GetDeviceName(mountPath interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeviceName", reflect.TypeOf((*MockMounter)(nil).GetDeviceName), mountPath)
 }
 
-// GetDevicePath mocks base method.
-func (m *MockMounter) GetDevicePath(wwn string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDevicePath", wwn)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDevicePath indicates an expected call of GetDevicePath.
-func (mr *MockMounterMockRecorder) GetDevicePath(wwn interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDevicePath", reflect.TypeOf((*MockMounter)(nil).GetDevicePath), wwn)
-}
-
 // GetMountRefs mocks base method.
 func (m *MockMounter) GetMountRefs(pathname string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -291,20 +276,6 @@ func (m *MockMounter) MountSensitiveWithoutSystemdWithMountFlags(source, target,
 func (mr *MockMounterMockRecorder) MountSensitiveWithoutSystemdWithMountFlags(source, target, fstype, options, sensitiveOptions, mountFlags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MountSensitiveWithoutSystemdWithMountFlags", reflect.TypeOf((*MockMounter)(nil).MountSensitiveWithoutSystemdWithMountFlags), source, target, fstype, options, sensitiveOptions, mountFlags)
-}
-
-// RescanSCSIBus mocks base method.
-func (m *MockMounter) RescanSCSIBus() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RescanSCSIBus")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RescanSCSIBus indicates an expected call of RescanSCSIBus.
-func (mr *MockMounterMockRecorder) RescanSCSIBus() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RescanSCSIBus", reflect.TypeOf((*MockMounter)(nil).RescanSCSIBus))
 }
 
 // Unmount mocks base method.

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2019, 2023 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -130,7 +130,6 @@ func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 }
 
 func (d *nodeService) nodeStageVolume(req *csi.NodeStageVolumeRequest) error {
-
 	target := req.GetStagingTargetPath()
 
 	volCap := req.GetVolumeCapability()
@@ -194,7 +193,7 @@ func (d *nodeService) isVolumeStaged(wwn string, req *csi.NodeStageVolumeRequest
 	target := req.GetStagingTargetPath()
 
 	// Read the device info from the staging path
-	stagingDev, _ := device.ReadStagedDeviceInfo(target, deviceInfoFileName)
+	stagingDev, _ := device.ReadData(target, deviceInfoFileName)
 	if stagingDev == nil {
 		return false
 	}
@@ -205,9 +204,6 @@ func (d *nodeService) isVolumeStaged(wwn string, req *csi.NodeStageVolumeRequest
 }
 
 func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) (*device.StagingDevice, error) {
-	klog.V(4).Infof(">>>>> stageVolume", "volumeID", req.VolumeId)
-	defer klog.V(4).Infof("<<<<< stageVolume", "volumeID", req.VolumeId)
-
 	target := req.GetStagingTargetPath()
 	volCap := req.GetVolumeCapability()
 
@@ -216,7 +212,7 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) (
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error creating device for volumeID %s, err: %v", req.VolumeId, err))
 	}
 
-	klog.V(4).Infof("find device path", "volumeID", req.VolumeId, "device", dev.Mapper)
+	klog.V(4).Infof("found device path", "volumeID", req.VolumeId, "device", dev.Mapper)
 
 	// Construct staging device to be stored in the staging path on the node
 	stagingDevice := &device.StagingDevice{
@@ -311,9 +307,6 @@ func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error {
-	klog.V(5).Infof(">>>>> nodeUnstageVolume", "volumeID", req.VolumeId)
-	defer klog.Info("<<<<< nodeUnstageVolume", "volumeID", req.VolumeId)
-
 	volumeID := req.VolumeId
 	target := req.GetStagingTargetPath()
 
@@ -324,7 +317,7 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 		klog.V(5).Infof("volume %s not in staged state as the device info file %s does not exist", volumeID, deviceFilePath)
 		return nil
 	}
-	stagingDev, _ := device.ReadStagedDeviceInfo(target, deviceInfoFileName)
+	stagingDev, _ := device.ReadData(target, deviceInfoFileName)
 	if stagingDev == nil {
 		klog.Infof("volume %s not in staged state as the staging device info file %s does not exist", volumeID, deviceFilePath)
 		return nil
@@ -628,14 +621,11 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 }
 
 func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeRequest, mountOptions []string) error {
-	klog.V(5).Infof(">>>>> nodePublishVolumeForBlock", "volumeID", req.VolumeId)
-	defer klog.Info("<<<<< nodePublishVolumeForBlock", "volumeID", req.VolumeId)
-
 	target := req.GetTargetPath()
 	volumeID := req.GetVolumeId()
 
 	// Read device info from the staging area
-	stagingDev, err := device.ReadStagedDeviceInfo(req.GetStagingTargetPath(), deviceInfoFileName)
+	stagingDev, err := device.ReadData(req.GetStagingTargetPath(), deviceInfoFileName)
 	if err != nil {
 		return status.Error(codes.FailedPrecondition,
 			fmt.Sprintf("staging target path %s not set for volumeID %s, err: %v", target, req.VolumeId, err))
@@ -685,9 +675,6 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 }
 
 func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeRequest, mountOptions []string, mode *csi.VolumeCapability_Mount) error {
-	klog.V(5).Infof(">>>>> nodePublishVolumeForFileSystem", "volumeID", req.VolumeId)
-	defer klog.Info("<<<<< nodePublishVolumeForFileSystem", "volumeID", req.VolumeId)
-
 	target := req.GetTargetPath()
 	source := req.GetStagingTargetPath()
 	volumeID := req.VolumeId
@@ -767,7 +754,7 @@ func (d *nodeService) isDirMounted(target string) (bool, error) {
 }
 
 func (d *nodeService) setupDevice(wwn string) (*device.Device, error) {
-	dev := device.GetDeviceFromVolume(wwn)
+	dev := device.GetDevice(wwn)
 	if dev != nil {
 		err := device.DeleteDevice(dev)
 		if err != nil {
@@ -776,10 +763,9 @@ func (d *nodeService) setupDevice(wwn string) (*device.Device, error) {
 	}
 
 	// Create Device
-	dev = nil
 	dev, err := device.CreateDevice(wwn)
 	if err != nil {
-		return nil, fmt.Errorf("error creating device for wwn %s, err: %v", wwn, err)
+		return nil, err
 	}
 	if dev == nil {
 		return nil, fmt.Errorf("unable to find the device for wwn %s", wwn)

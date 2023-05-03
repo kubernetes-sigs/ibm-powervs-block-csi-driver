@@ -29,13 +29,14 @@ import (
 )
 
 const (
-	multipathd         = "multipathd"
-	dmsetupcommand     = "dmsetup"
-	majorMinorPattern  = "(.*)\\((?P<Major>\\d+),\\s+(?P<Minor>\\d+)\\)"
-	orphanPathsPattern = ".*\\s+(?P<host>\\d+):(?P<channel>\\d+):(?P<target>\\d+):(?P<lun>\\d+).*orphan"
-	faultyPathsPattern = ".*failed.*(?P<host>\\d+):(?P<channel>\\d+):(?P<target>\\d+):(?P<lun>\\d+).*faulty"
-	errorMapPattern    = "((?P<mapname>.*):.*error)"
-	deviceDoesNotExist = "No such device or address"
+	multipathd           = "multipathd"
+	dmsetupcommand       = "dmsetup"
+	majorMinorPattern    = "(.*)\\((?P<Major>\\d+),\\s+(?P<Minor>\\d+)\\)"
+	orphanPathsPattern   = ".*\\s+(?P<host>\\d+):(?P<channel>\\d+):(?P<target>\\d+):(?P<lun>\\d+).*orphan"
+	faultyPathsPattern   = ".*failed.*(?P<host>\\d+):(?P<channel>\\d+):(?P<target>\\d+):(?P<lun>\\d+).*faulty"
+	errorMapPattern      = "((?P<mapname>.*):.*error)"
+	deviceDoesNotExist   = "No such device or address"
+	scsiDeviceDeletePath = "/sys/class/scsi_device/%s:%s:%s:%s/device/delete"
 )
 
 var (
@@ -47,7 +48,7 @@ var (
 	multipathMutex   sync.Mutex
 )
 
-// PathInfo : struct for multipathd show paths
+// PathInfo: struct for multipathd show paths
 type PathInfo struct {
 	UUID     string
 	Device   string
@@ -58,6 +59,7 @@ type PathInfo struct {
 	Checker  string
 }
 
+// retryGetPathOfDevice: get all slaves for a given device
 func retryGetPathOfDevice(dev *Device, needActivePath bool) (paths []*PathInfo, err error) {
 	try := 0
 	maxTries := 5
@@ -83,7 +85,7 @@ func retryGetPathOfDevice(dev *Device, needActivePath bool) (paths []*PathInfo, 
 	}
 }
 
-// multipathGetPathsOfDevice : get all scsi paths and host, channel information of multipath device
+// multipathGetPathsOfDevice: get all scsi paths and host, channel information of multipath device
 func multipathGetPathsOfDevice(dev *Device, needActivePath bool) (paths []*PathInfo, err error) {
 	lines, err := multipathdShowCmd(dev.WWID, showPathsFormat)
 	if err != nil {
@@ -121,6 +123,7 @@ func multipathGetPathsOfDevice(dev *Device, needActivePath bool) (paths []*PathI
 	return paths, nil
 }
 
+// multipathdShowCmd: runs multipathd show ... with given arguments
 func multipathdShowCmd(search string, args []string) (output []string, err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
@@ -144,7 +147,7 @@ func isMultipathBusyError(msg string) bool {
 	return strings.Contains(msg, "Device or resource busy")
 }
 
-// tearDownMultipathDevice : tear down the hiearchy of multipath device and scsi paths
+// tearDownMultipathDevice: tear down the hiearchy of multipath device and scsi paths
 func tearDownMultipathDevice(dev *Device) (err error) {
 	lines, err := multipathdShowCmd(dev.WWID, showMapsFormat)
 	if err != nil {
@@ -165,10 +168,10 @@ func tearDownMultipathDevice(dev *Device) (err error) {
 	return nil
 }
 
-// retry for maxtries for device Cleanup
+// retryCleanupDeviceAndSlaves: retry for maxtries for device Cleanup
 func retryCleanupDeviceAndSlaves(dev *Device) error {
 	try := 0
-	maxTries := 10 // retry for 50 seconds with periodic interval of 5 seconds
+	maxTries := 10
 	for {
 		err := cleanupDeviceAndSlaves(dev)
 		if err != nil {
@@ -183,7 +186,7 @@ func retryCleanupDeviceAndSlaves(dev *Device) error {
 	}
 }
 
-// cleanupDeviceAndSlaves : remove the multipath devices and its slaves and logout iscsi targets
+// cleanupDeviceAndSlaves: remove the multipath devices and its slaves
 func cleanupDeviceAndSlaves(dev *Device) (err error) {
 	// check for all paths again and make sure we have all paths for cleanup
 	allPaths, err := multipathGetPathsOfDevice(dev, false)
@@ -191,16 +194,17 @@ func cleanupDeviceAndSlaves(dev *Device) (err error) {
 		return err
 	}
 
-	// disable queuing on multipath
-	_ = multipathDisableQueuing(dev)
-
-	// remove dm device
 	removeErr := multipathRemoveDmDevice(dev)
 
-	// delete scsi devices
-	err = deleteSdDevices(allPaths)
-	if err != nil {
-		return err
+	// delete scsi devices (slaves)
+	for _, path := range allPaths {
+		deletePath := fmt.Sprintf("/sys/block/%s/device/delete", path.Device)
+		err := deleteSdDevice(deletePath)
+		if err != nil {
+			klog.Warningf("error while deleting device %s: %v", path, err)
+			// try to cleanup rest of the paths
+			continue
+		}
 	}
 
 	// indicate if we were not able to cleanup multipath map, so the caller can retry
@@ -210,11 +214,8 @@ func cleanupDeviceAndSlaves(dev *Device) (err error) {
 	return nil
 }
 
-// multipathDisableQueuing : disable queueing on the multipath device
+// multipathDisableQueuing: disable queueing on the multipath device
 func multipathDisableQueuing(dev *Device) (err error) {
-	multipathMutex.Lock()
-	defer multipathMutex.Unlock()
-
 	args := []string{"message", dev.Mapper, "0", "fail_if_no_path"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
 	if err != nil {
@@ -227,10 +228,12 @@ func multipathDisableQueuing(dev *Device) (err error) {
 	return nil
 }
 
-// multipathRemoveDmDevice : remove multipath device ps via dmsetup
+// multipathRemoveDmDevice: remove multipath device via dmsetup
 func multipathRemoveDmDevice(dev *Device) (err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
+
+	_ = multipathDisableQueuing(dev)
 
 	args := []string{"remove", "--force", dev.Mapper}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
@@ -244,36 +247,7 @@ func multipathRemoveDmDevice(dev *Device) (err error) {
 	return nil
 }
 
-func deleteSdDevices(paths []*PathInfo) error {
-	for _, path := range paths {
-		err := deleteSdDevice(path.Device)
-		if err != nil {
-			// try to cleanup rest of the paths
-			klog.Warningf("error while deleting device %s: %v", path, err)
-			continue
-		}
-	}
-	return nil
-}
-
-// deleteSdDevice : delete the scsi device
-func deleteSdDevice(path string) (err error) {
-	//deletePath for deleting the device
-	deletePath := fmt.Sprintf("/sys/block/%s/device/delete", path)
-	is, _, _ := FileExists(deletePath)
-	if !is {
-		// path seems to be already cleaned up so we return success
-		// err = fmt.Errorf("path %s doesn't exist", deletePath)
-		return nil
-	}
-	err = os.WriteFile(deletePath, []byte("1\n"), 0644)
-	if err != nil {
-		err = fmt.Errorf("error writing to file %s : %v", deletePath, err)
-		return err
-	}
-	return nil
-}
-
+// cleanupErrorMultipathMaps: find error maps and remove them
 func cleanupErrorMultipathMaps() (err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
@@ -307,6 +281,7 @@ func cleanupErrorMultipathMaps() (err error) {
 	return nil
 }
 
+// cleanupOrphanPaths: find orphan paths and remove them
 func cleanupOrphanPaths() (err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
@@ -326,7 +301,8 @@ func cleanupOrphanPaths() (err error) {
 	listOrphanPaths := orphanPathRegexp.FindAllString(out, -1)
 	for _, orphanPath := range listOrphanPaths {
 		result := findStringSubmatchMap(orphanPath, orphanPathRegexp)
-		err := deleteSdDeviceByHctl(result["host"], result["channel"], result["target"], result["lun"])
+		deletePath := fmt.Sprintf(scsiDeviceDeletePath, result["host"], result["channel"], result["target"], result["lun"])
+		err := deleteSdDevice(deletePath)
 		if err != nil {
 			// ignore errors as its a best effort to cleanup all orphan maps
 			klog.Warningf("error while deleting device: %v", err)
@@ -336,21 +312,7 @@ func cleanupOrphanPaths() (err error) {
 	return nil
 }
 
-// nolint as we want to keep updatePathSerialByHctl separate
-func deleteSdDeviceByHctl(h string, c string, t string, l string) (err error) {
-	deletePath := fmt.Sprintf("/sys/class/scsi_device/%s:%s:%s:%s/device/delete", h, c, t, l)
-	is, _, _ := FileExists(deletePath)
-	if is {
-		err := os.WriteFile(deletePath, []byte("1"), 0644)
-		if err != nil {
-			err = fmt.Errorf("error writing to file %s : %v", deletePath, err)
-			return err
-		}
-	}
-	return nil
-}
-
-// cleanupStaleMaps cleanup maps which are not attached to a vend/prod/rev
+// cleanupStaleMaps: cleanup maps which are not attached to a vend/prod/rev
 func cleanupStaleMaps() (err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
@@ -382,6 +344,7 @@ func cleanupStaleMaps() (err error) {
 	return nil
 }
 
+// cleanupFaultyPaths: cleanup paths which are faulty, indicates no storage
 func cleanupFaultyPaths() (err error) {
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
@@ -401,7 +364,8 @@ func cleanupFaultyPaths() (err error) {
 	listFaultyPaths := faultyPathRegexp.FindAllString(out, -1)
 	for _, faultyPath := range listFaultyPaths {
 		result := findStringSubmatchMap(faultyPath, faultyPathRegexp)
-		err := deleteSdDeviceByHctl(result["host"], result["channel"], result["target"], result["lun"])
+		deletePath := fmt.Sprintf(scsiDeviceDeletePath, result["host"], result["channel"], result["target"], result["lun"])
+		err := deleteSdDevice(deletePath)
 		if err != nil {
 			// ignore errors as its a best effort to cleanup all fulty paths
 			klog.Warningf("error while deleting device: %v", err)
@@ -411,14 +375,14 @@ func cleanupFaultyPaths() (err error) {
 	return nil
 }
 
+// cleanupStalePaths: clean stale scsi devices which can be result of remapped disks
 func cleanupStalePaths() (err error) {
 	// get all maps (.*mpath.*) to clean stale paths in `/sys/class/scsi_device`
-	lines, err := multipathdShowCmd("mpath", showMapsFormat)
+	allMaps, err := multipathdShowCmd("mpath", showMapsFormat)
 	if err != nil {
 		klog.Info(err)
 		return err
 	}
-	klog.Info(lines)
 
 	scsiPath := "/sys/class/scsi_device/"
 	if dirs, err := os.ReadDir(scsiPath); err == nil {
@@ -432,7 +396,7 @@ func cleanupStalePaths() (err error) {
 			entries := strings.Split(wwid, ".")
 			if len(entries) > 1 {
 				wwn := entries[1]
-				for _, line := range lines {
+				for _, line := range allMaps {
 					if strings.Contains(line, wwn) {
 						found = true
 						break
@@ -441,7 +405,8 @@ func cleanupStalePaths() (err error) {
 			}
 			if !found {
 				hctl := strings.Split(f.Name(), ":")
-				err := deleteSdDeviceByHctl(hctl[0], hctl[1], hctl[2], hctl[3])
+				deletePath := fmt.Sprintf(scsiDeviceDeletePath, hctl[0], hctl[1], hctl[2], hctl[3])
+				err := deleteSdDevice(deletePath)
 				if err != nil {
 					// ignore errors as its a best effort to cleanup all stale paths
 					klog.Warningf("error while deleting device: %v", err)

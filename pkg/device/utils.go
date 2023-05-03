@@ -26,7 +26,7 @@ import (
 	"regexp"
 )
 
-// findStringSubmatchMap : find and build  the map of named groups
+// findStringSubmatchMap: find and build  the map of named groups
 func findStringSubmatchMap(s string, r *regexp.Regexp) map[string]string {
 	captures := make(map[string]string)
 	match := r.FindStringSubmatch(s)
@@ -41,6 +41,7 @@ func findStringSubmatchMap(s string, r *regexp.Regexp) map[string]string {
 	return captures
 }
 
+// readFirstLine: read the file line no. 1
 func readFirstLine(filePath string) (line string, er error) {
 	file, err := os.Open(filePath)
 	a := ""
@@ -60,7 +61,7 @@ func readFirstLine(filePath string) (line string, er error) {
 	return a, err
 }
 
-// FileExists does a stat on the path and returns true if it exists
+// FileExists: does a stat on the path and returns true if it exists
 // In addition, dir returns true if the path is a directory
 func FileExists(path string) (exists bool, dir bool, err error) {
 	info, err := os.Stat(path)
@@ -73,7 +74,7 @@ func FileExists(path string) (exists bool, dir bool, err error) {
 	return true, info.IsDir(), nil
 }
 
-// WriteData persists data as json file at the provided location. Creates new directory if not already present.
+// WriteData: persists data as json file at the provided location. Creates new directory if not already present.
 func WriteData(dir string, fileName string, data interface{}) error {
 	dataFilePath := filepath.Join(dir, fileName)
 	// Encode from json object
@@ -96,7 +97,8 @@ func WriteData(dir string, fileName string, data interface{}) error {
 	return nil
 }
 
-func ReadData(dir, fileName string) ([]byte, error) {
+// readData: read the file at a given location
+func readDataFile(dir, fileName string) ([]byte, error) {
 	// Check if the file exists
 	dataFilePath := filepath.Join(dir, fileName)
 	exists, _, err := FileExists(dataFilePath)
@@ -116,8 +118,9 @@ func ReadData(dir, fileName string) ([]byte, error) {
 
 }
 
-func ReadStagedDeviceInfo(dir, fileName string) (*StagingDevice, error) {
-	deviceInfo, err := ReadData(dir, fileName)
+// ReadData: read data as json file at the provided location.
+func ReadData(dir, fileName string) (*StagingDevice, error) {
+	deviceInfo, err := readDataFile(dir, fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +135,7 @@ func ReadStagedDeviceInfo(dir, fileName string) (*StagingDevice, error) {
 	return &stagingDev, nil
 }
 
-// FileDelete : delete the file
+// FileDelete: delete the file
 func FileDelete(path string) error {
 	is, _, _ := FileExists(path)
 	if !is {
@@ -141,6 +144,30 @@ func FileDelete(path string) error {
 	err := os.RemoveAll(path)
 	if err != nil {
 		return errors.New("Unable to delete file " + path + " " + err.Error())
+	}
+	return nil
+}
+
+func getMpathName(pathname string) (string, error) {
+	fileName := fmt.Sprintf("/sys/block/%s/dm/name", pathname)
+	return readFirstLine(fileName)
+}
+
+func getUUID(pathname string) (string, error) {
+	fileName := fmt.Sprintf("/sys/block/%s/dm/uuid", pathname)
+	return readFirstLine(fileName)
+}
+
+// deleteSdDevice: delete the scsi device by writing "1"
+func deleteSdDevice(deletePath string) (err error) {
+	//deletePath for deleting the device
+	is, _, _ := FileExists(deletePath)
+	if is {
+		err = os.WriteFile(deletePath, []byte("1"), 0644)
+		if err != nil {
+			err = fmt.Errorf("error writing to file %s: %v", deletePath, err)
+			return err
+		}
 	}
 	return nil
 }

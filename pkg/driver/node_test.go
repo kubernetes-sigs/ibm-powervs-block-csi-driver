@@ -67,8 +67,6 @@ func TestNodeStageVolume(t *testing.T) {
 		}
 
 		successExpectMock = func(mockMounter mocks.MockMounter) {
-			// mockMounter.EXPECT().RescanSCSIBus().Return(nil)
-			mockMounter.EXPECT().GetDevicePath(gomock.Eq(devicePath)).Return(devicePath, nil)
 			// mockMounter.EXPECT().ExistsPath(gomock.Eq(targetPath)).Return(false, nil)
 			// mockMounter.EXPECT().MakeDir(gomock.Any()).Return(nil)
 			mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
@@ -197,7 +195,6 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeId:          volumeID,
 			},
 			expectMock: func(mockMounter mocks.MockMounter) {
-				mockMounter.EXPECT().GetDevicePath(gomock.Eq(devicePath)).Return(devicePath, nil)
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(devicePath, 1, nil)
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -404,7 +401,6 @@ func TestNodePublishVolume(t *testing.T) {
 					volumeLocks: util.NewVolumeLocks(),
 				}
 
-				mockMounter.EXPECT().GetDevicePath(gomock.Any()).Return(sourcePath, nil)
 				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
@@ -436,7 +432,6 @@ func TestNodePublishVolume(t *testing.T) {
 					volumeLocks: util.NewVolumeLocks(),
 				}
 
-				mockMounter.EXPECT().GetDevicePath(gomock.Any()).Return(sourcePath, nil)
 				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
@@ -469,7 +464,6 @@ func TestNodePublishVolume(t *testing.T) {
 					volumeLocks: util.NewVolumeLocks(),
 				}
 
-				mockMounter.EXPECT().GetDevicePath(gomock.Any()).Return(sourcePath, nil)
 				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)

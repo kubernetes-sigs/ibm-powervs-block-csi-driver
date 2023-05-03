@@ -17,11 +17,8 @@ limitations under the License.
 package driver
 
 import (
-	"fmt"
 	"os"
-	goexec "os/exec"
 
-	"k8s.io/klog/v2"
 	"k8s.io/mount-utils"
 	"k8s.io/utils/exec"
 )
@@ -35,7 +32,6 @@ type Mounter interface {
 	MakeFile(pathname string) error
 	MakeDir(pathname string) error
 	ExistsPath(filename string) (bool, error)
-	RescanSCSIBus() error
 }
 
 type NodeMounter struct {
@@ -51,16 +47,6 @@ func newNodeMounter() Mounter {
 		},
 		exec.New(),
 	}
-}
-
-func (m *NodeMounter) RescanSCSIBus() error {
-	cmd := goexec.Command("/usr/bin/rescan-scsi-bus.sh")
-	stdoutStderr, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to rescan-scsi-bus.sh: %v", err)
-	}
-	klog.V(5).Infof("output of rescan-scsi-bus.sh: %s", stdoutStderr)
-	return nil
 }
 
 func (m *NodeMounter) GetDeviceName(mountPath string) (string, int, error) {
