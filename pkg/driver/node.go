@@ -389,7 +389,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 		var err error
 		isBlock, err = d.stats.IsBlockDevice(volumePath)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to determine if volume path %v is a block device: %v", volumePath, err, "volumeID", volumeID)
+			return nil, status.Errorf(codes.Internal, "failed to determine if volume path %v volumeID %s is a block device: %v", volumePath, volumeID, err)
 		}
 	}
 
@@ -401,20 +401,20 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 
 	notMounted, err := d.mounter.IsLikelyNotMountPoint(volumePath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "volume path %s check for mount failed: %v", volumePath, volumeID, err)
+		return nil, status.Errorf(codes.Internal, "volume path %s volumeID %s check for mount failed: %v", volumePath, volumeID, err)
 	}
 
 	if notMounted {
-		return nil, status.Errorf(codes.Internal, "volume path %s is not mounted", volumePath, "volumeID", volumeID)
+		return nil, status.Errorf(codes.Internal, "volume path %s volumeID %s is not mounted", volumePath, volumeID)
 	}
 
 	devicePath, _, err := mount.GetDeviceNameFromMount(d.mounter, volumePath)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get device from volume path %s: %v", volumePath, err, "volumeID", volumeID)
+		return nil, status.Errorf(codes.Internal, "failed to get device from volume path %s volumeID %s: %v", volumePath, volumeID, err)
 	}
 
 	if devicePath == "" {
-		return nil, status.Errorf(codes.Internal, "failed to get device from volume path %s", volumePath, "volumeID", volumeID)
+		return nil, status.Errorf(codes.Internal, "failed to get device from volume path %s volumeID %s", volumePath, volumeID)
 	}
 
 	// TODO: refactor Mounter to expose a mount.SafeFormatAndMount object

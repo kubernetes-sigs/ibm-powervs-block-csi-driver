@@ -26,7 +26,7 @@ import (
 // Mounter is an interface for mount operations
 type Mounter interface {
 	mount.Interface
-	exec.Interface
+
 	FormatAndMount(source string, target string, fstype string, options []string) error
 	GetDeviceName(mountPath string) (string, int, error)
 	MakeFile(pathname string) error
@@ -36,7 +36,6 @@ type Mounter interface {
 
 type NodeMounter struct {
 	mount.SafeFormatAndMount
-	exec.Interface
 }
 
 func newNodeMounter() Mounter {
@@ -45,7 +44,6 @@ func newNodeMounter() Mounter {
 			Interface: mount.New(""),
 			Exec:      exec.New(),
 		},
-		exec.New(),
 	}
 }
 

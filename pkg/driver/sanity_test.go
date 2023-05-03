@@ -13,7 +13,6 @@ import (
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
 	"k8s.io/mount-utils"
-	"k8s.io/utils/exec"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
@@ -264,18 +263,11 @@ func (c *fakeCloudProvider) ResizeDisk(volumeID string, newSize int64) (int64, e
 }
 
 type fakeMounter struct {
-	mount.SafeFormatAndMount
-	exec.Interface
+	mount.Interface
 }
 
 func newFakeMounter() *fakeMounter {
-	return &fakeMounter{
-		mount.SafeFormatAndMount{
-			Interface: mount.New(""),
-			Exec:      exec.New(),
-		},
-		exec.New(),
-	}
+	return &fakeMounter{}
 }
 
 func (f *fakeMounter) IsCorruptedMnt(err error) bool {

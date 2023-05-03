@@ -5,16 +5,15 @@
 package mocks
 
 import (
-	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
 	mount "k8s.io/mount-utils"
-	exec "k8s.io/utils/exec"
 )
 
 // MockMounter is a mock of Mounter interface.
 type MockMounter struct {
+	mount.Interface
 	ctrl     *gomock.Controller
 	recorder *MockMounterMockRecorder
 }
@@ -34,44 +33,6 @@ func NewMockMounter(ctrl *gomock.Controller) *MockMounter {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMounter) EXPECT() *MockMounterMockRecorder {
 	return m.recorder
-}
-
-// Command mocks base method.
-func (m *MockMounter) Command(cmd string, args ...string) exec.Cmd {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{cmd}
-	for _, a := range args {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Command", varargs...)
-	ret0, _ := ret[0].(exec.Cmd)
-	return ret0
-}
-
-// Command indicates an expected call of Command.
-func (mr *MockMounterMockRecorder) Command(cmd interface{}, args ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{cmd}, args...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Command", reflect.TypeOf((*MockMounter)(nil).Command), varargs...)
-}
-
-// CommandContext mocks base method.
-func (m *MockMounter) CommandContext(ctx context.Context, cmd string, args ...string) exec.Cmd {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, cmd}
-	for _, a := range args {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "CommandContext", varargs...)
-	ret0, _ := ret[0].(exec.Cmd)
-	return ret0
-}
-
-// CommandContext indicates an expected call of CommandContext.
-func (mr *MockMounterMockRecorder) CommandContext(ctx, cmd interface{}, args ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, cmd}, args...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommandContext", reflect.TypeOf((*MockMounter)(nil).CommandContext), varargs...)
 }
 
 // ExistsPath mocks base method.
@@ -177,21 +138,6 @@ func (m *MockMounter) List() ([]mount.MountPoint, error) {
 func (mr *MockMounterMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockMounter)(nil).List))
-}
-
-// LookPath mocks base method.
-func (m *MockMounter) LookPath(file string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LookPath", file)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LookPath indicates an expected call of LookPath.
-func (mr *MockMounterMockRecorder) LookPath(file interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookPath", reflect.TypeOf((*MockMounter)(nil).LookPath), file)
 }
 
 // MakeDir mocks base method.
