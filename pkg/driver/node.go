@@ -212,8 +212,6 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) (
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error creating device for volumeID %s, err: %v", req.VolumeId, err))
 	}
 
-	klog.V(4).Infof("found device path", "volumeID", req.VolumeId, "device", dev.Mapper)
-
 	// Construct staging device to be stored in the staging path on the node
 	stagingDevice := &device.StagingDevice{
 		VolumeID:         req.VolumeId,
@@ -245,7 +243,7 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) (
 	}
 
 	// Check if a device is mounted in target directory
-	deviceFromMount, _, err := mount.GetDeviceNameFromMount(d.mounter, target)
+	deviceFromMount, _, err := d.mounter.GetDeviceName(target)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to check if device is already mounted for volumeID %s: %v", req.VolumeId, err))
 	}
@@ -253,7 +251,7 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) (
 	// This operation (NodeStageVolume) MUST be idempotent.
 	// If the volume corresponding to the volume_id is already staged to the staging_target_path,
 	// and is identical to the specified volume_capability the Plugin MUST reply 0 OK.
-	source := dev.Mapper
+	source := (*dev).GetMapper()
 	if err == nil && deviceFromMount == source {
 		klog.V(4).Infof("Volume is already staged", "volumeID", req.VolumeId)
 		return stagingDevice, nil
@@ -325,7 +323,7 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 
 	klog.Infof("found staged device info: %+v", stagingDev, "volumeID", req.VolumeId)
 
-	dev := stagingDev.Device
+	dev := *stagingDev.Device
 	if dev == nil {
 		return status.Error(codes.Internal, fmt.Sprintf("missing device info in the staging device %v for volumeID %s", stagingDev, volumeID))
 	}
@@ -343,13 +341,13 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 	// Delete device
 	klog.Infof("deleting device %+v", dev, "volumeID", volumeID)
 	//check if device is mounted or has holders
-	err := d.checkIfDeviceCanBeDeleted(dev)
+	err := d.checkIfDeviceCanBeDeleted(&dev)
 	if err != nil {
 		return fmt.Errorf("failed to delete device for volumeID %s: %v", volumeID, err)
 	}
 
-	if err := device.DeleteDevice(dev); err != nil {
-		return status.Error(codes.Internal, fmt.Sprintf("error deleting device %s for volumeID %s: %v", dev.Mapper, volumeID, err))
+	if err := dev.DeleteDevice(); err != nil {
+		return status.Error(codes.Internal, fmt.Sprintf("error deleting device %s for volumeID %s: %v", dev.GetMapper(), volumeID, err))
 	}
 	// Remove the device file
 	device.FileDelete(deviceFilePath)
@@ -635,7 +633,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 			fmt.Sprintf("staging device is not configured at the staging path %s for volumeID %s", target, volumeID))
 	}
 
-	source := stagingDev.Device.Mapper
+	source := (*stagingDev.Device).GetMapper()
 	klog.V(4).Infof("[block]: found device path for volumeID %s -> %s", volumeID, source)
 
 	// create the global mount path if it is missing
@@ -753,40 +751,42 @@ func (d *nodeService) isDirMounted(target string) (bool, error) {
 	return false, nil
 }
 
-func (d *nodeService) setupDevice(wwn string) (*device.Device, error) {
-	dev := device.GetDevice(wwn)
-	if dev != nil {
-		err := device.DeleteDevice(dev)
+var (
+	NewDevice = device.NewLinuxDevice
+)
+
+func (d *nodeService) setupDevice(wwn string) (*device.LinuxDevice, error) {
+	dev := NewDevice(wwn)
+	deviceExist := dev.GetDevice()
+	if deviceExist {
+		err := dev.DeleteDevice()
 		if err != nil {
-			klog.Warningf("failed to cleanup stale device %s before staging for WWN %s, err %v", dev.Mapper, dev.WWN, err)
+			klog.Warningf("failed to cleanup stale device before staging for WWN %s, err %v", wwn, err)
 		}
 	}
 
 	// Create Device
-	dev, err := device.CreateDevice(wwn)
+	err := dev.CreateDevice()
 	if err != nil {
 		return nil, err
 	}
-	if dev == nil {
-		return nil, fmt.Errorf("unable to find the device for wwn %s", wwn)
-	}
-
-	return dev, err
+	return &dev, err
 }
 
 // checkIfDeviceCanBeDeleted: check if device is currently in use
-func (d *nodeService) checkIfDeviceCanBeDeleted(dev *device.Device) (err error) {
+func (d *nodeService) checkIfDeviceCanBeDeleted(dev *device.LinuxDevice) (err error) {
 	// first check if the device is already mounted
 	ml, err := d.mounter.List()
 	if err != nil {
 		return err
 	}
 
+	mapPath := (*dev).GetMapper()
+
 	for _, mount := range ml {
-		if strings.EqualFold(dev.Mapper, mount.Device) || strings.EqualFold(dev.Pathname, mount.Device) {
-			return fmt.Errorf("%s is currently mounted for wwn %s", dev.Mapper, dev.WWN)
+		if strings.EqualFold(mapPath, mount.Device) {
+			return fmt.Errorf("%s is currently mounted", mapPath)
 		}
 	}
-
 	return nil
 }

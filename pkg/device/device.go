@@ -32,6 +32,13 @@ var (
 	lastStaleCleanExecuted time.Time
 )
 
+type LinuxDevice interface {
+	GetDevice() bool
+	DeleteDevice() (err error)
+	CreateDevice() (err error)
+	GetMapper() string
+}
+
 // Device struct
 type Device struct {
 	Pathname string   `json:"pathname,omitempty"`
@@ -43,32 +50,41 @@ type Device struct {
 
 // StagingDevice represents the device information that is stored in the staging area.
 type StagingDevice struct {
-	VolumeID         string  `json:"volume_id"`
-	VolumeAccessMode string  `json:"volume_access_mode"` // block or mount
-	Device           *Device `json:"device"`
-	MountInfo        *Mount  `json:"mount_info,omitempty"`
+	VolumeID         string       `json:"volume_id"`
+	VolumeAccessMode string       `json:"volume_access_mode"` // block or mount
+	Device           *LinuxDevice `json:"device"`
+	MountInfo        *Mount       `json:"mount_info,omitempty"`
 }
 
 // Mount struct
 type Mount struct {
-	Mountpoint string   `json:"Mountpoint,omitempty"`
-	Options    []string `json:"Options,omitempty"`
-	Device     *Device  `json:"device,omitempty"`
-	FSType     string   `json:"fstype,omitempty"`
+	Mountpoint string       `json:"Mountpoint,omitempty"`
+	Options    []string     `json:"Options,omitempty"`
+	Device     *LinuxDevice `json:"device,omitempty"`
+	FSType     string       `json:"fstype,omitempty"`
+}
+
+func NewLinuxDevice(wwn string) LinuxDevice {
+	return &Device{WWN: wwn}
+}
+
+func (d *Device) GetMapper() string {
+	return d.Mapper
 }
 
 // GetDevice: find the device with given wwn
-func GetDevice(wwn string) *Device {
-	devices, err := getLinuxDmDevices(wwn, false)
+func (d *Device) GetDevice() bool {
+	devices, err := d.getLinuxDmDevices(false)
 	// ignore any errors
 	if err != nil || len(devices) == 0 {
-		return nil
+		return false
 	}
-	return devices[0]
+	d = devices[0]
+	return true
 }
 
 // getLinuxDmDevices: get all linux Devices
-func getLinuxDmDevices(wwn string, needActivePath bool) ([]*Device, error) {
+func (d *Device) getLinuxDmDevices(needActivePath bool) ([]*Device, error) {
 	args := []string{"ls", "--target", "multipath"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
 	out := string(outBytes)
@@ -101,7 +117,7 @@ func getLinuxDmDevices(wwn string, needActivePath bool) ([]*Device, error) {
 		tmpWWID := strings.TrimPrefix(uuid, "mpath-")
 		tmpWWN := tmpWWID[1:] // truncate scsi-id prefix
 
-		if strings.EqualFold(wwn, tmpWWN) {
+		if strings.EqualFold(d.WWN, tmpWWN) {
 			dev.WWN = tmpWWN
 			dev.WWID = tmpWWID
 			if err != nil {
@@ -130,36 +146,40 @@ func getLinuxDmDevices(wwn string, needActivePath bool) ([]*Device, error) {
 }
 
 // DeleteDevice: delete the multipath device
-func DeleteDevice(dev *Device) (err error) {
-	return tearDownMultipathDevice(dev)
+func (d *Device) DeleteDevice() (err error) {
+	return tearDownMultipathDevice(d)
 }
 
 // CreateDevice: attach and create linux devices to host
-func CreateDevice(wwn string) (dev *Device, err error) {
+func (d *Device) CreateDevice() (err error) {
 	err = scsiHostRescan()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// wait for device to appear after rescan
 	time.Sleep(time.Second * 1)
 
-	device, err := createLinuxDevice(wwn)
+	err = d.createLinuxDevice()
 	if err != nil {
-		klog.Errorf("unable to create device for wwn %v", wwn)
-		return nil, err
+		klog.Errorf("unable to create device for wwn %v", d.WWN)
+		return err
 	}
-	return device, nil
+
+	if d.Mapper == "" {
+		return fmt.Errorf("unable to find the device for wwn %s", d.WWN)
+	}
+	return nil
 }
 
 // createLinuxDevice: attaches and creates a new linux device
-func createLinuxDevice(wwn string) (dev *Device, err error) {
+func (d *Device) createLinuxDevice() (err error) {
 	// Start a Countdown ticker
 	for i := 0; i <= 8; i++ {
 		// ignore devices with no paths
 		// Match wwn
-		dev, err := findDevice(wwn)
-		if dev != nil || err != nil {
-			return dev, err
+		err := d.findDevice()
+		if err != nil {
+			return err
 		}
 		// try cleaning up faulty, orphan, stale paths/maps
 		tmpTime := time.Now().Add(-10 * time.Second)
@@ -169,9 +189,9 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 		}
 
 		// search again before removing stale/remapped scsi disks
-		dev, err = findDevice(wwn)
-		if dev != nil || err != nil {
-			return dev, err
+		err = d.findDevice()
+		if err != nil {
+			return err
 		}
 
 		// handle stale paths
@@ -190,21 +210,22 @@ func createLinuxDevice(wwn string) (dev *Device, err error) {
 	}
 
 	// Reached here signifies the device was not found, throw an error
-	return nil, fmt.Errorf("fc device not found for wwn %s", wwn)
+	return fmt.Errorf("fc device not found for wwn %s", d.WWN)
 }
 
 // findDevice: find the device with given wwn and having atleast 1 slave disk
-func findDevice(wwn string) (*Device, error) {
-	devices, err := getLinuxDmDevices(wwn, true)
+func (d *Device) findDevice() error {
+	devices, err := d.getLinuxDmDevices(true)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	for _, d := range devices {
-		if len(d.Slaves) > 0 && strings.EqualFold(d.WWN, wwn) {
-			return d, nil
+	for _, dev := range devices {
+		if len(dev.Slaves) > 0 && strings.EqualFold(dev.WWN, d.WWN) {
+			d = dev
+			break
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 // tryCleaningFaultyAndOrphan: house keeping when device cannot be found once
