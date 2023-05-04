@@ -61,10 +61,11 @@ func readFirstLine(filePath string) (line string, er error) {
 	return a, err
 }
 
-// FileExists: does a stat on the path and returns true if it exists
-// In addition, dir returns true if the path is a directory
-func FileExists(path string) (exists bool, dir bool, err error) {
-	info, err := os.Stat(path)
+// fileExists: does a stat on the path and returns true if it exists
+// In addition, isDir returns true if the path is a directory
+func fileExists(dir, fileName string) (exists bool, isDir bool, err error) {
+	dataFilePath := filepath.Join(dir, fileName)
+	info, err := os.Stat(dataFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, false, nil
@@ -74,8 +75,8 @@ func FileExists(path string) (exists bool, dir bool, err error) {
 	return true, info.IsDir(), nil
 }
 
-// WriteData: persists data as json file at the provided location. Creates new directory if not already present.
-func WriteData(dir string, fileName string, data interface{}) error {
+// writeData: persists data as json file at the provided location. Creates new directory if not already present.
+func writeData(dir, fileName string, data interface{}) error {
 	dataFilePath := filepath.Join(dir, fileName)
 	// Encode from json object
 	jsonData, err := json.Marshal(data)
@@ -97,11 +98,11 @@ func WriteData(dir string, fileName string, data interface{}) error {
 	return nil
 }
 
-// readData: read the file at a given location
+// readDataFile: read the file at a given location
 func readDataFile(dir, fileName string) ([]byte, error) {
 	// Check if the file exists
 	dataFilePath := filepath.Join(dir, fileName)
-	exists, _, err := FileExists(dataFilePath)
+	exists, _, err := fileExists(dir, fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check if device info file %s exists, %v", dataFilePath, err.Error())
 	}
@@ -118,8 +119,8 @@ func readDataFile(dir, fileName string) ([]byte, error) {
 
 }
 
-// ReadData: read data as json file at the provided location.
-func ReadData(dir, fileName string) (*StagingDevice, error) {
+// readData: read data as json file at the provided location.
+func readData(dir, fileName string) (*StagingDevice, error) {
 	deviceInfo, err := readDataFile(dir, fileName)
 	if err != nil {
 		return nil, err
@@ -135,15 +136,16 @@ func ReadData(dir, fileName string) (*StagingDevice, error) {
 	return &stagingDev, nil
 }
 
-// FileDelete: delete the file
-func FileDelete(path string) error {
-	is, _, _ := FileExists(path)
+// fileDelete: delete the file
+func fileDelete(dir, fileName string) error {
+	dataFilePath := filepath.Join(dir, fileName)
+	is, _, _ := fileExists(dir, fileName)
 	if !is {
-		return errors.New("File doesnt exist " + path)
+		return errors.New("File doesnt exist " + dataFilePath)
 	}
-	err := os.RemoveAll(path)
+	err := os.RemoveAll(dataFilePath)
 	if err != nil {
-		return errors.New("Unable to delete file " + path + " " + err.Error())
+		return errors.New("Unable to delete file " + dataFilePath + " " + err.Error())
 	}
 	return nil
 }
@@ -161,13 +163,10 @@ func getUUID(pathname string) (string, error) {
 // deleteSdDevice: delete the scsi device by writing "1"
 func deleteSdDevice(deletePath string) (err error) {
 	//deletePath for deleting the device
-	is, _, _ := FileExists(deletePath)
-	if is {
-		err = os.WriteFile(deletePath, []byte("1"), 0644)
-		if err != nil {
-			err = fmt.Errorf("error writing to file %s: %v", deletePath, err)
-			return err
-		}
+	err = os.WriteFile(deletePath, []byte("1"), 0644)
+	if err != nil {
+		err = fmt.Errorf("error writing to file %s: %v", deletePath, err)
+		return err
 	}
 	return nil
 }

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -50,12 +49,13 @@ const (
 	// defaultMaxVolumesPerInstance is the limit of volumes can be attached in the PowerVS environment
 	// TODO: rightnow 99 is just a placeholder, this needs to be changed post discussion with PowerVS team
 	defaultMaxVolumesPerInstance = 127 - 1
-
-	// deviceInfoFileName is used to store the device details in a JSON file
-	deviceInfoFileName = "deviceInfo.json"
 )
 
 var (
+	NewDevice = device.NewLinuxDevice
+	WriteData = device.WriteData
+	ReadData  = device.ReadData
+
 	// nodeCaps represents the capability of node service.
 	nodeCaps = []csi.NodeServiceCapability_RPC_Type{
 		csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
@@ -175,13 +175,13 @@ func (d *nodeService) nodeStageVolume(req *csi.NodeStageVolumeRequest) error {
 		return status.Error(codes.Internal, fmt.Sprintf("failed to stage volumeID %s err: %s", req.VolumeId, err))
 	}
 	if stagingDev == nil || stagingDev.Device == nil {
-		return fmt.Errorf("invalid staging device info, staging device cannot be nil")
+		return status.Error(codes.Internal, "invalid staging device info, staging device cannot be nil")
 	}
 	klog.V(4).Infof("staged successfully, StagingDev: %#v", stagingDev, "volumeID", req.VolumeId)
 
 	// Save staged device info in the staging area
 	klog.V(4).Infof("writing device info %+v to staging target path %s", stagingDev.Device, target, "volumeID", req.VolumeId)
-	err = device.WriteData(target, deviceInfoFileName, stagingDev)
+	err = WriteData(target, stagingDev)
 	if err != nil {
 		return status.Error(codes.Internal, fmt.Sprintf("Failed to stage volumeID %s, err: %v", req.VolumeId, err))
 	}
@@ -193,7 +193,7 @@ func (d *nodeService) isVolumeStaged(wwn string, req *csi.NodeStageVolumeRequest
 	target := req.GetStagingTargetPath()
 
 	// Read the device info from the staging path
-	stagingDev, _ := device.ReadData(target, deviceInfoFileName)
+	_, stagingDev := ReadData(target)
 	if stagingDev == nil {
 		return false
 	}
@@ -309,15 +309,13 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 	target := req.GetStagingTargetPath()
 
 	// Check if the staged device file exists and read
-	deviceFilePath := path.Join(target, deviceInfoFileName)
-	exists, _, _ := device.FileExists(deviceFilePath)
+	exists, stagingDev := ReadData(target)
 	if !exists {
-		klog.V(5).Infof("volume %s not in staged state as the device info file %s does not exist", volumeID, deviceFilePath)
+		klog.V(5).Infof("volume %s not in staged state as the device info file %s does not exist", volumeID, target)
 		return nil
 	}
-	stagingDev, _ := device.ReadData(target, deviceInfoFileName)
 	if stagingDev == nil {
-		klog.Infof("volume %s not in staged state as the staging device info file %s does not exist", volumeID, deviceFilePath)
+		klog.V(5).Infof("volume %s not in staged state as the staging device info file %s does not exist", volumeID, target)
 		return nil
 	}
 
@@ -350,7 +348,7 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 		return status.Error(codes.Internal, fmt.Sprintf("error deleting device %s for volumeID %s: %v", dev.GetMapper(), volumeID, err))
 	}
 	// Remove the device file
-	device.FileDelete(deviceFilePath)
+	WriteData(target, nil)
 
 	return nil
 }
@@ -458,6 +456,11 @@ func (d *nodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not supported")
 	}
 
+	wwn, ok := req.PublishContext[WWNKey]
+	if !ok || wwn == "" {
+		return nil, status.Error(codes.InvalidArgument, "WWN ID is not provided or empty")
+	}
+
 	mountOptions := []string{"bind"}
 	if req.GetReadonly() {
 		mountOptions = append(mountOptions, "ro")
@@ -496,7 +499,7 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	defer d.volumeLocks.Release(volumeID)
 
 	klog.V(5).Infof("starting unmounting %s for volumeID %s", target, volumeID)
-	err := mount.CleanupMountPoint(target, d.mounter, false)
+	err := d.mounter.Unmount(target)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not unmount %q for volumeID %s volumeID: %v", target, volumeID, err)
 	}
@@ -623,10 +626,10 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	volumeID := req.GetVolumeId()
 
 	// Read device info from the staging area
-	stagingDev, err := device.ReadData(req.GetStagingTargetPath(), deviceInfoFileName)
-	if err != nil {
+	exists, stagingDev := ReadData(req.GetStagingTargetPath())
+	if !exists {
 		return status.Error(codes.FailedPrecondition,
-			fmt.Sprintf("staging target path %s not set for volumeID %s, err: %v", target, req.VolumeId, err))
+			fmt.Sprintf("staging target path %s not set for volumeID %s", target, req.VolumeId))
 	}
 	if stagingDev == nil || stagingDev.Device == nil {
 		return status.Error(codes.FailedPrecondition,
@@ -750,10 +753,6 @@ func (d *nodeService) isDirMounted(target string) (bool, error) {
 	}
 	return false, nil
 }
-
-var (
-	NewDevice = device.NewLinuxDevice
-)
 
 func (d *nodeService) setupDevice(wwn string) (*device.LinuxDevice, error) {
 	dev := NewDevice(wwn)

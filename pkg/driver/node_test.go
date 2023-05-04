@@ -16,7 +16,6 @@ package driver
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -68,18 +67,26 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		}
 
-		successExpectMock = func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
-			// mockMounter.EXPECT().ExistsPath(gomock.Eq(targetPath)).Return(false, nil)
-			// mockMounter.EXPECT().MakeDir(gomock.Any()).Return(nil)
-			mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
+		commonExpectMock = func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+			// always use mocked device
+			NewDevice = func(wwn string) device.LinuxDevice {
+				return mockDevice
+			}
+
+			mockDevice.EXPECT().GetDevice().Return(false)
+			mockDevice.EXPECT().CreateDevice().Return(nil)
 			mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
+
+			WriteData = func(devPath string, stgDev *device.StagingDevice) error {
+				return nil
+			}
 
 		}
 	)
 	testCases := []struct {
 		name         string
 		request      *csi.NodeStageVolumeRequest
-		expectMock   func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice)
+		expectMock   func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice)
 		expectedCode codes.Code
 		volumeLock   bool
 	}{
@@ -92,12 +99,11 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeCapability:  stdVolCap,
 				VolumeId:          volumeID,
 			},
-			expectMock: func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
-				successExpectMock(mockMounter, mockDevice)
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Any(), gomock.Any()).Return(nil)
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
 
-				mockDevice.EXPECT().GetDevice().Return(false)
-				mockDevice.EXPECT().CreateDevice().Return(nil)
 				mockDevice.EXPECT().GetMapper().Return(devicePath)
 			},
 		},
@@ -105,7 +111,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "success normal [raw block]",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability: &csi.VolumeCapability{
 					AccessType: &csi.VolumeCapability_Block{
@@ -117,16 +123,17 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
-				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
 			},
 		},
 
 		{
 			name: "success with mount options",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability: &csi.VolumeCapability{
 					AccessType: &csi.VolumeCapability_Mount{
@@ -140,16 +147,20 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
-				successExpectMock(mockMounter, mockDevice)
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Eq([]string{"dirsync", "noexec"}))
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
+
 			},
 		},
 
 		{
 			name: "success fsType ext3",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability: &csi.VolumeCapability{
 					AccessType: &csi.VolumeCapability_Mount{
@@ -163,16 +174,20 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
-				successExpectMock(mockMounter, mockDevice)
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any())
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
+
 			},
 		},
 
 		{
 			name: "success mount with default fsType ext4",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability: &csi.VolumeCapability{
 					AccessType: &csi.VolumeCapability_Mount{
@@ -186,31 +201,37 @@ func TestNodeStageVolume(t *testing.T) {
 				},
 				VolumeId: volumeID,
 			},
-			expectMock: func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
-				successExpectMock(mockMounter, mockDevice)
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
+
 			},
 		},
 
 		{
 			name: "success device already mounted at target",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
 				VolumeId:          volumeID,
 			},
-			expectMock: func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(devicePath, 1, nil)
-				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
 			},
 		},
 
 		{
 			name: "fail no VolumeId",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
 			},
@@ -219,7 +240,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail no mount",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability: &csi.VolumeCapability{
 					AccessType: &csi.VolumeCapability_Mount{},
@@ -233,7 +254,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail no StagingTargetPath",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:   map[string]string{WWNKey: devicePath},
+				PublishContext:   map[string]string{WWNKey: volumeWWN},
 				VolumeCapability: stdVolCap,
 				VolumeId:         volumeID,
 			},
@@ -243,7 +264,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail no VolumeCapability",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeId:          volumeID,
 			},
@@ -253,7 +274,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail invalid VolumeCapability",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability: &csi.VolumeCapability{
 					AccessMode: &csi.VolumeCapability_AccessMode{
@@ -263,9 +284,6 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeId: volumeID,
 			},
 			expectedCode: codes.InvalidArgument,
-			expectMock: func(mockMounter mocks.MockMounter, mockDevice mocks.MockLinuxDevice) {
-				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-			},
 		},
 		{
 			name: "fail no devicePath",
@@ -278,7 +296,7 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "fail_if_volume_already_locked",
 			request: &csi.NodeStageVolumeRequest{
-				PublishContext:    map[string]string{WWNKey: devicePath},
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
 				StagingTargetPath: targetPath,
 				VolumeCapability:  stdVolCap,
 				VolumeId:          volumeID,
@@ -296,10 +314,6 @@ func TestNodeStageVolume(t *testing.T) {
 			mockMounter := mocks.NewMockMounter(mockCtl)
 			mockDevice := mocks.NewMockLinuxDevice(mockCtl)
 
-			NewDevice = func(wwn string) device.LinuxDevice {
-				return mockDevice
-			}
-
 			powervsDriver := &nodeService{
 				mounter:     mockMounter,
 				volumeLocks: util.NewVolumeLocks(),
@@ -311,7 +325,7 @@ func TestNodeStageVolume(t *testing.T) {
 			}
 
 			if tc.expectMock != nil {
-				tc.expectMock(*mockMounter, *mockDevice)
+				tc.expectMock(mockMounter, mockDevice)
 			}
 
 			_, err := powervsDriver.NodeStageVolume(context.TODO(), tc.request)
@@ -380,10 +394,9 @@ func TestNodeExpandVolume(t *testing.T) {
 }
 
 func TestNodePublishVolume(t *testing.T) {
-	targetPath := "/test/path"
-	stagingTargetPath := "/test/staging/path"
+	targetPath := "/tmp/test/path"
+	stagingTargetPath := "/tmp/test/staging/path"
 	devicePath := "/dev/fake"
-	sourcePath := "/test/src"
 	wwnValue := "testwwn12"
 	stdVolCap := &csi.VolumeCapability{
 		AccessType: &csi.VolumeCapability_Block{
@@ -406,6 +419,7 @@ func TestNodePublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockDevice := mocks.NewMockLinuxDevice(mockCtl)
 
 				powervsDriver := &nodeService{
 					mounter:     mockMounter,
@@ -414,7 +428,18 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
-				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
+				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
+
+				// always use mocked device
+				NewDevice = func(wwn string) device.LinuxDevice {
+					return mockDevice
+				}
+				var mD device.LinuxDevice = mockDevice
+				ReadData = func(devPath string) (bool, *device.StagingDevice) {
+					return true, &device.StagingDevice{Device: &mD}
+				}
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
@@ -437,6 +462,7 @@ func TestNodePublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockDevice := mocks.NewMockLinuxDevice(mockCtl)
 
 				powervsDriver := &nodeService{
 					mounter:     mockMounter,
@@ -445,7 +471,18 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
-				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
+				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
+
+				// always use mocked device
+				NewDevice = func(wwn string) device.LinuxDevice {
+					return mockDevice
+				}
+				var mD device.LinuxDevice = mockDevice
+				ReadData = func(devPath string) (bool, *device.StagingDevice) {
+					return true, &device.StagingDevice{Device: &mD}
+				}
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
@@ -469,6 +506,7 @@ func TestNodePublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockDevice := mocks.NewMockLinuxDevice(mockCtl)
 
 				powervsDriver := &nodeService{
 					mounter:     mockMounter,
@@ -477,7 +515,18 @@ func TestNodePublishVolume(t *testing.T) {
 
 				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
-				mockMounter.EXPECT().Mount(sourcePath, targetPath, "", gomock.Any()).Return(nil)
+				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
+
+				// always use mocked device
+				NewDevice = func(wwn string) device.LinuxDevice {
+					return mockDevice
+				}
+				var mD device.LinuxDevice = mockDevice
+				ReadData = func(devPath string) (bool, *device.StagingDevice) {
+					return true, &device.StagingDevice{Device: &mD}
+				}
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
@@ -762,8 +811,8 @@ func TestNodeUnpublishVolume(t *testing.T) {
 					VolumeId:   "vol-test",
 				}
 
-				powervsDriver.volumeLocks.TryAcquire(req.TargetPath)
-				defer powervsDriver.volumeLocks.Release(req.TargetPath)
+				powervsDriver.volumeLocks.TryAcquire(req.VolumeId)
+				defer powervsDriver.volumeLocks.Release(req.VolumeId)
 
 				_, err := powervsDriver.NodeUnpublishVolume(context.TODO(), req)
 				checkExpectedErrorCode(t, err, codes.Aborted)
@@ -974,7 +1023,6 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				req := csi.NodeGetVolumeStatsRequest{VolumeId: volumeID, VolumePath: volumePath}
 
 				_, err := driver.NodeGetVolumeStats(context.TODO(), &req)
-				fmt.Println(err)
 				expectErr(t, err, codes.Internal)
 			},
 		},
@@ -995,7 +1043,6 @@ func TestNodeGetVolumeStats(t *testing.T) {
 				req := csi.NodeGetVolumeStatsRequest{VolumeId: volumeID, VolumePath: volumePath}
 
 				_, err := driver.NodeGetVolumeStats(context.TODO(), &req)
-				fmt.Println(err)
 
 				expectErr(t, err, codes.Internal)
 			},

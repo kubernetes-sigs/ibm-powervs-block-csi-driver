@@ -32,6 +32,11 @@ var (
 	lastStaleCleanExecuted time.Time
 )
 
+const (
+	// deviceInfoFileName is used to store the device details in a JSON file
+	deviceInfoFileName = "deviceInfo.json"
+)
+
 type LinuxDevice interface {
 	GetDevice() bool
 	DeleteDevice() (err error)
@@ -65,7 +70,9 @@ type Mount struct {
 }
 
 func NewLinuxDevice(wwn string) LinuxDevice {
-	return &Device{WWN: wwn}
+	return &Device{
+		WWN: wwn,
+	}
 }
 
 func (d *Device) GetMapper() string {
@@ -266,4 +273,20 @@ func scsiHostRescan() error {
 		}
 	}
 	return nil
+}
+
+func ReadData(devPath string) (bool, *StagingDevice) {
+	isFileExist, _, _ := fileExists(devPath, deviceInfoFileName)
+	if isFileExist {
+		stgDev, _ := readData(devPath, deviceInfoFileName)
+		return true, stgDev
+	}
+	return false, nil
+}
+
+func WriteData(devPath string, stgDev *StagingDevice) error {
+	if stgDev == nil {
+		return fileDelete(devPath, deviceInfoFileName)
+	}
+	return writeData(devPath, deviceInfoFileName, stgDev)
 }
