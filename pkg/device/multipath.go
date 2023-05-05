@@ -94,6 +94,7 @@ func multipathGetPathsOfDevice(dev *Device, needActivePath bool) (paths []*PathI
 	if len(lines) == 0 && dev != nil && dev.WWID != "" {
 		return nil, nil
 	}
+
 	for _, line := range lines {
 		if strings.Contains(line, dev.WWID) {
 			entry := strings.Fields(line)
@@ -128,7 +129,7 @@ func multipathdShowCmd(search string, args []string) (output []string, err error
 	multipathMutex.Lock()
 	defer multipathMutex.Unlock()
 
-	out, err := exec.Command(multipathd, args...).Output()
+	out, err := exec.Command(multipathd, args...).CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
@@ -153,6 +154,7 @@ func tearDownMultipathDevice(dev *Device) (err error) {
 	if err != nil {
 		return err
 	}
+
 	for _, line := range lines {
 		if strings.Contains(line, dev.WWID) {
 			entry := strings.Fields(line)

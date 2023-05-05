@@ -436,7 +436,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 				var mD device.LinuxDevice = mockDevice
 				ReadData = func(devPath string) (bool, *device.StagingDevice) {
-					return true, &device.StagingDevice{Device: &mD}
+					return true, &device.StagingDevice{Device: mD}
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath)
@@ -479,7 +479,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 				var mD device.LinuxDevice = mockDevice
 				ReadData = func(devPath string) (bool, *device.StagingDevice) {
-					return true, &device.StagingDevice{Device: &mD}
+					return true, &device.StagingDevice{Device: mD}
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath)
@@ -523,7 +523,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 				var mD device.LinuxDevice = mockDevice
 				ReadData = func(devPath string) (bool, *device.StagingDevice) {
-					return true, &device.StagingDevice{Device: &mD}
+					return true, &device.StagingDevice{Device: mD}
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath)
@@ -721,7 +721,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 					VolumeId:   "vol-test",
 				}
 
-				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
+				mockMounter.EXPECT().Unmount(targetPath).Return(nil)
 				_, err := powervsDriver.NodeUnpublishVolume(context.TODO(), req)
 				if err != nil {
 					t.Fatalf("Expect no error but got: %v", err)
@@ -788,7 +788,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 					VolumeId:   "vol-test",
 				}
 
-				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(errors.New("test Unmount error"))
+				mockMounter.EXPECT().Unmount(targetPath).Return(errors.New("test Unmount error"))
 				_, err := powervsDriver.NodeUnpublishVolume(context.TODO(), req)
 				expectErr(t, err, codes.Internal)
 			},

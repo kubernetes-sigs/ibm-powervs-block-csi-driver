@@ -128,6 +128,8 @@ func readData(dir, fileName string) (*StagingDevice, error) {
 
 	// Decode into device object
 	var stagingDev StagingDevice
+	// need to set this for unmarshal to know the interface type
+	stagingDev.Device = &Device{}
 	err = json.Unmarshal(deviceInfo, &stagingDev)
 	if err != nil {
 		return nil, err
