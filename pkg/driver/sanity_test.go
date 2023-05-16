@@ -14,7 +14,6 @@ import (
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
 	"k8s.io/mount-utils"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
-	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/device"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
@@ -62,11 +61,6 @@ func TestSanity(t *testing.T) {
 			volumeLocks:   util.NewVolumeLocks(),
 			stats:         &statsUtil,
 		},
-	}
-
-	ReadData = func(devPath string) (bool, *device.StagingDevice) {
-		fmt.Print("testing this one for mocking")
-		return false, nil
 	}
 
 	defer func() {

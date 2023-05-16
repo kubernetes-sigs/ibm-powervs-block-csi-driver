@@ -69,17 +69,13 @@ func TestNodeStageVolume(t *testing.T) {
 
 		commonExpectMock = func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
 			// always use mocked device
-			NewDevice = func(wwn string) device.LinuxDevice {
-				return mockDevice
+			NewDevice = func(wwn string) (bool, device.LinuxDevice) {
+				return true, mockDevice
 			}
-
-			mockDevice.EXPECT().GetDevice().Return(false)
 			mockDevice.EXPECT().CreateDevice().Return(nil)
+			mockDevice.EXPECT().GetMapper().Return(devicePath)
+			mockDevice.EXPECT().DeleteDevice().Return(nil)
 			mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
-
-			WriteData = func(devPath string, stgDev *device.StagingDevice) error {
-				return nil
-			}
 
 		}
 	)
@@ -104,7 +100,6 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Any(), gomock.Any()).Return(nil)
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
 
-				mockDevice.EXPECT().GetMapper().Return(devicePath)
 			},
 		},
 
@@ -124,7 +119,12 @@ func TestNodeStageVolume(t *testing.T) {
 				VolumeId: volumeID,
 			},
 			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
-				commonExpectMock(mockMounter, mockDevice)
+				// always use mocked device
+				NewDevice = func(wwn string) (bool, device.LinuxDevice) {
+					return true, mockDevice
+				}
+
+				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 			},
@@ -152,8 +152,6 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Eq([]string{"dirsync", "noexec"}))
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
 
-				mockDevice.EXPECT().GetMapper().Return(devicePath)
-
 			},
 		},
 
@@ -178,8 +176,6 @@ func TestNodeStageVolume(t *testing.T) {
 				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any())
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
-
-				mockDevice.EXPECT().GetMapper().Return(devicePath)
 
 			},
 		},
@@ -206,8 +202,6 @@ func TestNodeStageVolume(t *testing.T) {
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
 
-				mockDevice.EXPECT().GetMapper().Return(devicePath)
-
 			},
 		},
 
@@ -223,8 +217,6 @@ func TestNodeStageVolume(t *testing.T) {
 				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(devicePath, 1, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-
-				mockDevice.EXPECT().GetMapper().Return(devicePath)
 			},
 		},
 
@@ -431,15 +423,13 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
 
 				// always use mocked device
-				NewDevice = func(wwn string) device.LinuxDevice {
-					return mockDevice
-				}
-				var mD device.LinuxDevice = mockDevice
-				ReadData = func(devPath string) (bool, *device.StagingDevice) {
-					return true, &device.StagingDevice{Device: mD}
+				NewDevice = func(wwn string) (bool, device.LinuxDevice) {
+					return true, mockDevice
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath)
+				mockDevice.EXPECT().CreateDevice().Return(nil)
+				mockDevice.EXPECT().DeleteDevice().Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
@@ -474,15 +464,13 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
 
 				// always use mocked device
-				NewDevice = func(wwn string) device.LinuxDevice {
-					return mockDevice
-				}
-				var mD device.LinuxDevice = mockDevice
-				ReadData = func(devPath string) (bool, *device.StagingDevice) {
-					return true, &device.StagingDevice{Device: mD}
+				NewDevice = func(wwn string) (bool, device.LinuxDevice) {
+					return true, mockDevice
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath)
+				mockDevice.EXPECT().CreateDevice().Return(nil)
+				mockDevice.EXPECT().DeleteDevice().Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
@@ -518,15 +506,13 @@ func TestNodePublishVolume(t *testing.T) {
 				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
 
 				// always use mocked device
-				NewDevice = func(wwn string) device.LinuxDevice {
-					return mockDevice
-				}
-				var mD device.LinuxDevice = mockDevice
-				ReadData = func(devPath string) (bool, *device.StagingDevice) {
-					return true, &device.StagingDevice{Device: mD}
+				NewDevice = func(wwn string) (bool, device.LinuxDevice) {
+					return true, mockDevice
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath)
+				mockDevice.EXPECT().CreateDevice().Return(nil)
+				mockDevice.EXPECT().DeleteDevice().Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -32,13 +33,8 @@ var (
 	lastStaleCleanExecuted time.Time
 )
 
-const (
-	// deviceInfoFileName is used to store the device details in a JSON file
-	deviceInfoFileName = "deviceInfo.json"
-)
-
 type LinuxDevice interface {
-	GetDevice() bool
+	// GetDevice() bool
 	DeleteDevice() (err error)
 	CreateDevice() (err error)
 	GetMapper() string
@@ -52,31 +48,21 @@ type Device struct {
 	Slaves []string `json:"slaves,omitempty"`
 }
 
-// StagingDevice represents the device information that is stored in the staging area.
-type StagingDevice struct {
-	VolumeID         string      `json:"volume_id"`
-	VolumeAccessMode string      `json:"volume_access_mode"` // block or mount
-	Device           LinuxDevice `json:"device"`
-	IsMounted        bool
-}
-
-func NewLinuxDevice(wwn string) LinuxDevice {
-	return &Device{
+// NewLinuxDevice: new device with given wwn
+func NewLinuxDevice(wwn string) (bool, LinuxDevice) {
+	d := &Device{
 		WWN: wwn,
 	}
+	err := d.getLinuxDmDevice(false)
+	if err != nil || d.Mapper == "" {
+		return false, d
+	}
+
+	return true, d
 }
 
 func (d *Device) GetMapper() string {
 	return d.Mapper
-}
-
-// GetDevice: find the device with given wwn
-func (d *Device) GetDevice() bool {
-	err := d.getLinuxDmDevice(false)
-	if err != nil || d.Mapper == "" {
-		return false
-	}
-	return true
 }
 
 // getLinuxDmDevice: get all linux Devices
@@ -248,19 +234,20 @@ func scsiHostRescan() error {
 	return nil
 }
 
-func ReadData(devPath string) (bool, *StagingDevice) {
-	isFileExist, _, _ := fileExists(devPath, deviceInfoFileName)
-	if isFileExist {
-		stgDev, err := readData(devPath, deviceInfoFileName)
-		klog.Warning(err)
-		return true, stgDev
+func GetDeviceWWN(pathName string) (wwn string, err error) {
+	if strings.HasPrefix(pathName, "/dev/mapper/") {
+		// get dm path
+		pathName, err = filepath.EvalSymlinks(pathName)
+		if err != nil {
+			return "", err
+		}
 	}
-	return false, nil
-}
+	pathName = strings.TrimPrefix(pathName, "/dev/")
 
-func WriteData(devPath string, stgDev *StagingDevice) error {
-	if stgDev == nil {
-		return fileDelete(devPath, deviceInfoFileName)
-	}
-	return writeData(devPath, deviceInfoFileName, stgDev)
+	uuid, err := getUUID(pathName)
+
+	tmpWWID := strings.TrimPrefix(uuid, "mpath-")
+	wwn = tmpWWID[1:] // truncate scsi-id prefix
+
+	return wwn, err
 }

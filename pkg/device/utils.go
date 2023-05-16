@@ -18,11 +18,8 @@ package device
 
 import (
 	"bufio"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 )
 
@@ -59,97 +56,6 @@ func readFirstLine(filePath string) (line string, er error) {
 		return "", err
 	}
 	return a, err
-}
-
-// fileExists: does a stat on the path and returns true if it exists
-// In addition, isDir returns true if the path is a directory
-func fileExists(dir, fileName string) (exists bool, isDir bool, err error) {
-	dataFilePath := filepath.Join(dir, fileName)
-	info, err := os.Stat(dataFilePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, false, nil
-		}
-		return true, false, err
-	}
-	return true, info.IsDir(), nil
-}
-
-// writeData: persists data as json file at the provided location. Creates new directory if not already present.
-func writeData(dir, fileName string, data interface{}) error {
-	dataFilePath := filepath.Join(dir, fileName)
-	// Encode from json object
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	// Attempt create of staging dir, as CSI attacher can remove the directory
-	// while operation is still pending(during retries)
-	if err = os.MkdirAll(dir, 0750); err != nil {
-		return err
-	}
-
-	// Write to file
-	err = os.WriteFile(dataFilePath, jsonData, 0600)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// readDataFile: read the file at a given location
-func readDataFile(dir, fileName string) ([]byte, error) {
-	// Check if the file exists
-	dataFilePath := filepath.Join(dir, fileName)
-	exists, _, err := fileExists(dir, fileName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if device info file %s exists, %v", dataFilePath, err.Error())
-	}
-	if !exists {
-		return nil, fmt.Errorf("Device info file %s does not exist", dataFilePath)
-	}
-
-	// Read from file
-	deviceInfo, err := os.ReadFile(dataFilePath)
-	if err != nil {
-		return nil, err
-	}
-	return deviceInfo, nil
-
-}
-
-// readData: read data as json file at the provided location.
-func readData(dir, fileName string) (*StagingDevice, error) {
-	deviceInfo, err := readDataFile(dir, fileName)
-	if err != nil {
-		return nil, err
-	}
-
-	// Decode into device object
-	var stagingDev StagingDevice
-	// need to set this for unmarshal to know the interface type
-	stagingDev.Device = &Device{}
-	err = json.Unmarshal(deviceInfo, &stagingDev)
-	if err != nil {
-		return nil, err
-	}
-
-	return &stagingDev, nil
-}
-
-// fileDelete: delete the file
-func fileDelete(dir, fileName string) error {
-	dataFilePath := filepath.Join(dir, fileName)
-	is, _, _ := fileExists(dir, fileName)
-	if !is {
-		return errors.New("File doesnt exist " + dataFilePath)
-	}
-	err := os.RemoveAll(dataFilePath)
-	if err != nil {
-		return errors.New("Unable to delete file " + dataFilePath + " " + err.Error())
-	}
-	return nil
 }
 
 func getMpathName(pathname string) (string, error) {
