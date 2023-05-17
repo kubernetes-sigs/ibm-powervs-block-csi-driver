@@ -1,5 +1,5 @@
 /*
-Copyright 2019, 2023 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -692,6 +692,7 @@ func hasMountOption(options []string, opt string) bool {
 func (d *nodeService) setupDevice(wwn string) (*device.LinuxDevice, error) {
 	devExist, dev := NewDevice(wwn)
 	if devExist {
+		// cleanup existing device so we can find it again fresh
 		if err := dev.DeleteDevice(); err != nil {
 			klog.Warningf("failed to cleanup stale device before staging for WWN %s, err %v", wwn, err)
 		}

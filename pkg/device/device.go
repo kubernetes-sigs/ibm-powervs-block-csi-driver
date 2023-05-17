@@ -91,27 +91,26 @@ func (d *Device) getLinuxDmDevice(needActivePath bool) error {
 		tmpWWID := strings.TrimPrefix(uuid, "mpath-")
 		tmpWWN := tmpWWID[1:] // truncate scsi-id prefix
 
-		if strings.EqualFold(d.WWN, tmpWWN) {
-			d.WWID = tmpWWID
-			mapName, err := getMpathName(tmpPathname)
-			if err != nil {
-				return err
-			}
-			d.Mapper = "/dev/mapper/" + mapName
+		if !strings.EqualFold(d.WWN, tmpWWN) {
+			continue
+		}
 
-			multipathdShowPaths, err := retryGetPathOfDevice(d, needActivePath)
-			if err != nil {
-				err = fmt.Errorf("unable to get scsi slaves for device %s: %v", d.WWN, err)
-				return err
+		d.WWID = tmpWWID
+		mapName, err := getMpathName(tmpPathname)
+		if err != nil {
+			return err
+		}
+		d.Mapper = "/dev/mapper/" + mapName
+
+		multipathdShowPaths, err := retryGetPathOfDevice(d, needActivePath)
+		if err != nil {
+			err = fmt.Errorf("unable to get scsi slaves for device %s: %v", d.WWN, err)
+			return err
+		}
+		for _, path := range multipathdShowPaths {
+			if !needActivePath || path.ChkState == "ready" {
+				d.Slaves = append(d.Slaves, path.Device)
 			}
-			var slaves []string
-			for _, path := range multipathdShowPaths {
-				if path != nil && (!needActivePath || path.ChkState == "ready") {
-					slaves = append(slaves, path.Device)
-				}
-			}
-			d.Slaves = slaves
-			break
 		}
 	}
 
@@ -120,8 +119,7 @@ func (d *Device) getLinuxDmDevice(needActivePath bool) error {
 
 // DeleteDevice: delete the multipath device
 func (d *Device) DeleteDevice() (err error) {
-	err = tearDownMultipathDevice(d)
-	if err != nil {
+	if err = tearDownMultipathDevice(d); err != nil {
 		return err
 	}
 	d.Mapper = ""
@@ -131,15 +129,13 @@ func (d *Device) DeleteDevice() (err error) {
 
 // CreateDevice: attach and create linux devices to host
 func (d *Device) CreateDevice() (err error) {
-	err = scsiHostRescan()
-	if err != nil {
+	if err = scsiHostRescan(); err != nil {
 		return err
 	}
 	// wait for device to appear after rescan
 	time.Sleep(time.Second * 1)
 
-	err = d.createLinuxDevice()
-	if err != nil {
+	if err = d.createLinuxDevice(); err != nil {
 		klog.Errorf("unable to create device for wwn %v", d.WWN)
 		return err
 	}
@@ -151,6 +147,14 @@ func (d *Device) CreateDevice() (err error) {
 }
 
 // createLinuxDevice: attaches and creates a new linux device
+// Try device discovery; retry every 5 sec if no device found or have 0 slaves
+// In between checks we will try to cleanup:
+// a. faulty and orphan paths (quick)
+// b. stale paths (time consuming)
+// Since there can be parallel requests for device discovery we are not
+// allowing cleanup process to run for each everytime.
+// For 'a' we will not cleanup if it was already run within last 10 secs.
+// For 'b' we will not cleanup if it was already run within last 25 secs.
 func (d *Device) createLinuxDevice() (err error) {
 	// Start a Countdown ticker
 	for i := 0; i <= 10; i++ {
@@ -196,41 +200,37 @@ func (d *Device) createLinuxDevice() (err error) {
 
 // tryCleaningFaultyAndOrphan: house keeping when device cannot be found once
 func tryCleaningFaultyAndOrphan() {
-	// handle faulty maps
-	err := cleanupFaultyPaths()
-	if err != nil {
-		klog.Warning(err)
+	operations := []struct {
+		cleanupFunc func() error
+		description string
+	}{
+		{cleanupFunc: cleanupFaultyPaths, description: "faulty paths"},
+		{cleanupFunc: cleanupOrphanPaths, description: "orphan paths"},
+		{cleanupFunc: cleanupStaleMaps, description: "stale maps"},
+		{cleanupFunc: cleanupErrorMultipathMaps, description: "error mappers"},
 	}
-	// handle orphan paths
-	err = cleanupOrphanPaths()
-	if err != nil {
-		klog.Warning(err)
-	}
-	// handle stale maps
-	err = cleanupStaleMaps()
-	if err != nil {
-		klog.Warning(err)
-	}
-	// handle error mappers
-	err = cleanupErrorMultipathMaps()
-	if err != nil {
-		klog.Warning(err)
+	for _, op := range operations {
+		if err := op.cleanupFunc(); err != nil {
+			klog.Warningf("Failed to cleanup %s: %v", op.description, err)
+		}
 	}
 }
 
 // scsiHostRescan: scans all scsi hosts
 func scsiHostRescan() error {
 	scsiPath := "/sys/class/scsi_host/"
-	if dirs, err := os.ReadDir(scsiPath); err == nil {
-		for _, f := range dirs {
-			name := scsiPath + f.Name() + "/scan"
-			data := []byte("- - -")
-			err := os.WriteFile(name, data, 0666)
-			if err != nil {
-				return fmt.Errorf("scsi host rescan failed: %v", err)
-			}
+	dirs, err := os.ReadDir(scsiPath)
+	if err != nil {
+		return err
+	}
+	for _, f := range dirs {
+		name := scsiPath + f.Name() + "/scan"
+		data := []byte("- - -")
+		if err := os.WriteFile(name, data, 0666); err != nil {
+			return fmt.Errorf("scsi host rescan failed: %v", err)
 		}
 	}
+
 	return nil
 }
 
