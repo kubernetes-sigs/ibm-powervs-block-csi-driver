@@ -12,8 +12,7 @@ import (
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
-	"k8s.io/utils/exec"
-	"k8s.io/utils/mount"
+	"k8s.io/mount-utils"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
@@ -63,6 +62,7 @@ func TestSanity(t *testing.T) {
 			stats:         &statsUtil,
 		},
 	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("recover: %v", r)
@@ -264,18 +264,11 @@ func (c *fakeCloudProvider) ResizeDisk(volumeID string, newSize int64) (int64, e
 }
 
 type fakeMounter struct {
-	mount.SafeFormatAndMount
-	exec.Interface
+	mount.Interface
 }
 
 func newFakeMounter() *fakeMounter {
-	return &fakeMounter{
-		mount.SafeFormatAndMount{
-			Interface: mount.New(""),
-			Exec:      exec.New(),
-		},
-		exec.New(),
-	}
+	return &fakeMounter{}
 }
 
 func (f *fakeMounter) IsCorruptedMnt(err error) bool {
@@ -358,8 +351,4 @@ func (f *fakeMounter) NeedResize(source string, path string) (bool, error) {
 
 func (f *fakeMounter) GetDeviceName(mountPath string) (string, int, error) {
 	return mount.GetDeviceNameFromMount(f, mountPath)
-}
-
-func (f *fakeMounter) GetDevicePath(wwn string) (devicePath string, err error) {
-	return wwn, nil
 }

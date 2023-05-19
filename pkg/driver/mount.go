@@ -17,32 +17,25 @@ limitations under the License.
 package driver
 
 import (
-	"fmt"
 	"os"
-	goexec "os/exec"
 
-	"k8s.io/klog/v2"
+	"k8s.io/mount-utils"
 	"k8s.io/utils/exec"
-	"k8s.io/utils/mount"
-	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/fibrechannel"
 )
 
 // Mounter is an interface for mount operations
 type Mounter interface {
 	mount.Interface
-	exec.Interface
+
 	FormatAndMount(source string, target string, fstype string, options []string) error
 	GetDeviceName(mountPath string) (string, int, error)
 	MakeFile(pathname string) error
 	MakeDir(pathname string) error
 	ExistsPath(filename string) (bool, error)
-	RescanSCSIBus() error
-	GetDevicePath(wwn string) (string, error)
 }
 
 type NodeMounter struct {
 	mount.SafeFormatAndMount
-	exec.Interface
 }
 
 func newNodeMounter() Mounter {
@@ -51,26 +44,7 @@ func newNodeMounter() Mounter {
 			Interface: mount.New(""),
 			Exec:      exec.New(),
 		},
-		exec.New(),
 	}
-}
-
-func (m *NodeMounter) RescanSCSIBus() error {
-	cmd := goexec.Command("/usr/bin/rescan-scsi-bus.sh")
-	stdoutStderr, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to rescan-scsi-bus.sh: %v", err)
-	}
-	klog.V(5).Infof("output of rescan-scsi-bus.sh: %s", stdoutStderr)
-	return nil
-}
-
-func (m *NodeMounter) GetDevicePath(wwn string) (devicePath string, err error) {
-	c := fibrechannel.Connector{}
-	// Prepending the 3 which is missing in the wwn getting it from the PowerVS infra
-	c.WWIDs = []string{"3" + wwn}
-
-	return fibrechannel.Attach(c, &fibrechannel.OSioHandler{})
 }
 
 func (m *NodeMounter) GetDeviceName(mountPath string) (string, int, error) {
