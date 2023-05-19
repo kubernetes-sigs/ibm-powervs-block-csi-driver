@@ -61,20 +61,6 @@ func (mr *MockLinuxDeviceMockRecorder) DeleteDevice() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDevice", reflect.TypeOf((*MockLinuxDevice)(nil).DeleteDevice))
 }
 
-// GetDevice mocks base method.
-func (m *MockLinuxDevice) GetDevice() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDevice")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// GetDevice indicates an expected call of GetDevice.
-func (mr *MockLinuxDeviceMockRecorder) GetDevice() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDevice", reflect.TypeOf((*MockLinuxDevice)(nil).GetDevice))
-}
-
 // GetMapper mocks base method.
 func (m *MockLinuxDevice) GetMapper() string {
 	m.ctrl.T.Helper()
@@ -87,4 +73,18 @@ func (m *MockLinuxDevice) GetMapper() string {
 func (mr *MockLinuxDeviceMockRecorder) GetMapper() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMapper", reflect.TypeOf((*MockLinuxDevice)(nil).GetMapper))
+}
+
+// Populate mocks base method.
+func (m *MockLinuxDevice) Populate(arg0 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Populate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Populate indicates an expected call of Populate.
+func (mr *MockLinuxDeviceMockRecorder) Populate(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Populate", reflect.TypeOf((*MockLinuxDevice)(nil).Populate), arg0)
 }

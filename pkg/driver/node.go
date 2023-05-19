@@ -299,12 +299,17 @@ func (d *nodeService) deleteDevice(deviceName string) error {
 	if err != nil {
 		return err
 	}
-	devExist, dev := NewDevice(wwn)
-	if devExist {
-		if err := dev.DeleteDevice(); err != nil {
-			return fmt.Errorf("failed to delete device %s: %v", deviceName, err)
-		}
+	dev := NewDevice(wwn)
+	if err := dev.Populate(false); err != nil {
+		return fmt.Errorf("failed to delete device %s: %v", deviceName, err)
 	}
+	if dev.GetMapper() == "" {
+		return fmt.Errorf("failed to find device %s mapper for wwn %s", deviceName, wwn)
+	}
+	if err := dev.DeleteDevice(); err != nil {
+		return fmt.Errorf("failed to delete device %s: %v", deviceName, err)
+	}
+
 	return nil
 }
 
@@ -690,8 +695,11 @@ func hasMountOption(options []string, opt string) bool {
 }
 
 func (d *nodeService) setupDevice(wwn string) (*device.LinuxDevice, error) {
-	devExist, dev := NewDevice(wwn)
-	if devExist {
+	dev := NewDevice(wwn)
+	if err := dev.Populate(false); err != nil {
+		return nil, err
+	}
+	if dev.GetMapper() != "" {
 		// cleanup existing device so we can find it again fresh
 		if err := dev.DeleteDevice(); err != nil {
 			klog.Warningf("failed to cleanup stale device before staging for WWN %s, err %v", wwn, err)

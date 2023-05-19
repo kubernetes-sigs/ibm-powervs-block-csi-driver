@@ -39,7 +39,7 @@ func findStringSubmatchMap(s string, r *regexp.Regexp) map[string]string {
 }
 
 // readFirstLine: read the file line no. 1
-func readFirstLine(filePath string) (line string, er error) {
+func readFirstLine(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	a := ""
 	if err != nil {

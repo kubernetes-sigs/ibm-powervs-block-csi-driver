@@ -38,6 +38,7 @@ type LinuxDevice interface {
 	DeleteDevice() (err error)
 	CreateDevice() (err error)
 	GetMapper() string
+	Populate(bool) error
 }
 
 // Device struct
@@ -49,24 +50,18 @@ type Device struct {
 }
 
 // NewLinuxDevice: new device with given wwn
-func NewLinuxDevice(wwn string) (bool, LinuxDevice) {
-	d := &Device{
+func NewLinuxDevice(wwn string) LinuxDevice {
+	return &Device{
 		WWN: wwn,
 	}
-	err := d.getLinuxDmDevice(false)
-	if err != nil || d.Mapper == "" {
-		return false, d
-	}
-
-	return true, d
 }
 
 func (d *Device) GetMapper() string {
 	return d.Mapper
 }
 
-// getLinuxDmDevice: get all linux Devices
-func (d *Device) getLinuxDmDevice(needActivePath bool) error {
+// Populate: get all linux Devices
+func (d *Device) Populate(needActivePath bool) error {
 	args := []string{"ls", "--target", "multipath"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
 	out := string(outBytes)
@@ -122,8 +117,6 @@ func (d *Device) DeleteDevice() (err error) {
 	if err = tearDownMultipathDevice(d); err != nil {
 		return err
 	}
-	d.Mapper = ""
-	d.Slaves = nil
 	return nil
 }
 
@@ -158,36 +151,32 @@ func (d *Device) CreateDevice() (err error) {
 func (d *Device) createLinuxDevice() (err error) {
 	// Start a Countdown ticker
 	for i := 0; i <= 10; i++ {
-		err := d.getLinuxDmDevice(true)
+		err := d.Populate(true)
 		if err != nil {
 			return err
 		}
 		if len(d.Slaves) > 0 {
 			// populated device with atleast 1 slave; job done
 			return nil
-		} else {
-			// no slaves; cannot use this device; retry
-			d.Mapper = ""
 		}
 
-		if i%2 == 0 {
-			// try cleaning up faulty, orphan, stale paths/maps
-			tmpTime := time.Now().Add(-10 * time.Second)
-			if lastCleanExecuted.Before(tmpTime) {
-				tryCleaningFaultyAndOrphan()
-				lastCleanExecuted = time.Now()
+		// cleaning up faulty, orphan, stale paths/maps
+		// try only between 10 secs
+		tmpTime := time.Now().Add(-10 * time.Second)
+		if lastCleanExecuted.Before(tmpTime) {
+			tryCleaningFaultyAndOrphan()
+			lastCleanExecuted = time.Now()
+		}
+
+		// handle stale paths
+		// heavy operation hence try only between 25 secs
+		tmpTime = time.Now().Add(-25 * time.Second)
+		if lastStaleCleanExecuted.Before(tmpTime) {
+			err = cleanupStalePaths()
+			if err != nil {
+				klog.Warning(err)
 			}
-		} else {
-			// handle stale paths
-			// heavy operation hence try only between 25 secs
-			tmpTime := time.Now().Add(-25 * time.Second)
-			if lastStaleCleanExecuted.Before(tmpTime) {
-				err = cleanupStalePaths()
-				if err != nil {
-					klog.Warning(err)
-				}
-				lastStaleCleanExecuted = time.Now()
-			}
+			lastStaleCleanExecuted = time.Now()
 		}
 
 		// some resting time

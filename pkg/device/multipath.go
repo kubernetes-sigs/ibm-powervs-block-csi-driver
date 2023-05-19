@@ -40,8 +40,8 @@ const (
 )
 
 var (
-	showPathsFormat  = []string{"show", "paths", "format", "%w %d %t %i %o %T %z %s %m"}
-	showMapsFormat   = []string{"show", "maps", "format", "%w %d %n %s"}
+	showPathsFormat  = []string{"show", "paths", "raw", "format", "%w %d %t %i %o %T %z %s %m"}
+	showMapsFormat   = []string{"show", "maps", "raw", "format", "%w %d %n %s"}
 	errorMapRegex    = regexp.MustCompile(errorMapPattern)
 	orphanPathRegexp = regexp.MustCompile(orphanPathsPattern)
 	faultyPathRegexp = regexp.MustCompile(faultyPathsPattern)
