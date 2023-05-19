@@ -190,7 +190,7 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 
 	dataVolume := &models.CreateDataVolume{
 		Name:      &volumeName,
-		Size:      pointer.Float64Ptr(float64(capacityGiB)),
+		Size:      pointer.Float64(float64(capacityGiB)),
 		Shareable: &diskOptions.Shareable,
 		DiskType:  volumeType,
 	}
