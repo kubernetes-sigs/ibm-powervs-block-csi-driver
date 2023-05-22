@@ -6,3 +6,5 @@ approvers:
 reviewers:
   - mkumatag
   - Madhan-SWE
+
+component: "Multi-Arch / IBM P and Z"
