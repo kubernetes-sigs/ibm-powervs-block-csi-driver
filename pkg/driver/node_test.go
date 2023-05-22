@@ -331,6 +331,216 @@ func TestNodeStageVolume(t *testing.T) {
 	}
 }
 
+func TestNodeUnstageVolume(t *testing.T) {
+	targetPath := "/test/path"
+	devicePath := "/dev/fake"
+
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "success normal",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockDevice := mocks.NewMockLinuxDevice(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(devicePath, 1, nil)
+				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
+				mockMounter.EXPECT().IsMountPoint(gomock.Eq(targetPath)).Return(false, nil)
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
+				mockDevice.EXPECT().Populate(false).Return(nil)
+				mockDevice.EXPECT().DeleteDevice().Return(nil)
+
+				req := &csi.NodeUnstageVolumeRequest{
+					StagingTargetPath: targetPath,
+					VolumeId:          volumeID,
+				}
+
+				GetDeviceWWN = func(pathName string) (string, error) {
+					return "fakeWWN", nil
+				}
+				// always use mocked device
+				NewDevice = func(wwn string) device.LinuxDevice {
+					return mockDevice
+				}
+
+				_, err := powervsDriver.NodeUnstageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success no device mounted at target",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(devicePath, 0, nil)
+
+				req := &csi.NodeUnstageVolumeRequest{
+					StagingTargetPath: targetPath,
+					VolumeId:          volumeID,
+				}
+				_, err := powervsDriver.NodeUnstageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "success device mounted at multiple targets",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+				mockDevice := mocks.NewMockLinuxDevice(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(devicePath, 2, nil)
+				mockMounter.EXPECT().Unmount(gomock.Eq(targetPath)).Return(nil)
+				mockMounter.EXPECT().IsMountPoint(gomock.Eq(targetPath)).Return(false, nil)
+
+				mockDevice.EXPECT().GetMapper().Return(devicePath)
+				mockDevice.EXPECT().Populate(false).Return(nil)
+				mockDevice.EXPECT().DeleteDevice().Return(nil)
+
+				GetDeviceWWN = func(pathName string) (string, error) {
+					return "fakeWWN", nil
+				}
+				// always use mocked device
+				NewDevice = func(wwn string) device.LinuxDevice {
+					return mockDevice
+				}
+
+				req := &csi.NodeUnstageVolumeRequest{
+					StagingTargetPath: targetPath,
+					VolumeId:          volumeID,
+				}
+
+				_, err := powervsDriver.NodeUnstageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("Expect no error but got: %v", err)
+				}
+			},
+		},
+		{
+			name: "fail no VolumeId",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				req := &csi.NodeUnstageVolumeRequest{
+					StagingTargetPath: targetPath,
+				}
+
+				_, err := powervsDriver.NodeUnstageVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail no StagingTargetPath",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				req := &csi.NodeUnstageVolumeRequest{
+					VolumeId: volumeID,
+				}
+				_, err := powervsDriver.NodeUnstageVolume(context.TODO(), req)
+				expectErr(t, err, codes.InvalidArgument)
+			},
+		},
+		{
+			name: "fail GetDeviceName returns error",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return("", 0, errors.New("GetDeviceName faield"))
+
+				req := &csi.NodeUnstageVolumeRequest{
+					StagingTargetPath: targetPath,
+					VolumeId:          volumeID,
+				}
+
+				_, err := powervsDriver.NodeUnstageVolume(context.TODO(), req)
+				expectErr(t, err, codes.Internal)
+			},
+		},
+		{
+			name: "fail if volume is already locked",
+			testFunc: func(t *testing.T) {
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockMounter := mocks.NewMockMounter(mockCtl)
+
+				powervsDriver := &nodeService{
+					mounter:     mockMounter,
+					volumeLocks: util.NewVolumeLocks(),
+				}
+
+				req := &csi.NodeUnstageVolumeRequest{
+					StagingTargetPath: targetPath,
+					VolumeId:          volumeID,
+				}
+				powervsDriver.volumeLocks.TryAcquire(req.VolumeId)
+				defer powervsDriver.volumeLocks.Release(req.VolumeId)
+
+				_, err := powervsDriver.NodeUnstageVolume(context.TODO(), req)
+				expectErr(t, err, codes.Aborted)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
 func TestNodeExpandVolume(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
