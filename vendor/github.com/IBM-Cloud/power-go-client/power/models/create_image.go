@@ -52,9 +52,14 @@ type CreateImage struct {
 	SecretKey string `json:"secretKey,omitempty"`
 
 	// Source of the image
+	// >*Note*: url option is deprecated, this option is supported till Oct 2022
+	//
 	// Required: true
 	// Enum: [root-project url]
 	Source *string `json:"source"`
+
+	// Source2 is added to test empty image reference
+	Source2 string `json:"source2,omitempty"`
 
 	// The storage affinity data; ignored if storagePool is provided; Used only when importing an image from cloud storage.
 	StorageAffinity *StorageAffinity `json:"storageAffinity,omitempty"`
