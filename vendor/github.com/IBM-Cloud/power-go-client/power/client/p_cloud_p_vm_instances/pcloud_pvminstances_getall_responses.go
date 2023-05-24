@@ -47,6 +47,12 @@ func (o *PcloudPvminstancesGetallReader) ReadResponse(response runtime.ClientRes
 			return nil, err
 		}
 		return nil, result
+	case 408:
+		result := NewPcloudPvminstancesGetallRequestTimeout()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	case 500:
 		result := NewPcloudPvminstancesGetallInternalServerError()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -299,6 +305,69 @@ func (o *PcloudPvminstancesGetallForbidden) GetPayload() *models.Error {
 }
 
 func (o *PcloudPvminstancesGetallForbidden) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.Error)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewPcloudPvminstancesGetallRequestTimeout creates a PcloudPvminstancesGetallRequestTimeout with default headers values
+func NewPcloudPvminstancesGetallRequestTimeout() *PcloudPvminstancesGetallRequestTimeout {
+	return &PcloudPvminstancesGetallRequestTimeout{}
+}
+
+/*
+PcloudPvminstancesGetallRequestTimeout describes a response with status code 408, with default header values.
+
+Request Timeout
+*/
+type PcloudPvminstancesGetallRequestTimeout struct {
+	Payload *models.Error
+}
+
+// IsSuccess returns true when this pcloud pvminstances getall request timeout response has a 2xx status code
+func (o *PcloudPvminstancesGetallRequestTimeout) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this pcloud pvminstances getall request timeout response has a 3xx status code
+func (o *PcloudPvminstancesGetallRequestTimeout) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this pcloud pvminstances getall request timeout response has a 4xx status code
+func (o *PcloudPvminstancesGetallRequestTimeout) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this pcloud pvminstances getall request timeout response has a 5xx status code
+func (o *PcloudPvminstancesGetallRequestTimeout) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this pcloud pvminstances getall request timeout response a status code equal to that given
+func (o *PcloudPvminstancesGetallRequestTimeout) IsCode(code int) bool {
+	return code == 408
+}
+
+func (o *PcloudPvminstancesGetallRequestTimeout) Error() string {
+	return fmt.Sprintf("[GET /pcloud/v1/cloud-instances/{cloud_instance_id}/pvm-instances][%d] pcloudPvminstancesGetallRequestTimeout  %+v", 408, o.Payload)
+}
+
+func (o *PcloudPvminstancesGetallRequestTimeout) String() string {
+	return fmt.Sprintf("[GET /pcloud/v1/cloud-instances/{cloud_instance_id}/pvm-instances][%d] pcloudPvminstancesGetallRequestTimeout  %+v", 408, o.Payload)
+}
+
+func (o *PcloudPvminstancesGetallRequestTimeout) GetPayload() *models.Error {
+	return o.Payload
+}
+
+func (o *PcloudPvminstancesGetallRequestTimeout) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.Error)
 

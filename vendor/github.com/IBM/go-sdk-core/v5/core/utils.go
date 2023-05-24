@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
-	validator "gopkg.in/go-playground/validator.v9"
+	validator "github.com/go-playground/validator/v10"
 )
 
 // Validate is a shared validator instance used to perform validation of structs.
@@ -39,8 +39,8 @@ func init() {
 }
 
 const (
-	jsonMimePattern      = "(?i)^application\\/((json)|(merge\\-patch\\+json)|(vnd\\..*\\+json))(;.*)?$"
-	jsonPatchMimePattern = "(?i)^application\\/json\\-patch\\+json(;.*)?$"
+	jsonMimePattern      = "(?i)^application\\/((json)|(merge\\-patch\\+json)|(vnd\\..*\\+json))(\\s*;.*)?$"
+	jsonPatchMimePattern = "(?i)^application\\/json\\-patch\\+json(\\s*;.*)?$"
 )
 
 // IsNil checks if the specified object is nil or not.
