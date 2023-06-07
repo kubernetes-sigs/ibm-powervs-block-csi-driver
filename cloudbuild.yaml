@@ -8,11 +8,11 @@ timeout: 7200s
 options:
   substitution_option: ALLOW_LOOSE
 steps:
-  - name: 'gcr.io/k8s-testimages/gcb-docker-gcloud:v20210722-085d930'
+  - name: 'gcr.io/k8s-staging-test-infra/gcb-docker-gcloud:v20221214-1b4dd4d69a'
     entrypoint: make
     env:
-    - PULL_BASE_REF=${_PULL_BASE_REF}
-    - TAG=${_GIT_TAG}
-    - HOME=/root
+      - PULL_BASE_REF=${_PULL_BASE_REF}
+      - TAG=${_GIT_TAG}
+      - HOME=/root
     args:
-    - release-staging
+      - release-staging
