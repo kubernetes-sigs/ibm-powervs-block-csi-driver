@@ -375,7 +375,8 @@ OUTER:
 		wwidPath := scsiPath + f.Name() + "/device/wwid"
 		wwid, err := readFirstLine(wwidPath)
 		if err != nil {
-			return err
+			klog.Warning(err)
+			continue
 		}
 		entries := strings.Split(wwid, ".")
 		if len(entries) <= 1 {
