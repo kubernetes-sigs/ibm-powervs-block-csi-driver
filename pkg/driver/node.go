@@ -302,7 +302,7 @@ func (d *nodeService) deleteDevice(deviceName string) error {
 	}
 	dev := NewDevice(wwn)
 	if err := dev.Populate(false); err != nil {
-		return fmt.Errorf("failed to delete device %s: %v", deviceName, err)
+		return fmt.Errorf("failed to populate device %s: %v", deviceName, err)
 	}
 	if dev.GetMapper() == "" {
 		return fmt.Errorf("failed to find device %s mapper for wwn %s", deviceName, wwn)

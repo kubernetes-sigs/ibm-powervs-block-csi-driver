@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -31,6 +32,7 @@ import (
 var (
 	lastCleanExecuted      time.Time
 	lastStaleCleanExecuted time.Time
+	scanLock               = &sync.Mutex{}
 )
 
 type LinuxDevice interface {
@@ -81,7 +83,8 @@ func (d *Device) Populate(needActivePath bool) error {
 		tmpPathname := "dm-" + result["Minor"]
 		uuid, err := getUUID(tmpPathname)
 		if err != nil {
-			return err
+			klog.Warning(err)
+			continue
 		}
 		tmpWWID := strings.TrimPrefix(uuid, "mpath-")
 		tmpWWN := tmpWWID[1:] // truncate scsi-id prefix
@@ -122,11 +125,6 @@ func (d *Device) DeleteDevice() (err error) {
 
 // CreateDevice: attach and create linux devices to host
 func (d *Device) CreateDevice() (err error) {
-	if err = scsiHostRescan(); err != nil {
-		return err
-	}
-	// wait for device to appear after rescan
-	time.Sleep(time.Second * 1)
 
 	if err = d.createLinuxDevice(); err != nil {
 		klog.Errorf("unable to create device for wwn %v", d.WWN)
@@ -137,6 +135,35 @@ func (d *Device) CreateDevice() (err error) {
 		return fmt.Errorf("unable to find the device for wwn %s", d.WWN)
 	}
 	return nil
+}
+
+// scsiHostRescanWithLock: scans all scsi hosts with locks
+// This is calling scsiHostRescan
+// which works in a way that only 1 scan will run at a time
+// and other requests will wait till the scan is complete
+// but will not scan again as it is already scanned.
+func scsiHostRescanWithLock() (err error) {
+	start := time.Now()
+	var scan bool = true
+	defer scanLock.Unlock()
+
+	for {
+		if scanLock.TryLock() {
+			if scan {
+				err = scsiHostRescan()
+			}
+			return err
+		} else {
+			if time.Since(start) > time.Minute {
+				// Scanning usually takes < 30s. If wait is more than a min then return.
+				return
+			}
+
+			// Already locked, wait for it to complete and don't scan again.
+			scan = false
+			time.Sleep(5 * time.Second)
+		}
+	}
 }
 
 // createLinuxDevice: attaches and creates a new linux device
@@ -151,6 +178,12 @@ func (d *Device) CreateDevice() (err error) {
 func (d *Device) createLinuxDevice() (err error) {
 	// Start a Countdown ticker
 	for i := 0; i <= 10; i++ {
+		if err = scsiHostRescanWithLock(); err != nil {
+			return err
+		}
+		// wait for device to appear after rescan
+		time.Sleep(time.Second * 1)
+
 		err := d.Populate(true)
 		if err != nil {
 			return err
