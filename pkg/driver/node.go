@@ -51,7 +51,8 @@ const (
 )
 
 var (
-	NewDevice = device.NewLinuxDevice
+	NewDevice    = device.NewLinuxDevice
+	GetDeviceWWN = device.GetDeviceWWN
 
 	// nodeCaps represents the capability of node service.
 	nodeCaps = []csi.NodeServiceCapability_RPC_Type{
@@ -265,7 +266,7 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 		return nil
 	}
 
-	klog.Infof("found staged device: %s", deviceName)
+	klog.V(5).Infof("found staged device: %s", deviceName)
 
 	// If mounted, then unmount the filesystem
 	klog.V(5).Infof("starting unmounting %s", stagingTarget, "volumeID", volumeID)
@@ -276,7 +277,7 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 	klog.V(5).Infof("completed unmounting %s", stagingTarget, "volumeID", volumeID)
 
 	// Delete device
-	klog.Infof("deleting device %s", deviceName, "volumeID", volumeID)
+	klog.V(5).Infof("deleting device %s", deviceName, "volumeID", volumeID)
 	//check if device is mounted or has holders
 	isDirMounted, err := d.mounter.IsMountPoint(stagingTarget)
 	if err != nil {
@@ -295,13 +296,13 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 
 func (d *nodeService) deleteDevice(deviceName string) error {
 
-	wwn, err := device.GetDeviceWWN(deviceName)
+	wwn, err := GetDeviceWWN(deviceName)
 	if err != nil {
 		return err
 	}
 	dev := NewDevice(wwn)
 	if err := dev.Populate(false); err != nil {
-		return fmt.Errorf("failed to delete device %s: %v", deviceName, err)
+		return fmt.Errorf("failed to populate device %s: %v", deviceName, err)
 	}
 	if dev.GetMapper() == "" {
 		return fmt.Errorf("failed to find device %s mapper for wwn %s", deviceName, wwn)
