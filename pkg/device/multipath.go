@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -375,7 +375,8 @@ OUTER:
 		wwidPath := scsiPath + f.Name() + "/device/wwid"
 		wwid, err := readFirstLine(wwidPath)
 		if err != nil {
-			return err
+			klog.Warning(err)
+			continue
 		}
 		entries := strings.Split(wwid, ".")
 		if len(entries) <= 1 {
