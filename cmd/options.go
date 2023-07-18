@@ -89,7 +89,7 @@ func GetOptions(fs *flag.FlagSet) *Options {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		panic(err)
+		klog.Fatal(err)
 	}
 
 	if *version {
