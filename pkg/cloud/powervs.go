@@ -38,20 +38,6 @@ import (
 
 var _ Cloud = &powerVSCloud{}
 
-var (
-	// TODO: Never seen these catalog values changing, lets add code to get these values in future for the sake of better design.
-
-	// This can be found in the IBM Cloud catalog, command used to get this information is
-	// $ ibmcloud catalog service-marketplace| grep power-iaas
-	// abd259f0-9990-11e8-acc8-b9f54a8f1661 power-iaas
-	powerVSServiceID = "abd259f0-9990-11e8-acc8-b9f54a8f1661"
-
-	// PlanID can be fetched via command:
-	// $ ibmcloud catalog service abd259f0-9990-11e8-acc8-b9f54a8f1661 | grep plan
-	//                 power-virtual-server-group                    plan         f165dd34-3a40-423b-9d95-e90a23f724dd
-	powerVSPlanID = "f165dd34-3a40-423b-9d95-e90a23f724dd"
-)
-
 const (
 	PollTimeout          = 120 * time.Second
 	PollInterval         = 5 * time.Second
@@ -92,28 +78,24 @@ func NewPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 	apikey := os.Getenv("IBMCLOUD_API_KEY")
 
-	serviceClientOptions := &resourcecontrollerv2.ResourceControllerV2Options{
-		Authenticator: &core.IamAuthenticator{ApiKey: apikey},
-	}
-	serviceClient, err := resourcecontrollerv2.NewResourceControllerV2UsingExternalConfig(serviceClientOptions)
-	if err != nil {
-		return nil, fmt.Errorf("errored while creating NewResourceControllerV2UsingExternalConfig: %v", err)
-	}
-	resourceInstanceList, _, err := serviceClient.ListResourceInstances(&resourcecontrollerv2.ListResourceInstancesOptions{
-		GUID:           &cloudInstanceID,
-		ResourceID:     &powerVSServiceID,
-		ResourcePlanID: &powerVSPlanID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("errored while listing the Power VS service instance with ID: %s, err: %v", cloudInstanceID, err)
-	}
-
-	if len(resourceInstanceList.Resources) == 0 {
-		return nil, fmt.Errorf("no Power VS service instance found with ID: %s", cloudInstanceID)
-	}
-
 	authenticator := &core.IamAuthenticator{ApiKey: apikey}
-	piOptions := ibmpisession.IBMPIOptions{Authenticator: authenticator, Debug: debug, UserAccount: *resourceInstanceList.Resources[0].AccountID, Zone: zone}
+
+	serviceClientOptions := &resourcecontrollerv2.ResourceControllerV2Options{
+		Authenticator: authenticator,
+	}
+	serviceClient, err := resourcecontrollerv2.NewResourceControllerV2(serviceClientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("errored while creating NewResourceControllerV2: %v", err)
+	}
+	resourceInstance, _, err := serviceClient.GetResourceInstance(&resourcecontrollerv2.GetResourceInstanceOptions{
+		ID: &cloudInstanceID,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("errored while getting the Power VS service instance with ID: %s, err: %v", cloudInstanceID, err)
+	}
+
+	piOptions := ibmpisession.IBMPIOptions{Authenticator: authenticator, Debug: debug, UserAccount: *resourceInstance.AccountID, Zone: zone}
 	piSession, err := ibmpisession.NewIBMPISession(&piOptions)
 	if err != nil {
 		return nil, err

@@ -73,17 +73,17 @@ type nodeService struct {
 }
 
 // newNodeService creates a new node service
-// it panics if failed to create the service
+// it will print stack trace and osexit if failed to create the service
 func newNodeService(driverOptions *Options) nodeService {
 	klog.V(4).Infof("retrieving node info from metadata service")
 	metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient, driverOptions.kubeconfig)
 	if err != nil {
-		panic(err)
+		klog.Fatalf("Failed to get metadata service: %v", err)
 	}
 
 	pvsCloud, err := NewPowerVSCloudFunc(metadata.GetCloudInstanceId(), metadata.GetZone(), driverOptions.debug)
 	if err != nil {
-		panic(err)
+		klog.Fatalf("Failed to get powervs cloud: %v", err)
 	}
 
 	return nodeService{
