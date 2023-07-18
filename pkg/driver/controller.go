@@ -89,7 +89,7 @@ var (
 )
 
 // newControllerService creates a new controller service
-// it panics if failed to create the service
+// it will print stack trace and osexit if failed to create the service
 func newControllerService(driverOptions *Options) controllerService {
 	var (
 		cloudInstanceId string
@@ -99,23 +99,23 @@ func newControllerService(driverOptions *Options) controllerService {
 		var cloudConfig CloudConfig
 		config, err := os.Open(driverOptions.cloudconfig)
 		if nil != err {
-			panic(err)
+			klog.Fatalf("Failed to get cloud config: %v", err)
 		}
 		defer config.Close()
 
 		if err := gcfg.FatalOnly(gcfg.ReadInto(&cloudConfig, config)); err != nil {
-			panic(err)
+			klog.Fatalf("Failed to read cloud config: %v", err)
 		}
 		cloudInstanceId = cloudConfig.Prov.PowerVSCloudInstanceID
 		zone = cloudConfig.Prov.PowerVSZone
 		if cloudInstanceId == "" || zone == "" {
-			panic(status.Errorf(codes.NotFound, "cloud instance id or zone is empty"))
+			klog.Fatalf("Failed to read cloud config: %v", status.Errorf(codes.NotFound, "cloud instance id or zone is empty"))
 		}
 	} else {
 		klog.V(4).Infof("retrieving node info from metadata service")
 		metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient, driverOptions.kubeconfig)
 		if err != nil {
-			panic(err)
+			klog.Fatalf("Failed to get metadata service: %v", err)
 		}
 		cloudInstanceId = metadata.GetCloudInstanceId()
 		zone = metadata.GetZone()
@@ -123,7 +123,7 @@ func newControllerService(driverOptions *Options) controllerService {
 
 	c, err := NewPowerVSCloudFunc(cloudInstanceId, zone, driverOptions.debug)
 	if err != nil {
-		panic(err)
+		klog.Fatalf("Failed to get powervs cloud: %v", err)
 	}
 
 	return controllerService{
