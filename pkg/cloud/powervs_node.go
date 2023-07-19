@@ -20,6 +20,7 @@ import (
 	"errors"
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 )
 
@@ -65,7 +66,7 @@ func NewNodeUpdateScope(params NodeUpdateScopeParams) (scope *NodeUpdateScope, e
 
 	c, err := NewPowerVSCloud(scope.ServiceInstanceId, scope.Zone, false)
 	if err != nil {
-		panic(err)
+		klog.Fatalf("Failed to get powervs cloud: %v", err)
 	}
 	scope.Cloud = c
 
