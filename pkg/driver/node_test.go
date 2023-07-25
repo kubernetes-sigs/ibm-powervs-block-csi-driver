@@ -72,10 +72,8 @@ func TestNodeStageVolume(t *testing.T) {
 			NewDevice = func(wwn string) device.LinuxDevice {
 				return mockDevice
 			}
-			mockDevice.EXPECT().CreateDevice().Return(nil)
 			mockDevice.EXPECT().Populate(false).Return(nil)
 			mockDevice.EXPECT().GetMapper().Return(devicePath).MinTimes(2)
-			mockDevice.EXPECT().DeleteDevice().Return(nil)
 			mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
 
 		}
@@ -100,7 +98,7 @@ func TestNodeStageVolume(t *testing.T) {
 				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Any(), gomock.Any()).Return(nil)
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
-
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 			},
 		},
 
@@ -127,7 +125,6 @@ func TestNodeStageVolume(t *testing.T) {
 
 				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
 				mockMounter.EXPECT().FormatAndMount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-
 			},
 		},
 
@@ -152,7 +149,7 @@ func TestNodeStageVolume(t *testing.T) {
 				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Eq([]string{"dirsync", "noexec"}))
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
-
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 			},
 		},
 
@@ -177,7 +174,7 @@ func TestNodeStageVolume(t *testing.T) {
 				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt3), gomock.Any())
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
-
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 			},
 		},
 
@@ -202,7 +199,7 @@ func TestNodeStageVolume(t *testing.T) {
 				commonExpectMock(mockMounter, mockDevice)
 				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Eq(FSTypeExt4), gomock.Any())
 				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
-
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
 			},
 		},
 
@@ -629,7 +626,7 @@ func TestNodePublishVolume(t *testing.T) {
 					volumeLocks: util.NewVolumeLocks(),
 				}
 
-				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil).Times(2)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
 
@@ -639,9 +636,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath).MinTimes(2)
-				mockDevice.EXPECT().CreateDevice().Return(nil)
 				mockDevice.EXPECT().Populate(false).Return(nil)
-				mockDevice.EXPECT().DeleteDevice().Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
@@ -671,7 +666,7 @@ func TestNodePublishVolume(t *testing.T) {
 					volumeLocks: util.NewVolumeLocks(),
 				}
 
-				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil).Times(2)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
 
@@ -681,9 +676,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath).MinTimes(2)
-				mockDevice.EXPECT().CreateDevice().Return(nil)
 				mockDevice.EXPECT().Populate(false).Return(nil)
-				mockDevice.EXPECT().DeleteDevice().Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
@@ -714,7 +707,7 @@ func TestNodePublishVolume(t *testing.T) {
 					volumeLocks: util.NewVolumeLocks(),
 				}
 
-				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil).Times(2)
 				mockMounter.EXPECT().MakeFile(targetPath).Return(nil)
 				mockMounter.EXPECT().Mount(devicePath, targetPath, "", gomock.Any()).Return(nil)
 
@@ -724,9 +717,7 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 
 				mockDevice.EXPECT().GetMapper().Return(devicePath).MinTimes(2)
-				mockDevice.EXPECT().CreateDevice().Return(nil)
 				mockDevice.EXPECT().Populate(false).Return(nil)
-				mockDevice.EXPECT().DeleteDevice().Return(nil)
 
 				req := &csi.NodePublishVolumeRequest{
 					PublishContext:    map[string]string{DevicePathKey: devicePath, WWNKey: wwnValue},
