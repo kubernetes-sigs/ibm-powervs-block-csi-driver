@@ -30,9 +30,7 @@ import (
 )
 
 var (
-	lastCleanExecuted      time.Time
-	lastStaleCleanExecuted time.Time
-	scanLock               = &sync.Mutex{}
+	scanLock = &sync.Mutex{}
 )
 
 type LinuxDevice interface {
@@ -45,13 +43,12 @@ type LinuxDevice interface {
 
 // Device struct
 type Device struct {
-	Mapper string   `json:"mapper,omitempty"`
-	WWID   string   `json:"wwid,omitempty"`
-	WWN    string   `json:"wwn,omitempty"`
-	Slaves []string `json:"slaves,omitempty"`
+	Mapper string `json:"mapper,omitempty"`
+	WWN    string `json:"wwn,omitempty"`
+	Slaves int    `json:"slaves,omitempty"`
 }
 
-// NewLinuxDevice: new device with given wwn
+// NewLinuxDevice new device with given wwn
 func NewLinuxDevice(wwn string) LinuxDevice {
 	return &Device{
 		WWN: wwn,
@@ -62,7 +59,7 @@ func (d *Device) GetMapper() string {
 	return d.Mapper
 }
 
-// Populate: get all linux Devices
+// Populate get all linux Devices
 func (d *Device) Populate(needActivePath bool) error {
 	args := []string{"ls", "--target", "multipath"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
@@ -86,48 +83,51 @@ func (d *Device) Populate(needActivePath bool) error {
 			klog.Warning(err)
 			continue
 		}
-		tmpWWID := strings.TrimPrefix(uuid, "mpath-")
-		tmpWWN := tmpWWID[1:] // truncate scsi-id prefix
-
-		if !strings.EqualFold(d.WWN, tmpWWN) {
-			continue
-		}
-
-		d.WWID = tmpWWID
 		mapName, err := getMpathName(tmpPathname)
 		if err != nil {
 			return err
 		}
-		d.Mapper = "/dev/mapper/" + mapName
 
-		multipathdShowPaths, err := retryGetPathOfDevice(d, needActivePath)
+		tmpWWID := strings.TrimPrefix(uuid, "mpath-")
+		tmpWWN := tmpWWID[1:] // truncate scsi-id prefix
+
+		// get the active count; if 0 then cleanup the dm
+		slavesCount, err := getPathsCount(mapName)
 		if err != nil {
-			err = fmt.Errorf("unable to get scsi slaves for device %s: %v", d.WWN, err)
-			return err
+			return fmt.Errorf("unable to count slaves for device %s: %v", d.WWN, err)
 		}
-		for _, path := range multipathdShowPaths {
-			if !needActivePath || path.ChkState == "ready" {
-				d.Slaves = append(d.Slaves, path.Device)
-			}
+
+		if slavesCount == 0 {
+			klog.Warningf("cleaning mapper %s as no active disks present", mapName)
+			_ = multipathRemoveDmDevice(mapName)
+			// even if wwn matches but no slaves lets skip
+		} else if strings.EqualFold(d.WWN, tmpWWN) {
+			// if atleast 1 active slave present then use it
+			d.Mapper = "/dev/mapper/" + mapName
+			d.Slaves = slavesCount
+			break
 		}
 	}
 
 	return nil
 }
 
-// DeleteDevice: delete the multipath device
+// DeleteDevice delete the multipath device
 func (d *Device) DeleteDevice() (err error) {
-	if err = tearDownMultipathDevice(d); err != nil {
+	if err := retryCleanupDevice(d); err != nil {
+		klog.Warningf("error while deleting multipath device %s: %v", d.Mapper, err)
 		return err
 	}
+	d.Mapper = ""
+	d.Slaves = 0
 	return nil
 }
 
-// CreateDevice: attach and create linux devices to host
+// CreateDevice attach and create linux devices to host
 func (d *Device) CreateDevice() (err error) {
 
 	if err = d.createLinuxDevice(); err != nil {
-		klog.Errorf("unable to create device for wwn %v", d.WWN)
+		klog.Errorf("unable to create device for wwn %s", d.WWN)
 		return err
 	}
 
@@ -145,14 +145,18 @@ func (d *Device) CreateDevice() (err error) {
 func scsiHostRescanWithLock() (err error) {
 	start := time.Now()
 	var scan bool = true
-	defer scanLock.Unlock()
 
 	for {
 		if scanLock.TryLock() {
-			if scan {
-				err = scsiHostRescan()
-			}
-			return err
+			func() {
+				defer scanLock.Unlock()
+				if scan {
+					// always clean orphan paths before scanning hosts
+					cleanupOrphanPaths()
+					err = scsiHostRescan()
+				}
+			}()
+			return
 		} else {
 			if time.Since(start) > time.Minute {
 				// Scanning usually takes < 30s. If wait is more than a min then return.
@@ -188,28 +192,9 @@ func (d *Device) createLinuxDevice() (err error) {
 		if err != nil {
 			return err
 		}
-		if len(d.Slaves) > 0 {
+		if d.Slaves > 0 {
 			// populated device with atleast 1 slave; job done
 			return nil
-		}
-
-		// cleaning up faulty, orphan, stale paths/maps
-		// try only between 10 secs
-		tmpTime := time.Now().Add(-10 * time.Second)
-		if lastCleanExecuted.Before(tmpTime) {
-			tryCleaningFaultyAndOrphan()
-			lastCleanExecuted = time.Now()
-		}
-
-		// handle stale paths
-		// heavy operation hence try only between 25 secs
-		tmpTime = time.Now().Add(-25 * time.Second)
-		if lastStaleCleanExecuted.Before(tmpTime) {
-			err = cleanupStalePaths()
-			if err != nil {
-				klog.Warning(err)
-			}
-			lastStaleCleanExecuted = time.Now()
 		}
 
 		// some resting time
@@ -218,24 +203,6 @@ func (d *Device) createLinuxDevice() (err error) {
 
 	// Reached here signifies the device was not found, throw an error
 	return fmt.Errorf("fc device not found for wwn %s", d.WWN)
-}
-
-// tryCleaningFaultyAndOrphan: house keeping when device cannot be found once
-func tryCleaningFaultyAndOrphan() {
-	operations := []struct {
-		cleanupFunc func() error
-		description string
-	}{
-		{cleanupFunc: cleanupFaultyPaths, description: "faulty paths"},
-		{cleanupFunc: cleanupOrphanPaths, description: "orphan paths"},
-		{cleanupFunc: cleanupStaleMaps, description: "stale maps"},
-		{cleanupFunc: cleanupErrorMultipathMaps, description: "error mappers"},
-	}
-	for _, op := range operations {
-		if err := op.cleanupFunc(); err != nil {
-			klog.Warningf("Failed to cleanup %s: %v", op.description, err)
-		}
-	}
 }
 
 // scsiHostRescan: scans all scsi hosts
