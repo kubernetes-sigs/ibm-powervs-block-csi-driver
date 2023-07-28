@@ -214,6 +214,17 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) e
 		return nil
 	}
 
+	// Just before the mount operation check if device path exist and try again.
+	sourceExists, _ := d.mounter.ExistsPath(source)
+	if !sourceExists {
+		klog.Warningf("unable to find device %s", source)
+		err := (*dev).CreateDevice()
+		if err != nil {
+			return err
+		}
+		source = (*dev).GetMapper()
+	}
+
 	// FormatAndMount will format only if needed
 	klog.V(5).Infof("starting formatting %s and mounting at %s for volumeID %s with fstype %s", source, target, req.VolumeId, fsType)
 	err = d.mounter.FormatAndMount(source, target, fsType, mountOptions)
@@ -620,6 +631,17 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 		return status.Errorf(codes.Internal, "[block]: could not create file %q for volumeID %s: %v", target, volumeID, err)
 	}
 
+	// Just before the mount operation check if device path exist and try again.
+	sourceExists, _ := d.mounter.ExistsPath(globalMountPath)
+	if !sourceExists {
+		klog.Warningf("unable to find device %s", source)
+		err := (*dev).CreateDevice()
+		if err != nil {
+			return err
+		}
+		source = (*dev).GetMapper()
+	}
+
 	klog.V(5).Infof("[block]: starting mounting %s at %s for volumeID %s", source, target, volumeID)
 	if err := d.mounter.Mount(source, target, "", mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
@@ -700,13 +722,11 @@ func (d *nodeService) setupDevice(wwn string) (*device.LinuxDevice, error) {
 	if err := dev.Populate(false); err != nil {
 		return nil, err
 	}
-	if dev.GetMapper() != "" {
-		// cleanup existing device so we can find it again fresh
-		if err := dev.DeleteDevice(); err != nil {
-			klog.Warningf("failed to cleanup stale device before staging for WWN %s, err %v", wwn, err)
-		}
-	}
 
+	// Populate will ensure atleast 1 active path exist for the mapper
+	if dev.GetMapper() != "" {
+		return &dev, nil
+	}
 	// Create Device
 	err := dev.CreateDevice()
 	if err != nil {
