@@ -23,7 +23,7 @@ type StatsUtils interface {
 type VolumeStatUtils struct {
 }
 
-// IsDevicePathNotExist ...
+// IsPathNotExist ...
 func (su *VolumeStatUtils) IsPathNotExist(path string) bool {
 	var stat unix.Stat_t
 	err := unix.Stat(path, &stat)
