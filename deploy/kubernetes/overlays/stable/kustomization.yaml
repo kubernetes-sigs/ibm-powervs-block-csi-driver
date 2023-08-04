@@ -4,14 +4,14 @@ bases:
   - ../../base
 images:
   - name: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver
-    newTag: v0.3.0
+    newTag: v0.4.0
   - name: registry.k8s.io/sig-storage/csi-provisioner
-    newTag: v3.3.0
+    newTag: v3.5.0
   - name: registry.k8s.io/sig-storage/csi-attacher
-    newTag: v3.5.1
+    newTag: v4.3.0
   - name: registry.k8s.io/sig-storage/csi-resizer
-    newTag: v1.7.0
+    newTag: v1.8.0
   - name: registry.k8s.io/sig-storage/livenessprobe
     newTag: v2.9.0
   - name: registry.k8s.io/sig-storage/csi-node-driver-registrar
-    newTag: v2.7.0
+    newTag: v2.8.0
