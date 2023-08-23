@@ -123,21 +123,6 @@ func (mr *MockCloudMockRecorder) GetDiskByName(name interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskByName", reflect.TypeOf((*MockCloud)(nil).GetDiskByName), name)
 }
 
-// GetImageByID mocks base method.
-func (m *MockCloud) GetImageByID(imageID string) (*cloud.PVMImage, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetImageByID", imageID)
-	ret0, _ := ret[0].(*cloud.PVMImage)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetImageByID indicates an expected call of GetImageByID.
-func (mr *MockCloudMockRecorder) GetImageByID(imageID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImageByID", reflect.TypeOf((*MockCloud)(nil).GetImageByID), imageID)
-}
-
 // GetPVMInstanceByID mocks base method.
 func (m *MockCloud) GetPVMInstanceByID(instanceID string) (*cloud.PVMInstance, error) {
 	m.ctrl.T.Helper()

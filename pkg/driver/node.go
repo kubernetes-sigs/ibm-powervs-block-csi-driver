@@ -575,13 +575,9 @@ func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoReque
 		klog.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", d.pvmInstanceId, err)
 		return nil, fmt.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", d.pvmInstanceId, err)
 	}
-	image, err := d.cloud.GetImageByID(in.ImageID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the image details for %s, err: %s", in.ImageID, err)
-	}
 
 	segments := map[string]string{
-		DiskTypeKey: image.DiskType,
+		DiskTypeKey: in.DiskType,
 	}
 
 	topology := &csi.Topology{Segments: segments}
