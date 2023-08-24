@@ -134,21 +134,19 @@ func newFakeCloudProvider() *fakeCloudProvider {
 }
 
 func (p *fakeCloudProvider) GetPVMInstanceByName(name string) (*cloud.PVMInstance, error) {
-
 	return &cloud.PVMInstance{
-		ID:      name + "-" + "id",
-		ImageID: name + "-" + "image",
-		Name:    name,
+		ID:       name + "-" + "id",
+		DiskType: "tier3",
+		Name:     name,
 	}, nil
 
 }
 
 func (p *fakeCloudProvider) GetPVMInstanceByID(instanceID string) (*cloud.PVMInstance, error) {
-
 	return &cloud.PVMInstance{
-		ID:      instanceID,
-		ImageID: strings.Split(instanceID, "-")[0] + "-" + "image",
-		Name:    strings.Split(instanceID, "-")[0],
+		ID:       instanceID,
+		DiskType: "tier3",
+		Name:     strings.Split(instanceID, "-")[0],
 	}, nil
 }
 
@@ -164,15 +162,6 @@ func (p *fakeCloudProvider) GetPVMInstanceDetails(instanceID string) (*models.PV
 func (p *fakeCloudProvider) UpdateStoragePoolAffinity(instanceID string) error {
 
 	return nil
-}
-
-func (p *fakeCloudProvider) GetImageByID(imageID string) (*cloud.PVMImage, error) {
-
-	return &cloud.PVMImage{
-		ID:       imageID,
-		Name:     strings.Split(imageID, "-")[0] + "-" + "image",
-		DiskType: "tier3",
-	}, nil
 }
 
 func (c *fakeCloudProvider) CreateDisk(volumeName string, diskOptions *cloud.DiskOptions) (*cloud.Disk, error) {

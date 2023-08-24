@@ -54,21 +54,14 @@ type powerVSCloud struct {
 
 	cloudInstanceID string
 
-	imageClient        *instance.IBMPIImageClient
 	pvmInstancesClient *instance.IBMPIInstanceClient
 	volClient          *instance.IBMPIVolumeClient
 }
 
 type PVMInstance struct {
-	ID      string
-	ImageID string
-	Name    string
-}
-
-type PVMImage struct {
 	ID       string
-	Name     string
 	DiskType string
+	Name     string
 }
 
 func NewPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
@@ -104,12 +97,10 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 	backgroundContext := context.Background()
 	volClient := instance.NewIBMPIVolumeClient(backgroundContext, piSession, cloudInstanceID)
 	pvmInstancesClient := instance.NewIBMPIInstanceClient(backgroundContext, piSession, cloudInstanceID)
-	imageClient := instance.NewIBMPIImageClient(backgroundContext, piSession, cloudInstanceID)
 
 	return &powerVSCloud{
 		piSession:          piSession,
 		cloudInstanceID:    cloudInstanceID,
-		imageClient:        imageClient,
 		pvmInstancesClient: pvmInstancesClient,
 		volClient:          volClient,
 	}, nil
@@ -123,9 +114,9 @@ func (p *powerVSCloud) GetPVMInstanceByName(name string) (*PVMInstance, error) {
 	for _, pvmInstance := range in.PvmInstances {
 		if name == *pvmInstance.ServerName {
 			return &PVMInstance{
-				ID:      *pvmInstance.PvmInstanceID,
-				ImageID: *pvmInstance.ImageID,
-				Name:    *pvmInstance.ServerName,
+				ID:       *pvmInstance.PvmInstanceID,
+				DiskType: pvmInstance.StorageType,
+				Name:     *pvmInstance.ServerName,
 			}, nil
 		}
 	}
@@ -139,21 +130,9 @@ func (p *powerVSCloud) GetPVMInstanceByID(instanceID string) (*PVMInstance, erro
 	}
 
 	return &PVMInstance{
-		ID:      *in.PvmInstanceID,
-		ImageID: *in.ImageID,
-		Name:    *in.ServerName,
-	}, nil
-}
-
-func (p *powerVSCloud) GetImageByID(imageID string) (*PVMImage, error) {
-	image, err := p.imageClient.Get(imageID)
-	if err != nil {
-		return nil, err
-	}
-	return &PVMImage{
-		ID:       *image.ImageID,
-		Name:     *image.Name,
-		DiskType: *image.StorageType,
+		ID:       *in.PvmInstanceID,
+		DiskType: *in.StorageType,
+		Name:     *in.ServerName,
 	}, nil
 }
 
