@@ -33,6 +33,5 @@ type Cloud interface {
 	GetPVMInstanceByID(instanceID string) (instance *PVMInstance, err error)
 	GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error)
 	UpdateStoragePoolAffinity(instanceID string) error
-	GetImageByID(imageID string) (image *PVMImage, err error)
 	IsAttached(volumeID string, nodeID string) (attached bool, err error)
 }
