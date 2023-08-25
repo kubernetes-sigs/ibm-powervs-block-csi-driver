@@ -1096,14 +1096,8 @@ func TestNodeGetInfo(t *testing.T) {
 			mockCloud := cloudmocks.NewMockCloud(mockCtl)
 
 			mockCloud.EXPECT().GetPVMInstanceByID(tc.instanceID).Return(&cloud.PVMInstance{
-				ID:      tc.instanceID,
-				Name:    tc.name,
-				ImageID: "test-image",
-			}, nil)
-
-			mockCloud.EXPECT().GetImageByID(gomock.Eq("test-image")).Return(&cloud.PVMImage{
-				ID:       "test-image",
-				Name:     "test-image",
+				ID:       tc.instanceID,
+				Name:     tc.name,
 				DiskType: "tier3",
 			}, nil)
 

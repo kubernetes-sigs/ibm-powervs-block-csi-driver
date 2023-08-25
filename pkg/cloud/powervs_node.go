@@ -66,7 +66,8 @@ func NewNodeUpdateScope(params NodeUpdateScopeParams) (scope *NodeUpdateScope, e
 
 	c, err := NewPowerVSCloud(scope.ServiceInstanceId, scope.Zone, false)
 	if err != nil {
-		klog.Fatalf("Failed to get powervs cloud: %v", err)
+		klog.Errorf("Failed to get powervs cloud: %v", err)
+		return
 	}
 	scope.Cloud = c
 
