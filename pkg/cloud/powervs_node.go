@@ -21,7 +21,7 @@ import (
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -85,7 +85,7 @@ func (p *powerVSCloud) GetPVMInstanceDetails(instanceID string) (*models.PVMInst
 func (p *powerVSCloud) UpdateStoragePoolAffinity(instanceID string) error {
 
 	body := &models.PVMInstanceUpdate{
-		StoragePoolAffinity: pointer.Bool(StoragePoolAffinity),
+		StoragePoolAffinity: ptr.To[bool](StoragePoolAffinity),
 	}
 
 	_, err := p.pvmInstancesClient.Update(instanceID, body)

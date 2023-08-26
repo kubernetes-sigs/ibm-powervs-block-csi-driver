@@ -32,7 +32,7 @@ import (
 	"github.com/IBM/platform-services-go-sdk/resourcecontrollerv2"
 	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
@@ -151,7 +151,7 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 
 	dataVolume := &models.CreateDataVolume{
 		Name:      &volumeName,
-		Size:      pointer.Float64(float64(capacityGiB)),
+		Size:      ptr.To[float64](float64(capacityGiB)),
 		Shareable: &diskOptions.Shareable,
 		DiskType:  volumeType,
 	}
@@ -233,7 +233,8 @@ func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64
 }
 
 func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
-	err := wait.PollImmediate(PollInterval, PollTimeout, func() (bool, error) {
+	ctx := context.Background()
+	err := wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
 		v, err := p.volClient.Get(volumeID)
 		if err != nil {
 			return false, err
