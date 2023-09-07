@@ -91,11 +91,19 @@ var (
 // newControllerService creates a new controller service
 // it will print stack trace and osexit if failed to create the service
 func newControllerService(driverOptions *Options) controllerService {
-	var (
-		cloudInstanceId string
-		zone            string
-	)
-	if driverOptions.cloudconfig != "" {
+	var cloudInstanceId, zone string
+
+	// Following env vars will be checked before looking up the
+	// cli options and metadata service if both are not set.
+	// It will help with running the controller tests locally
+	// on a powervs vm. Currently, it relies on k8s cluster node.
+	cID := os.Getenv("POWERVS_CLOUD_INSTANCE_ID")
+	z := os.Getenv("POWERVS_ZONE")
+
+	if cID != "" && z != "" {
+		klog.V(4).Info("using node info from environment variables")
+		cloudInstanceId, zone = cID, z
+	} else if driverOptions.cloudconfig != "" {
 		var cloudConfig CloudConfig
 		config, err := os.Open(driverOptions.cloudconfig)
 		if nil != err {

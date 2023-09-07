@@ -75,13 +75,28 @@ type nodeService struct {
 // newNodeService creates a new node service
 // it will print stack trace and osexit if failed to create the service
 func newNodeService(driverOptions *Options) nodeService {
-	klog.V(4).Infof("retrieving node info from metadata service")
-	metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient, driverOptions.kubeconfig)
-	if err != nil {
-		klog.Fatalf("Failed to get metadata service: %v", err)
+	var cloudInstanceId, zone, instanceID string
+
+	// Following env vars will be checked before looking up the metadata service
+	// if all are not set. It will help with running the nodes tests locally
+	// on a powervs vm. Currently, it relies on k8s cluster node.
+	cID := os.Getenv("POWERVS_CLOUD_INSTANCE_ID")
+	z := os.Getenv("POWERVS_ZONE")
+	insID := os.Getenv("POWERVS_INSTANCE_ID")
+
+	if cID != "" && z != "" && insID != "" {
+		klog.V(4).Info("using node info from environment variables")
+		cloudInstanceId, zone, instanceID = cID, z, insID
+	} else {
+		klog.V(4).Infof("retrieving node info from metadata service")
+		metadata, err := cloud.NewMetadataService(cloud.DefaultKubernetesAPIClient, driverOptions.kubeconfig)
+		if err != nil {
+			klog.Fatalf("Failed to get metadata service: %v", err)
+		}
+		cloudInstanceId, zone, instanceID = metadata.GetCloudInstanceId(), metadata.GetZone(), metadata.GetPvmInstanceId()
 	}
 
-	pvsCloud, err := NewPowerVSCloudFunc(metadata.GetCloudInstanceId(), metadata.GetZone(), driverOptions.debug)
+	pvsCloud, err := NewPowerVSCloudFunc(cloudInstanceId, zone, driverOptions.debug)
 	if err != nil {
 		klog.Fatalf("Failed to get powervs cloud: %v", err)
 	}
@@ -90,7 +105,7 @@ func newNodeService(driverOptions *Options) nodeService {
 		cloud:         pvsCloud,
 		mounter:       newNodeMounter(),
 		driverOptions: driverOptions,
-		pvmInstanceId: metadata.GetPvmInstanceId(),
+		pvmInstanceId: instanceID,
 		volumeLocks:   util.NewVolumeLocks(),
 		stats:         &VolumeStatUtils{},
 	}
