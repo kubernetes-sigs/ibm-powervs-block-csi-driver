@@ -79,13 +79,13 @@ func retryCleanupDevice(dev *Device) error {
 }
 
 // multipathDisableQueuing disable queueing on the multipath device
-func multipathDisableQueuing(mapper string) (err error) {
+func multipathDisableQueuing(mapper string) error {
 	args := []string{"message", mapper, "0", "fail_if_no_path"}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
-	if err != nil {
-		return err
-	}
 	out := string(outBytes)
+	if err != nil {
+		return fmt.Errorf("cannot disable queuing: %s : %v", out, err)
+	}
 	if strings.Contains(out, deviceDoesNotExist) {
 		return fmt.Errorf("cannot disable queuing: %s", out)
 	}
@@ -93,25 +93,26 @@ func multipathDisableQueuing(mapper string) (err error) {
 }
 
 // multipathRemoveDmDevice remove multipath device via dmsetup
-func multipathRemoveDmDevice(mapper string) (err error) {
+func multipathRemoveDmDevice(mapper string) error {
 	if strings.HasSuffix(mapper, "mpatha") {
 		klog.Warning("skipping remove mpatha which is root")
-		return
+		return nil
 	}
 
-	err = multipathDisableQueuing(mapper)
-	if err != nil {
+	// Any failure while performing disable queuing operation on the device map
+	// will be ignored and will try to delete it.
+	if err := multipathDisableQueuing(mapper); err != nil {
 		klog.Warningf("failure while disabling queue for %s: %v", mapper, err)
 	}
 
 	args := []string{"remove", "--force", mapper}
 	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to remove multipath map for %s, error: %v", mapper, err)
-	}
 	out := string(outBytes)
+	if err != nil {
+		return fmt.Errorf("failed to remove device map for %s : %s : %v", mapper, out, err)
+	}
 	if isDmsetupRemoveError(out) {
-		return fmt.Errorf("failed to remove device map for %s, error: %s", mapper, out)
+		return fmt.Errorf("failed to remove device map for %s : %s", mapper, out)
 	}
 	return nil
 }
