@@ -14,7 +14,7 @@ require (
 	github.com/onsi/gomega v1.27.10
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sys v0.12.0
-	google.golang.org/grpc v1.58.0
+	google.golang.org/grpc v1.58.1
 	gopkg.in/gcfg.v1 v1.2.3
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
