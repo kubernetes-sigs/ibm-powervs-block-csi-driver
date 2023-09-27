@@ -40,8 +40,8 @@ github.com/IBM-Cloud/power-go-client v1.3.1 h1:LIxP6XJtP6MpDOB3foAZzX36FYvfgsyfa
 github.com/IBM-Cloud/power-go-client v1.3.1/go.mod h1:UBFlT5XKspkD1K0Wqd9evScL7dnu6hZOnGikTID8lHQ=
 github.com/IBM/go-sdk-core/v5 v5.14.1 h1:WR1r0zz+gDW++xzZjF41r9ueY4JyjS2vgZjiYs8lO3c=
 github.com/IBM/go-sdk-core/v5 v5.14.1/go.mod h1:MUvIr/1mgGh198ZXL+ByKz9Qs1JoEh80v/96x8jPXNY=
-github.com/IBM/platform-services-go-sdk v0.50.2 h1:57JdiZq3nnn0epmSLScYISQ2OLJZrR8fKfcnUdCMtjA=
-github.com/IBM/platform-services-go-sdk v0.50.2/go.mod h1:6LxcUhIaSLP4SuQJXF9oLXBamSQogs5D9BcVwr4hmfU=
+github.com/IBM/platform-services-go-sdk v0.50.4 h1:YQcdFv5+WW+rH1lideBX4fJbPoS3NauUNqtJdxnnKyI=
+github.com/IBM/platform-services-go-sdk v0.50.4/go.mod h1:6LxcUhIaSLP4SuQJXF9oLXBamSQogs5D9BcVwr4hmfU=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
