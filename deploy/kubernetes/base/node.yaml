@@ -19,6 +19,7 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/os: linux
+        kubernetes.io/arch: ppc64le
       hostNetwork: true
       serviceAccountName: powervs-csi-node-sa
       priorityClassName: system-node-critical

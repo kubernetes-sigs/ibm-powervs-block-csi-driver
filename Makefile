@@ -92,7 +92,11 @@ bin/mockgen: | bin
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.2
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.54.2
+
+bin/govulncheck: | bin
+	echo "Installing govulncheck..."
+	go install golang.org/x/vuln/cmd/govulncheck@v1.0.1
 
 mockgen: bin/mockgen
 	./hack/update-gomock
@@ -102,6 +106,10 @@ verify: bin/golangci-lint
 	echo "verifying and linting files ..."
 	./hack/verify-all
 	echo "Congratulations! All Go source files have been linted."
+
+.PHONY: govulncheck
+govulncheck: bin/govulncheck
+	$(GOBIN)/govulncheck ./...
 
 .PHONY: verify-vendor
 test: verify-vendor

@@ -60,7 +60,7 @@ func (o *PcloudTasksGetReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return nil, result
 	default:
-		return nil, runtime.NewAPIError("response status code does not match any response statuses defined for this endpoint in the swagger spec", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /pcloud/v1/tasks/{task_id}] pcloud.tasks.get", response, response.Code())
 	}
 }
 
@@ -101,6 +101,11 @@ func (o *PcloudTasksGetOK) IsServerError() bool {
 // IsCode returns true when this pcloud tasks get o k response a status code equal to that given
 func (o *PcloudTasksGetOK) IsCode(code int) bool {
 	return code == 200
+}
+
+// Code gets the status code for the pcloud tasks get o k response
+func (o *PcloudTasksGetOK) Code() int {
+	return 200
 }
 
 func (o *PcloudTasksGetOK) Error() string {
@@ -166,6 +171,11 @@ func (o *PcloudTasksGetBadRequest) IsCode(code int) bool {
 	return code == 400
 }
 
+// Code gets the status code for the pcloud tasks get bad request response
+func (o *PcloudTasksGetBadRequest) Code() int {
+	return 400
+}
+
 func (o *PcloudTasksGetBadRequest) Error() string {
 	return fmt.Sprintf("[GET /pcloud/v1/tasks/{task_id}][%d] pcloudTasksGetBadRequest  %+v", 400, o.Payload)
 }
@@ -227,6 +237,11 @@ func (o *PcloudTasksGetUnauthorized) IsServerError() bool {
 // IsCode returns true when this pcloud tasks get unauthorized response a status code equal to that given
 func (o *PcloudTasksGetUnauthorized) IsCode(code int) bool {
 	return code == 401
+}
+
+// Code gets the status code for the pcloud tasks get unauthorized response
+func (o *PcloudTasksGetUnauthorized) Code() int {
+	return 401
 }
 
 func (o *PcloudTasksGetUnauthorized) Error() string {
@@ -292,6 +307,11 @@ func (o *PcloudTasksGetForbidden) IsCode(code int) bool {
 	return code == 403
 }
 
+// Code gets the status code for the pcloud tasks get forbidden response
+func (o *PcloudTasksGetForbidden) Code() int {
+	return 403
+}
+
 func (o *PcloudTasksGetForbidden) Error() string {
 	return fmt.Sprintf("[GET /pcloud/v1/tasks/{task_id}][%d] pcloudTasksGetForbidden  %+v", 403, o.Payload)
 }
@@ -355,6 +375,11 @@ func (o *PcloudTasksGetNotFound) IsCode(code int) bool {
 	return code == 404
 }
 
+// Code gets the status code for the pcloud tasks get not found response
+func (o *PcloudTasksGetNotFound) Code() int {
+	return 404
+}
+
 func (o *PcloudTasksGetNotFound) Error() string {
 	return fmt.Sprintf("[GET /pcloud/v1/tasks/{task_id}][%d] pcloudTasksGetNotFound  %+v", 404, o.Payload)
 }
@@ -416,6 +441,11 @@ func (o *PcloudTasksGetInternalServerError) IsServerError() bool {
 // IsCode returns true when this pcloud tasks get internal server error response a status code equal to that given
 func (o *PcloudTasksGetInternalServerError) IsCode(code int) bool {
 	return code == 500
+}
+
+// Code gets the status code for the pcloud tasks get internal server error response
+func (o *PcloudTasksGetInternalServerError) Code() int {
+	return 500
 }
 
 func (o *PcloudTasksGetInternalServerError) Error() string {

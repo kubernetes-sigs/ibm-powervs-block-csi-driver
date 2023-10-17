@@ -24,15 +24,13 @@ import (
 	"time"
 
 	"github.com/IBM-Cloud/power-go-client/clients/instance"
-	"github.com/IBM-Cloud/power-go-client/errors"
 	"github.com/IBM-Cloud/power-go-client/ibmpisession"
-	"github.com/IBM-Cloud/power-go-client/power/client/p_cloud_volumes"
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/platform-services-go-sdk/resourcecontrollerv2"
 	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
@@ -50,10 +48,6 @@ type PowerVSClient interface {
 }
 
 type powerVSCloud struct {
-	piSession *ibmpisession.IBMPISession
-
-	cloudInstanceID string
-
 	pvmInstancesClient *instance.IBMPIInstanceClient
 	volClient          *instance.IBMPIVolumeClient
 }
@@ -99,8 +93,6 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 	pvmInstancesClient := instance.NewIBMPIInstanceClient(backgroundContext, piSession, cloudInstanceID)
 
 	return &powerVSCloud{
-		piSession:          piSession,
-		cloudInstanceID:    cloudInstanceID,
 		pvmInstancesClient: pvmInstancesClient,
 		volClient:          volClient,
 	}, nil
@@ -151,7 +143,7 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 
 	dataVolume := &models.CreateDataVolume{
 		Name:      &volumeName,
-		Size:      pointer.Float64(float64(capacityGiB)),
+		Size:      ptr.To[float64](float64(capacityGiB)),
 		Shareable: &diskOptions.Shareable,
 		DiskType:  volumeType,
 	}
@@ -233,7 +225,8 @@ func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64
 }
 
 func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
-	err := wait.PollImmediate(PollInterval, PollTimeout, func() (bool, error) {
+	ctx := context.Background()
+	err := wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
 		v, err := p.volClient.Get(volumeID)
 		if err != nil {
 			return false, err
@@ -248,13 +241,11 @@ func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
 }
 
 func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
-	//TODO: remove capacityBytes
-	params := p_cloud_volumes.NewPcloudCloudinstancesVolumesGetallParamsWithTimeout(TIMEOUT).WithCloudInstanceID(p.cloudInstanceID)
-	resp, err := p.piSession.Power.PCloudVolumes.PcloudCloudinstancesVolumesGetall(params, p.piSession.AuthInfo(p.cloudInstanceID))
+	vols, err := p.volClient.GetAll()
 	if err != nil {
-		return nil, errors.ToError(err)
+		return nil, err
 	}
-	for _, v := range resp.Payload.Volumes {
+	for _, v := range vols.Volumes {
 		if name == *v.Name {
 			return &Disk{
 				Name:        *v.Name,

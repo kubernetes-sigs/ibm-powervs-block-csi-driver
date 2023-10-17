@@ -19,9 +19,6 @@ import (
 // swagger:model volumesAttach
 type VolumesAttach struct {
 
-	// Enables performance path for volume attach
-	PerformancePath *bool `json:"performancePath,omitempty"`
-
 	// List of volumes to be attached to a PVM instance
 	// Required: true
 	VolumeIDs []string `json:"volumeIDs"`

@@ -25,9 +25,6 @@ type VolumesCloneCreate struct {
 	// Required: true
 	Name *string `json:"name"`
 
-	// Enables performance path for creating volume clones.
-	PerformancePath *bool `json:"performancePath,omitempty"`
-
 	// List of volumes to be cloned
 	// Required: true
 	VolumeIDs []string `json:"volumeIDs"`

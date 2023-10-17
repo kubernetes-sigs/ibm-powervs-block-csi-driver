@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -34,6 +35,9 @@ type PVMInstanceReferenceV2 struct {
 	// Required: true
 	Deployment *PvmInstanceDeployment `json:"deployment"`
 
+	// health
+	Health *PVMInstanceV2Health `json:"health,omitempty"`
+
 	// The pvm instance host information
 	Host *PvmInstanceHost `json:"host,omitempty"`
 
@@ -52,6 +56,10 @@ type PVMInstanceReferenceV2 struct {
 	// Name of the server
 	// Required: true
 	Name *string `json:"name"`
+
+	// The pvm instance network ports information
+	// Required: true
+	NetworkPorts []*PVMInstanceV2NetworkPort `json:"networkPorts"`
 
 	// The pvm instance OS system information
 	// Required: true
@@ -88,6 +96,10 @@ func (m *PVMInstanceReferenceV2) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateHealth(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateHost(formats); err != nil {
 		res = append(res, err)
 	}
@@ -105,6 +117,10 @@ func (m *PVMInstanceReferenceV2) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateNetworkPorts(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -201,6 +217,25 @@ func (m *PVMInstanceReferenceV2) validateDeployment(formats strfmt.Registry) err
 	return nil
 }
 
+func (m *PVMInstanceReferenceV2) validateHealth(formats strfmt.Registry) error {
+	if swag.IsZero(m.Health) { // not required
+		return nil
+	}
+
+	if m.Health != nil {
+		if err := m.Health.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("health")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("health")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *PVMInstanceReferenceV2) validateHost(formats strfmt.Registry) error {
 	if swag.IsZero(m.Host) { // not required
 		return nil
@@ -262,6 +297,33 @@ func (m *PVMInstanceReferenceV2) validateName(formats strfmt.Registry) error {
 
 	if err := validate.Required("name", "body", m.Name); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (m *PVMInstanceReferenceV2) validateNetworkPorts(formats strfmt.Registry) error {
+
+	if err := validate.Required("networkPorts", "body", m.NetworkPorts); err != nil {
+		return err
+	}
+
+	for i := 0; i < len(m.NetworkPorts); i++ {
+		if swag.IsZero(m.NetworkPorts[i]) { // not required
+			continue
+		}
+
+		if m.NetworkPorts[i] != nil {
+			if err := m.NetworkPorts[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("networkPorts" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("networkPorts" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
 	}
 
 	return nil
@@ -350,11 +412,19 @@ func (m *PVMInstanceReferenceV2) ContextValidate(ctx context.Context, formats st
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateHealth(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateHost(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.contextValidateMemory(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateNetworkPorts(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -379,6 +449,11 @@ func (m *PVMInstanceReferenceV2) ContextValidate(ctx context.Context, formats st
 func (m *PVMInstanceReferenceV2) contextValidateConfiguration(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Configuration != nil {
+
+		if swag.IsZero(m.Configuration) { // not required
+			return nil
+		}
+
 		if err := m.Configuration.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("configuration")
@@ -395,6 +470,7 @@ func (m *PVMInstanceReferenceV2) contextValidateConfiguration(ctx context.Contex
 func (m *PVMInstanceReferenceV2) contextValidateCores(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Cores != nil {
+
 		if err := m.Cores.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("cores")
@@ -411,6 +487,7 @@ func (m *PVMInstanceReferenceV2) contextValidateCores(ctx context.Context, forma
 func (m *PVMInstanceReferenceV2) contextValidateDeployment(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Deployment != nil {
+
 		if err := m.Deployment.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("deployment")
@@ -424,9 +501,35 @@ func (m *PVMInstanceReferenceV2) contextValidateDeployment(ctx context.Context, 
 	return nil
 }
 
+func (m *PVMInstanceReferenceV2) contextValidateHealth(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Health != nil {
+
+		if swag.IsZero(m.Health) { // not required
+			return nil
+		}
+
+		if err := m.Health.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("health")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("health")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *PVMInstanceReferenceV2) contextValidateHost(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Host != nil {
+
+		if swag.IsZero(m.Host) { // not required
+			return nil
+		}
+
 		if err := m.Host.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("host")
@@ -443,6 +546,7 @@ func (m *PVMInstanceReferenceV2) contextValidateHost(ctx context.Context, format
 func (m *PVMInstanceReferenceV2) contextValidateMemory(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Memory != nil {
+
 		if err := m.Memory.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("memory")
@@ -456,9 +560,35 @@ func (m *PVMInstanceReferenceV2) contextValidateMemory(ctx context.Context, form
 	return nil
 }
 
+func (m *PVMInstanceReferenceV2) contextValidateNetworkPorts(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.NetworkPorts); i++ {
+
+		if m.NetworkPorts[i] != nil {
+
+			if swag.IsZero(m.NetworkPorts[i]) { // not required
+				return nil
+			}
+
+			if err := m.NetworkPorts[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("networkPorts" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("networkPorts" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 func (m *PVMInstanceReferenceV2) contextValidateOperatingSystem(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.OperatingSystem != nil {
+
 		if err := m.OperatingSystem.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("operatingSystem")
@@ -475,6 +605,11 @@ func (m *PVMInstanceReferenceV2) contextValidateOperatingSystem(ctx context.Cont
 func (m *PVMInstanceReferenceV2) contextValidatePlacementGroup(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.PlacementGroup != nil {
+
+		if swag.IsZero(m.PlacementGroup) { // not required
+			return nil
+		}
+
 		if err := m.PlacementGroup.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("placementGroup")
@@ -491,6 +626,11 @@ func (m *PVMInstanceReferenceV2) contextValidatePlacementGroup(ctx context.Conte
 func (m *PVMInstanceReferenceV2) contextValidateVirtualCores(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.VirtualCores != nil {
+
+		if swag.IsZero(m.VirtualCores) { // not required
+			return nil
+		}
+
 		if err := m.VirtualCores.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("virtualCores")

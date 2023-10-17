@@ -177,6 +177,11 @@ func (m *PVMInstanceConfiguration) ContextValidate(ctx context.Context, formats 
 func (m *PVMInstanceConfiguration) contextValidateConsoleLanguage(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.ConsoleLanguage != nil {
+
+		if swag.IsZero(m.ConsoleLanguage) { // not required
+			return nil
+		}
+
 		if err := m.ConsoleLanguage.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("consoleLanguage")
@@ -193,6 +198,11 @@ func (m *PVMInstanceConfiguration) contextValidateConsoleLanguage(ctx context.Co
 func (m *PVMInstanceConfiguration) contextValidateSapProfile(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.SapProfile != nil {
+
+		if swag.IsZero(m.SapProfile) { // not required
+			return nil
+		}
+
 		if err := m.SapProfile.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("sapProfile")
@@ -209,6 +219,11 @@ func (m *PVMInstanceConfiguration) contextValidateSapProfile(ctx context.Context
 func (m *PVMInstanceConfiguration) contextValidateSoftwareLicenses(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.SoftwareLicenses != nil {
+
+		if swag.IsZero(m.SoftwareLicenses) { // not required
+			return nil
+		}
+
 		if err := m.SoftwareLicenses.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("softwareLicenses")
@@ -229,6 +244,11 @@ func (m *PVMInstanceConfiguration) contextValidateSystemReferenceCodes(ctx conte
 		for ii := 0; ii < len(m.SystemReferenceCodes[i]); ii++ {
 
 			if m.SystemReferenceCodes[i][ii] != nil {
+
+				if swag.IsZero(m.SystemReferenceCodes[i][ii]) { // not required
+					return nil
+				}
+
 				if err := m.SystemReferenceCodes[i][ii].ContextValidate(ctx, formats); err != nil {
 					if ve, ok := err.(*errors.Validation); ok {
 						return ve.ValidateName("systemReferenceCodes" + "." + strconv.Itoa(i) + "." + strconv.Itoa(ii))

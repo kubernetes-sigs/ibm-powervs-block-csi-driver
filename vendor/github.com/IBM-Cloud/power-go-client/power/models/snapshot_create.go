@@ -26,9 +26,6 @@ type SnapshotCreate struct {
 	// Required: true
 	Name *string `json:"name"`
 
-	// Enables optimized performance path for creating snapshots of PVM instances.
-	PerformancePath *bool `json:"performancePath,omitempty"`
-
 	// List of volumes to include in the PVM instance snapshot
 	VolumeIDs []string `json:"volumeIDs"`
 }

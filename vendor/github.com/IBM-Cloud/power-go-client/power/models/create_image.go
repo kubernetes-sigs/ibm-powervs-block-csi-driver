@@ -58,9 +58,6 @@ type CreateImage struct {
 	// Enum: [root-project url]
 	Source *string `json:"source"`
 
-	// Source2 is added to test empty image reference
-	Source2 string `json:"source2,omitempty"`
-
 	// The storage affinity data; ignored if storagePool is provided; Used only when importing an image from cloud storage.
 	StorageAffinity *StorageAffinity `json:"storageAffinity,omitempty"`
 
@@ -217,6 +214,11 @@ func (m *CreateImage) ContextValidate(ctx context.Context, formats strfmt.Regist
 func (m *CreateImage) contextValidateStorageAffinity(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.StorageAffinity != nil {
+
+		if swag.IsZero(m.StorageAffinity) { // not required
+			return nil
+		}
+
 		if err := m.StorageAffinity.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("storageAffinity")
