@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/IBM-Cloud/power-go-client v1.5.3
 	github.com/IBM/go-sdk-core/v5 v5.14.1
-	github.com/IBM/platform-services-go-sdk v0.52.1
+	github.com/IBM/platform-services-go-sdk v0.53.0
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/mock v1.6.0
