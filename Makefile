@@ -126,3 +126,6 @@ init-buildx:
 	# Register gcloud as a Docker credential helper.
 	# Required for "docker buildx build --push".
 	gcloud auth configure-docker --quiet
+
+test-integration:
+	go test -v -timeout 100m sigs.k8s.io/ibm-powervs-block-csi-driver/tests/it -run ^TestIntegration$
