@@ -288,7 +288,7 @@ func (d *nodeService) nodeUnstageVolume(req *csi.NodeUnstageVolumeRequest) error
 		return status.Errorf(codes.Internal, "failed to get device for vol %s target %q: %v", volumeID, stagingTarget, err)
 	}
 	if count == 0 {
-		klog.V(5).Infof("volume %s not in staged state as the device is not mounted", volumeID, stagingTarget)
+		klog.V(5).Infof("volume %s not in staged state as the device is not mounted", volumeID)
 		return nil
 	}
 
@@ -378,7 +378,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 
 	// Noop for block NodeExpandVolume.
 	if isBlock {
-		klog.V(4).Infof("NodeExpandVolume: ignoring as given volume path is a block device", "volumeID", volumeID, "volumePath", volumePath)
+		klog.V(4).Infof("NodeExpandVolume: ignoring as given volume %s at path %s is a block device", volumeID, volumePath)
 		return &csi.NodeExpandVolumeResponse{}, nil
 	}
 
