@@ -65,10 +65,11 @@ func NewPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 	apikey := os.Getenv("IBMCLOUD_API_KEY")
 
-	authenticator := &core.IamAuthenticator{ApiKey: apikey}
+	authenticator := &core.IamAuthenticator{ApiKey: apikey, URL: os.Getenv("IBMCLOUD_IAM_API_ENDPOINT")}
 
 	serviceClientOptions := &resourcecontrollerv2.ResourceControllerV2Options{
 		Authenticator: authenticator,
+		URL:           os.Getenv("IBMCLOUD_RESOURCE_CONTROLLER_ENDPOINT"),
 	}
 	serviceClient, err := resourcecontrollerv2.NewResourceControllerV2(serviceClientOptions)
 	if err != nil {
