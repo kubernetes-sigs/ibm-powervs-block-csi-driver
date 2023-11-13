@@ -107,3 +107,11 @@ Please go through [CSI Spec](https://github.com/container-storage-interface/spec
 ### Testing
 * To build image, run: `make image`
 * To push image, run: `make push`
+
+### Running on PowerVS Staging
+To test the driver on the staging IBM Cloud PowerVS environment make use of the following environment variables.
+```
+export IBMCLOUD_IAM_API_ENDPOINT=https://iam.test.cloud.ibm.com
+export IBMCLOUD_RESOURCE_CONTROLLER_ENDPOINT=https://resource-controller.test.cloud.ibm.com;
+export IBMCLOUD_POWER_API_ENDPOINT=https://dal.power-iaas.test.cloud.ibm.com # Replace 'dal' with specific region of your test workspace.
+```
