@@ -213,7 +213,7 @@ func scsiHostRescan() error {
 		return err
 	}
 	for _, f := range dirs {
-		name := scsiPath + f.Name() + "/scan"
+		name := filepath.Clean(scsiPath + f.Name() + "/scan")
 		data := []byte("- - -")
 		if err := os.WriteFile(name, data, 0666); err != nil {
 			return fmt.Errorf("scsi host rescan failed: %v", err)
