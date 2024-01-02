@@ -1,0 +1,27 @@
+name: Integration Test
+
+on:
+  schedule:
+    - cron: '30 5 * * 2,4'
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  it:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    environment: powervs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: make test-integration
+        env:
+          IBMCLOUD_API_KEY: ${{ secrets.IBMCLOUD_API_KEY }}
+          IBMCLOUD_ACCOUNT_ID: ${{ secrets.IBMCLOUD_ACCOUNT_ID }}
+          POWERVS_CLOUD_INSTANCE_ID: ${{ secrets.POWERVS_CLOUD_INSTANCE_ID }}
+          POWERVS_ZONE: ${{ vars.POWERVS_ZONE }}
+          POWERVS_NETWORK: ${{ vars.POWERVS_NETWORK }}
+          POWERVS_IMAGE: ${{ vars.POWERVS_IMAGE }}
+          TEST_REMOTE_NODE: ${{ vars.TEST_REMOTE_NODE }}
