@@ -447,8 +447,8 @@ k8s.io/component-helpers v0.28.4/go.mod h1:8LzMalOQ0K10tkBJWBWq8h0HTI9HDPx4WT3Qv
 k8s.io/controller-manager v0.28.4 h1:8uJmo1pD6fWYk4mC/JfZQU6zPvuCgEHf3pd5G39ldDU=
 k8s.io/controller-manager v0.28.4/go.mod h1:pnO+UK2mcWNu1MxucqI8xHPD/8UBm04IUmp2u/3vbnM=
 k8s.io/csi-translation-lib v0.28.4 h1:4TrU2zefZGU5HQCyPZvcPxkS6IowqZ/jBs2Qi/dPUpc=
-k8s.io/klog/v2 v2.120.0 h1:z+q5mfovBj1fKFxiRzsa2DsJLPIVMk/KFL81LMOfK+8=
-k8s.io/klog/v2 v2.120.0/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
+k8s.io/klog/v2 v2.120.1 h1:QXU6cPEOIslTGvZaXvFWiP9VKyeet3sawzTOvdXb4Vw=
+k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
 k8s.io/kms v0.28.4 h1:PMgY/3CQTWP9eIKmNQiTgjLIZ0ns6O+voagzD2/4mSg=
 k8s.io/kms v0.28.4/go.mod h1:HL4/lR/bhjAJPbqycKtfhWiKh1Sp21cpHOL8P4oo87w=
 k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 h1:LyMgNKD2P8Wn1iAwQU5OhxCKlKJy0sHc+PcDwFB24dQ=
