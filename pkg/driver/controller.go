@@ -430,6 +430,11 @@ func (d *controllerService) ControllerGetVolume(ctx context.Context, req *csi.Co
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
+func (d *controllerService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
+	klog.V(4).InfoS("ControllerModifyVolume: called with args %+v", *req)
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
 func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
 	hasSupport := func(cap *csi.VolumeCapability) bool {
 		for _, c := range volumeCaps {
