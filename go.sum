@@ -7,8 +7,8 @@ github.com/IBM-Cloud/power-go-client v1.5.8 h1:4l9PmnYRXV/KfVNBRuc9hya6kW5cQZhN4
 github.com/IBM-Cloud/power-go-client v1.5.8/go.mod h1:y4WDw/l9+29CKX98ngCCvGoHdzX49LL00B1euoAbWzQ=
 github.com/IBM/go-sdk-core/v5 v5.15.1 h1:XOzNZbBgnlxOGK1JMMBtZJYSVguK4TFPJiYutuzFmdA=
 github.com/IBM/go-sdk-core/v5 v5.15.1/go.mod h1:so2mbdIgSp6X8Zm/qLV+whdchTGgi04c3j4xFMsqlCc=
-github.com/IBM/platform-services-go-sdk v0.56.3 h1:DQ1VMQSknhPsdT7d+AybKiZT82esczAkHCIBkwYubzQ=
-github.com/IBM/platform-services-go-sdk v0.56.3/go.mod h1:+U6Kg7o5u/Bh4ZkLxjymSgfdpVsaWAtsMtzhwclUry0=
+github.com/IBM/platform-services-go-sdk v0.56.4 h1:FOduByAYUT8RKo51bYyGnS8F0B3NxQ4YW6T7Iuz57wo=
+github.com/IBM/platform-services-go-sdk v0.56.4/go.mod h1:+U6Kg7o5u/Bh4ZkLxjymSgfdpVsaWAtsMtzhwclUry0=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h1:7RFfzj4SSt6nnvCPbCqijJi1nWCd+TqAT3bYCStRC18=
