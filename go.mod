@@ -3,7 +3,7 @@ module sigs.k8s.io/ibm-powervs-block-csi-driver
 go 1.21
 
 require (
-	github.com/IBM-Cloud/power-go-client v1.5.8
+	github.com/IBM-Cloud/power-go-client v1.5.9
 	github.com/IBM/go-sdk-core/v5 v5.15.1
 	github.com/IBM/platform-services-go-sdk v0.56.4
 	github.com/container-storage-interface/spec v1.9.0
