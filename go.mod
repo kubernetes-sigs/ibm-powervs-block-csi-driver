@@ -8,11 +8,11 @@ require (
 	github.com/IBM/platform-services-go-sdk v0.62.2
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/golang/mock v1.6.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.32.0
 	github.com/pkg/errors v0.9.1
+	go.uber.org/mock v0.4.0
 	golang.org/x/sys v0.18.0
 	google.golang.org/grpc v1.62.1
 	gopkg.in/gcfg.v1 v1.2.3

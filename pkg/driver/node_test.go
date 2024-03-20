@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	cloudmocks "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud/mocks"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/device"
@@ -496,7 +496,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 					volumeLocks: util.NewVolumeLocks(),
 				}
 
-				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return("", 0, errors.New("GetDeviceName faield"))
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return("", 0, errors.New("GetDeviceName failed"))
 
 				req := &csi.NodeUnstageVolumeRequest{
 					StagingTargetPath: targetPath,
