@@ -88,7 +88,7 @@ clean:
 	rm -rf bin/*
 
 bin/mockgen: | bin
-	go install github.com/golang/mock/mockgen@v1.6.0
+	go install go.uber.org/mock/mockgen@v0.4.0
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
