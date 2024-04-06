@@ -13,7 +13,7 @@ require (
 	github.com/onsi/gomega v1.32.0
 	github.com/pkg/errors v0.9.1
 	go.uber.org/mock v0.4.0
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 	google.golang.org/grpc v1.62.1
 	gopkg.in/gcfg.v1 v1.2.3
 	k8s.io/api v0.29.3
