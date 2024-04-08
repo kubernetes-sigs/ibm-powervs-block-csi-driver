@@ -64,6 +64,12 @@ func TestParseEndpoint(t *testing.T) {
 		expErr    error
 	}{
 		{
+			name:      "valid tcp endpoint",
+			endpoint:  "tcp://localhost:10000",
+			expScheme: "tcp",
+			expAddr:   "localhost:10000",
+		},
+		{
 			name:      "valid unix endpoint 1",
 			endpoint:  "unix:///csi/csi.sock",
 			expScheme: "unix",
