@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/resolver"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
@@ -106,6 +107,7 @@ func verifyRequiredEnvVars(runRemotely bool) {
 
 // newCSIClient creates as CSI client
 func newCSIClient() (*CSIClient, error) {
+	resolver.SetDefaultScheme("passthrough")
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		// grpc.WithBlock(),
