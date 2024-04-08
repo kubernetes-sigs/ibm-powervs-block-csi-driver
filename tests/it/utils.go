@@ -132,7 +132,7 @@ func newCSIClient() (*CSIClient, error) {
 			},
 		),
 	}
-	grpcClient, err := grpc.Dial(endpoint, opts...)
+	grpcClient, err := grpc.NewClient(endpoint, opts...)
 	if err != nil {
 		return nil, err
 	}
