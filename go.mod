@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/IBM-Cloud/power-go-client v1.6.0
-	github.com/IBM/go-sdk-core/v5 v5.16.3
+	github.com/IBM/go-sdk-core/v5 v5.16.5
 	github.com/IBM/platform-services-go-sdk v0.62.2
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/davecgh/go-spew v1.1.1
@@ -59,7 +59,7 @@ require (
 	github.com/go-openapi/validate v0.22.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.18.0 // indirect
+	github.com/go-playground/validator/v10 v10.19.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
