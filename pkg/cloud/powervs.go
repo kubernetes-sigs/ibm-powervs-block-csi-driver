@@ -31,6 +31,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
+
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
@@ -39,13 +40,9 @@ var _ Cloud = &powerVSCloud{}
 const (
 	PollTimeout          = 120 * time.Second
 	PollInterval         = 5 * time.Second
-	TIMEOUT              = 60 * time.Minute
 	VolumeInUseState     = "in-use"
 	VolumeAvailableState = "available"
 )
-
-type PowerVSClient interface {
-}
 
 type powerVSCloud struct {
 	pvmInstancesClient *instance.IBMPIInstanceClient
@@ -176,12 +173,8 @@ func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
 	if err != nil {
 		return err
 	}
+	return p.WaitForVolumeState(volumeID, VolumeInUseState)
 
-	err = p.WaitForVolumeState(volumeID, VolumeInUseState)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
@@ -189,11 +182,7 @@ func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
 	if err != nil {
 		return err
 	}
-	err = p.WaitForVolumeState(volumeID, VolumeAvailableState)
-	if err != nil {
-		return err
-	}
-	return nil
+	return p.WaitForVolumeState(volumeID, VolumeAvailableState)
 }
 
 func (p *powerVSCloud) IsAttached(volumeID string, nodeID string) (attached bool, err error) {
@@ -210,11 +199,9 @@ func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64
 		return 0, err
 	}
 
-	capacityGiB := util.BytesToGiB(reqSize)
-
 	dataVolume := &models.UpdateVolume{
 		Name:      &disk.Name,
-		Size:      float64(capacityGiB),
+		Size:      float64(util.BytesToGiB(reqSize)),
 		Shareable: &disk.Shareable,
 	}
 

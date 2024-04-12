@@ -57,7 +57,7 @@ func (m *Metadata) GetPvmInstanceId() string {
 	return m.pvmInstanceId
 }
 
-// TokenizeProviderID tokenize the provider id into Metadata structure
+// TokenizeProviderID tokenizes the provider id into Metadata structure
 // ProviderID format: ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>
 func TokenizeProviderID(providerID string) (*Metadata, error) {
 	data := strings.Split(providerID, "/")
@@ -87,13 +87,12 @@ func TokenizeProviderID(providerID string) (*Metadata, error) {
 
 // Get New Metadata Service
 func NewMetadataService(k8sAPIClient KubernetesAPIClient, kubeconfig string) (MetadataService, error) {
-	klog.Infof("retrieving instance data from kubernetes api")
+	klog.Infof("retrieving instance data from kubernetes API")
 	clientset, err := k8sAPIClient(kubeconfig)
 	if err != nil {
 		klog.Warningf("error creating kubernetes api client: %v", err)
-	} else {
-		klog.Infof("kubernetes api is available")
-		return KubernetesAPIInstanceInfo(clientset)
+		return nil, fmt.Errorf("an error occured during creation of k8s API client: %w", err)
 	}
-	return nil, fmt.Errorf("error getting instance data from ec2 metadata or kubernetes api")
+	klog.Info("kubernetes API is available")
+	return KubernetesAPIInstanceInfo(clientset)
 }

@@ -224,7 +224,7 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) e
 	// If the volume corresponding to the volume_id is already staged to the staging_target_path,
 	// and is identical to the specified volume_capability the Plugin MUST reply 0 OK.
 	source := (*dev).GetMapper()
-	if err == nil && deviceFromMount == source {
+	if deviceFromMount == source {
 		klog.V(4).Infof("Volume %s is already staged", req.VolumeId)
 		return nil
 	}

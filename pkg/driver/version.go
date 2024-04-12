@@ -52,8 +52,5 @@ func GetVersion() VersionInfo {
 func GetVersionJSON() (string, error) {
 	info := GetVersion()
 	marshalled, err := json.MarshalIndent(&info, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(marshalled), nil
+	return string(marshalled), err
 }
