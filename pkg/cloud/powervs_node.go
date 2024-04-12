@@ -31,66 +31,54 @@ const (
 )
 
 type NodeUpdateScopeParams struct {
-	ServiceInstanceId string
 	InstanceId        string
+	ServiceInstanceId string
 	Zone              string
 }
 
 type NodeUpdateScope struct {
 	Cloud
-	ServiceInstanceId string
 	InstanceId        string
+	ServiceInstanceId string
 	Zone              string
 }
 
 func NewNodeUpdateScope(params NodeUpdateScopeParams) (scope *NodeUpdateScope, err error) {
-	scope = &NodeUpdateScope{}
-
 	if params.ServiceInstanceId == "" {
 		err = errors.New("ServiceInstanceId is required when creating a NodeUpdateScope")
 		return
 	}
-	scope.ServiceInstanceId = params.ServiceInstanceId
-
 	if params.InstanceId == "" {
 		err = errors.New("InstanceId is required when creating a NodeUpdateScope")
 		return
 	}
-	scope.InstanceId = params.InstanceId
-
 	if params.Zone == "" {
 		err = errors.New("zone is required when creating a NodeUpdateScope")
 		return
 	}
-	scope.Zone = params.Zone
-
-	c, err := NewPowerVSCloud(scope.ServiceInstanceId, scope.Zone, false)
+	c, err := NewPowerVSCloud(params.ServiceInstanceId, params.Zone, false)
 	if err != nil {
 		klog.Errorf("Failed to get powervs cloud: %v", err)
 		return
 	}
-	scope.Cloud = c
 
-	return scope, nil
+	return &NodeUpdateScope{
+		ServiceInstanceId: params.ServiceInstanceId,
+		InstanceId:        params.InstanceId,
+		Zone:              params.Zone,
+		Cloud:             c,
+	}, nil
 }
 
 func (p *powerVSCloud) GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error) {
-	insDetails, err := p.pvmInstancesClient.Get(instanceID)
-	if err != nil {
-		return nil, err
-	}
-	return insDetails, nil
+	return p.pvmInstancesClient.Get(instanceID)
+
 }
 
 func (p *powerVSCloud) UpdateStoragePoolAffinity(instanceID string) error {
-
-	body := &models.PVMInstanceUpdate{
-		StoragePoolAffinity: ptr.To[bool](StoragePoolAffinity),
-	}
-
-	_, err := p.pvmInstancesClient.Update(instanceID, body)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := p.pvmInstancesClient.Update(instanceID,
+		&models.PVMInstanceUpdate{
+			StoragePoolAffinity: ptr.To[bool](StoragePoolAffinity),
+		})
+	return err
 }

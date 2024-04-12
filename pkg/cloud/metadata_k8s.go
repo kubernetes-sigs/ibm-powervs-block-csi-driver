@@ -36,11 +36,7 @@ var DefaultKubernetesAPIClient = func(kubeconfig string) (kubernetes.Interface, 
 		return nil, err
 	}
 	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	return clientset, nil
+	return kubernetes.NewForConfig(config)
 }
 
 // Get instance info from kubernetes API

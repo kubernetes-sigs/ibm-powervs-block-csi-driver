@@ -18,6 +18,8 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestGetVersion(t *testing.T) {
@@ -33,7 +35,7 @@ func TestGetVersion(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(version, expected) {
-		t.Fatalf("structs not equall\ngot:\n%+v\nexpected:\n%+v", version, expected)
+		t.Fatalf("structs not equal, diff(- want, + got): \n%v", cmp.Diff(version, expected))
 	}
 }
 
@@ -53,6 +55,6 @@ func TestGetVersionJSON(t *testing.T) {
 }`, runtime.Version(), runtime.Compiler, fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH))
 
 	if version != expected {
-		t.Fatalf("json not equall\ngot:\n%s\nexpected:\n%s", version, expected)
+		t.Fatalf("structs not equal, diff(- want, + got): \n%v", cmp.Diff(version, expected))
 	}
 }
