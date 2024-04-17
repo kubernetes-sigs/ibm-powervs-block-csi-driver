@@ -18,7 +18,7 @@ require (
 	google.golang.org/grpc v1.63.2
 	gopkg.in/gcfg.v1 v1.2.3
 	k8s.io/api v0.29.3
-	k8s.io/apimachinery v0.29.3
+	k8s.io/apimachinery v0.29.4
 	k8s.io/client-go v0.29.3
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kubernetes v1.29.3
