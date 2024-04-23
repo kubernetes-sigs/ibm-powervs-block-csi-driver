@@ -5,8 +5,8 @@ cloud.google.com/go/compute/metadata v0.2.3 h1:mg4jlk7mCAj6xXp9UJ4fjI9VUI5rubuGB
 cloud.google.com/go/compute/metadata v0.2.3/go.mod h1:VAV5nSsACxMJvgaAuX6Pk2AawlZn8kiOGuCv6gTkwuA=
 github.com/IBM-Cloud/power-go-client v1.6.0 h1:X+QX+WSF66+aouyaf4r+IeBLXUurAJj9+Bd+vH7G5I0=
 github.com/IBM-Cloud/power-go-client v1.6.0/go.mod h1:0ad5Lcq1utoYVJx0uqooMjCpUaYaK0ItP9QJYtY6k0Y=
-github.com/IBM/go-sdk-core/v5 v5.16.5 h1:5ZltNcryRI8kVcuvNJGR2EXKqb7HtM4atA0Nm5QwAFE=
-github.com/IBM/go-sdk-core/v5 v5.16.5/go.mod h1:GatGZpxlo1KaxiRN6E10/rNgWtUtx1hN/GoHSCaSPKA=
+github.com/IBM/go-sdk-core/v5 v5.17.0 h1:J/8by7r70JmCYqXL/NHFcgpneFAqv16oKMtif+syA14=
+github.com/IBM/go-sdk-core/v5 v5.17.0/go.mod h1:GatGZpxlo1KaxiRN6E10/rNgWtUtx1hN/GoHSCaSPKA=
 github.com/IBM/platform-services-go-sdk v0.62.5 h1:Yi+eUny+IbNmzJNF1DxwC32sPuUphfenCzOh3y37eJ4=
 github.com/IBM/platform-services-go-sdk v0.62.5/go.mod h1:M26dloj9C48k9AjfMcKGsgH/acEjaUvxjVS8z41Q8dg=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
