@@ -1,6 +1,7 @@
 module sigs.k8s.io/ibm-powervs-block-csi-driver
 
 go 1.21
+toolchain go1.22.2
 
 require (
 	github.com/IBM-Cloud/power-go-client v1.6.0
@@ -17,15 +18,15 @@ require (
 	golang.org/x/sys v0.19.0
 	google.golang.org/grpc v1.63.2
 	gopkg.in/gcfg.v1 v1.2.3
-	k8s.io/api v0.29.4
-	k8s.io/apimachinery v0.29.4
-	k8s.io/client-go v0.29.4
+	k8s.io/api v0.30.0
+	k8s.io/apimachinery v0.30.0
+	k8s.io/client-go v0.30.0
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kubernetes v1.29.4
 	k8s.io/mount-utils v0.29.4
 	k8s.io/pod-security-admission v0.29.4
 	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
-	sigs.k8s.io/controller-runtime v0.17.3
+	sigs.k8s.io/controller-runtime v0.18.1
 )
 
 require (
@@ -41,7 +42,7 @@ require (
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
-	github.com/evanphx/json-patch/v5 v5.8.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
@@ -65,7 +66,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/cel-go v0.17.7 // indirect
+	github.com/google/cel-go v0.17.8 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
@@ -138,14 +139,14 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.29.4 // indirect
-	k8s.io/apiserver v0.29.4 // indirect
+	k8s.io/apiextensions-apiserver v0.30.0 // indirect
+	k8s.io/apiserver v0.30.0 // indirect
 	k8s.io/cloud-provider v0.29.4 // indirect
-	k8s.io/component-base v0.29.4 // indirect
+	k8s.io/component-base v0.30.0 // indirect
 	k8s.io/component-helpers v0.29.4 // indirect
 	k8s.io/controller-manager v0.29.4 // indirect
-	k8s.io/kms v0.29.4 // indirect
-	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
+	k8s.io/kms v0.30.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/kubectl v0.29.4 // indirect
 	k8s.io/kubelet v0.29.4 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
