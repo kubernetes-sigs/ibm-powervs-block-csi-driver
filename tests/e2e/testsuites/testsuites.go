@@ -288,10 +288,8 @@ func (t *TestPersistentVolumeClaim) DeleteBoundPersistentVolume() {
 func (t *TestPersistentVolumeClaim) DeleteBackingVolume(cloud powervscloud.Cloud) {
 	volumeID := t.persistentVolume.Spec.CSI.VolumeHandle
 	By(fmt.Sprintf("deleting PowerVS volume %q", volumeID))
-	ok, err := cloud.DeleteDisk(volumeID)
-	if err != nil || !ok {
-		Fail(fmt.Sprintf("could not delete volume %q: %v", volumeID, err))
-	}
+	err := cloud.DeleteDisk(volumeID)
+	framework.ExpectNoError(err)
 }
 
 type TestDeployment struct {

@@ -76,7 +76,7 @@ Please see the compatibility matrix above before you deploy the driver
 
 To deploy the CSI driver:
 ```sh
-kubectl apply -k "https://github.com/kubernetes-sigs/ibm-powervs-block-csi-driver/deploy/kubernetes/overlays/stable/?ref=v0.3.0"
+kubectl apply -k "https://github.com/kubernetes-sigs/ibm-powervs-block-csi-driver/deploy/kubernetes/overlays/stable/?ref=v0.6.0"
 ```
 
 Verify driver is running:
@@ -87,7 +87,7 @@ kubectl get pods -n kube-system
 #### Deploy driver with debug mode
 To view driver debug logs, run the CSI driver with `-v=5` command line option
 
-To enable powervs debug logs, run the CSI driver with `debug=true` command line option.
+To enable PowerVS debug logs, run the CSI driver with `-debug=true` command line option.
 
 ## Examples
 Make sure you follow the [Prerequisites](README.md#Prerequisites) before the examples:

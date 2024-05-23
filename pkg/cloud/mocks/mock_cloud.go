@@ -70,12 +70,11 @@ func (mr *MockCloudMockRecorder) CreateDisk(volumeName, diskOptions any) *gomock
 }
 
 // DeleteDisk mocks base method.
-func (m *MockCloud) DeleteDisk(volumeID string) (bool, error) {
+func (m *MockCloud) DeleteDisk(volumeID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteDisk", volumeID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // DeleteDisk indicates an expected call of DeleteDisk.
@@ -174,12 +173,11 @@ func (mr *MockCloudMockRecorder) GetPVMInstanceDetails(instanceID any) *gomock.C
 }
 
 // IsAttached mocks base method.
-func (m *MockCloud) IsAttached(volumeID, nodeID string) (bool, error) {
+func (m *MockCloud) IsAttached(volumeID, nodeID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsAttached", volumeID, nodeID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // IsAttached indicates an expected call of IsAttached.

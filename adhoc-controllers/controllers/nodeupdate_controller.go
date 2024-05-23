@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,7 +62,7 @@ func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 		klog.Infof("PROVIDER-ID: %s", node.Spec.ProviderID)
 		metadata, err := cloud.TokenizeProviderID(node.Spec.ProviderID)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to tokenize the providerID and err: %v", err)
+			return ctrl.Result{}, fmt.Errorf("failed to tokenize the providerID. err: %v", err)
 		}
 
 		nodeUpdateScope, err := cloud.NewNodeUpdateScope(cloud.NodeUpdateScopeParams{
@@ -73,12 +72,12 @@ func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 		})
 
 		if err != nil {
-			return ctrl.Result{}, errors.Errorf("failed to create nodeUpdateScope: %+v", err)
+			return ctrl.Result{}, fmt.Errorf("failed to create nodeUpdateScope: %w", err)
 		}
 
 		instance, err := nodeUpdateScope.Cloud.GetPVMInstanceDetails(nodeUpdateScope.InstanceId)
 		if err != nil {
-			klog.Infof("Unable to fetch Instance Details %v", err)
+			klog.Errorf("unable to fetch instance details. err: %v", err)
 			return ctrl.Result{}, nil
 		}
 
@@ -92,8 +91,8 @@ func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 					} else {
 						err := r.getOrUpdate(nodeUpdateScope)
 						if err != nil {
-							klog.Infof("unable to update instance StoragePoolAffinity %v", err)
-							return ctrl.Result{}, errors.Wrapf(err, "failed to reconcile VSI for IBMPowerVSMachine %s/%s", node.Namespace, node.Name)
+							klog.Errorf("unable to update instance StoragePoolAffinity. err: %v", err)
+							return ctrl.Result{}, fmt.Errorf("failed to reconcile VSI for IBMPowerVSMachine %s/%s. err: %w", node.Namespace, node.Name, err)
 						}
 					}
 				default:
@@ -107,10 +106,7 @@ func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 }
 
 func (r *NodeUpdateReconciler) getOrUpdate(scope *cloud.NodeUpdateScope) error {
-	if err := scope.Cloud.UpdateStoragePoolAffinity(scope.InstanceId); err != nil {
-		return err
-	}
-	return nil
+	return scope.Cloud.UpdateStoragePoolAffinity(scope.InstanceId)
 }
 
 // SetupWithManager sets up the controller with the Manager.

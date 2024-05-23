@@ -25,9 +25,12 @@ import (
 )
 
 const (
-	PowerVSInstanceStateSHUTOFF = "SHUTOFF"
-	PowerVSInstanceStateACTIVE  = "ACTIVE"
-	StoragePoolAffinity         = false
+	PowerVSInstanceStateSHUTOFF  = "SHUTOFF"
+	PowerVSInstanceStateACTIVE   = "ACTIVE"
+	PowerVSInstanceStateERROR    = "ERROR"
+	PowerVSInstanceHealthWARNING = "WARNING"
+	PowerVSInstanceHealthOK      = "OK"
+	StoragePoolAffinity          = false
 )
 
 type NodeUpdateScopeParams struct {
@@ -78,7 +81,7 @@ func (p *powerVSCloud) GetPVMInstanceDetails(instanceID string) (*models.PVMInst
 func (p *powerVSCloud) UpdateStoragePoolAffinity(instanceID string) error {
 	_, err := p.pvmInstancesClient.Update(instanceID,
 		&models.PVMInstanceUpdate{
-			StoragePoolAffinity: ptr.To[bool](StoragePoolAffinity),
+			StoragePoolAffinity: ptr.To(StoragePoolAffinity),
 		})
 	return err
 }

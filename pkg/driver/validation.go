@@ -20,6 +20,8 @@ import (
 	"fmt"
 )
 
+var supportedModes = []Mode{AllMode, ControllerMode, NodeMode}
+
 func ValidateDriverOptions(options *Options) error {
 	if err := validateMode(options.mode); err != nil {
 		return fmt.Errorf("invalid mode: %v", err)
@@ -29,7 +31,7 @@ func ValidateDriverOptions(options *Options) error {
 
 func validateMode(mode Mode) error {
 	if mode != AllMode && mode != ControllerMode && mode != NodeMode {
-		return fmt.Errorf("Mode is not supported (actual: %s, supported: %v)", mode, []Mode{AllMode, ControllerMode, NodeMode})
+		return fmt.Errorf("Mode is not supported (actual: %s, supported: %v)", mode, supportedModes)
 	}
 	return nil
 }
