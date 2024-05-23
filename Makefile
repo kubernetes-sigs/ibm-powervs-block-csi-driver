@@ -129,3 +129,6 @@ init-buildx:
 
 test-integration:
 	go test -v -timeout 100m sigs.k8s.io/ibm-powervs-block-csi-driver/tests/it -run ^TestIntegration$
+
+test-e2e:
+	go test -v -timeout 100m sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e -run ^TestE2E$

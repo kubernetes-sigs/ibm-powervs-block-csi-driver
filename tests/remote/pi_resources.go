@@ -26,6 +26,8 @@ import (
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
+
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 )
 
 func (r *Remote) createPVSResources() (err error) {
@@ -244,14 +246,14 @@ func waitForInstanceHealth(insID string, ic *instance.IBMPIInstanceClient) (*mod
 		if err != nil {
 			return false, err
 		}
-		if *pvm.Status == "ERROR" {
+		if *pvm.Status == cloud.PowerVSInstanceStateERROR {
 			if pvm.Fault != nil {
-				return false, fmt.Errorf("failed to create the lpar: %s", pvm.Fault.Message)
+				return false, fmt.Errorf("failed to create a PowerVS instance: %s", pvm.Fault.Message)
 			}
-			return false, fmt.Errorf("failed to create the lpar")
+			return false, fmt.Errorf("failed to create a PowerVS instance")
 		}
 		// Check for `instanceReadyStatus` health status and also the final health status "OK"
-		if *pvm.Status == "ACTIVE" && (pvm.Health.Status == "WARNING" || pvm.Health.Status == "OK") {
+		if *pvm.Status == cloud.PowerVSInstanceStateACTIVE && (pvm.Health.Status == cloud.PowerVSInstanceHealthWARNING || pvm.Health.Status == cloud.PowerVSInstanceHealthOK) {
 			return true, nil
 		}
 

@@ -22,7 +22,7 @@ import (
 
 type Cloud interface {
 	CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
-	DeleteDisk(volumeID string) (success bool, err error)
+	DeleteDisk(volumeID string) (err error)
 	AttachDisk(volumeID string, nodeID string) (err error)
 	DetachDisk(volumeID string, nodeID string) (err error)
 	ResizeDisk(volumeID string, reqSize int64) (newSize int64, err error)
@@ -33,5 +33,5 @@ type Cloud interface {
 	GetPVMInstanceByID(instanceID string) (instance *PVMInstance, err error)
 	GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error)
 	UpdateStoragePoolAffinity(instanceID string) error
-	IsAttached(volumeID string, nodeID string) (attached bool, err error)
+	IsAttached(volumeID string, nodeID string) (err error)
 }

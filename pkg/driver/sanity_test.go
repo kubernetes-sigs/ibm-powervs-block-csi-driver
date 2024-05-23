@@ -186,13 +186,13 @@ func (c *fakeCloudProvider) CreateDisk(volumeName string, diskOptions *cloud.Dis
 	return d.Disk, nil
 }
 
-func (c *fakeCloudProvider) DeleteDisk(volumeID string) (bool, error) {
+func (c *fakeCloudProvider) DeleteDisk(volumeID string) error {
 	for volName, f := range c.disks {
 		if f.Disk.VolumeID == volumeID {
 			delete(c.disks, volName)
 		}
 	}
-	return true, nil
+	return nil
 }
 
 func (c *fakeCloudProvider) AttachDisk(volumeID, nodeID string) error {
@@ -207,8 +207,8 @@ func (c *fakeCloudProvider) DetachDisk(volumeID, nodeID string) error {
 	return nil
 }
 
-func (c *fakeCloudProvider) IsAttached(volumeID string, nodeID string) (attached bool, err error) {
-	return true, nil
+func (c *fakeCloudProvider) IsAttached(volumeID string, nodeID string) (err error) {
+	return nil
 }
 
 func (c *fakeCloudProvider) WaitForVolumeState(volumeID, expectedState string) error {

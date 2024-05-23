@@ -159,38 +159,28 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 	return &Disk{CapacityGiB: capacityGiB, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
 }
 
-func (p *powerVSCloud) DeleteDisk(volumeID string) (success bool, err error) {
-	err = p.volClient.DeleteVolume(volumeID)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+func (p *powerVSCloud) DeleteDisk(volumeID string) (err error) {
+	return p.volClient.DeleteVolume(volumeID)
 }
 
 func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
-	err = p.volClient.Attach(nodeID, volumeID)
-	if err != nil {
+	if err = p.volClient.Attach(nodeID, volumeID); err != nil {
 		return err
 	}
 	return p.WaitForVolumeState(volumeID, VolumeInUseState)
-
 }
 
 func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
-	err = p.volClient.Detach(nodeID, volumeID)
-	if err != nil {
+	if err = p.volClient.Detach(nodeID, volumeID); err != nil {
 		return err
 	}
 	return p.WaitForVolumeState(volumeID, VolumeAvailableState)
 }
 
-func (p *powerVSCloud) IsAttached(volumeID string, nodeID string) (attached bool, err error) {
+// IsAttached returns an error if a volume isn't attached to a node, else nil.
+func (p *powerVSCloud) IsAttached(volumeID string, nodeID string) (err error) {
 	_, err = p.volClient.CheckVolumeAttach(nodeID, volumeID)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
+	return err
 }
 
 func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64, err error) {
@@ -214,7 +204,7 @@ func (p *powerVSCloud) ResizeDisk(volumeID string, reqSize int64) (newSize int64
 
 func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
 	ctx := context.Background()
-	err := wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
 		v, err := p.volClient.Get(volumeID)
 		if err != nil {
 			return false, err
@@ -222,10 +212,6 @@ func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
 		spew.Dump(v)
 		return v.State == state, nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {

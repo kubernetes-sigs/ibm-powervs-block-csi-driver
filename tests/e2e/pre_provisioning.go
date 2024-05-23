@@ -23,10 +23,13 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	admissionapi "k8s.io/pod-security-admission/api"
+
 	powervscloud "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	powervscsidriver "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e/driver"
@@ -69,26 +72,21 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 			Shareable:     false,
 		}
 
-		// setup Power VS volume
+		// setup PowerVS volume
 		if os.Getenv(apiKeyEnv) == "" {
 			Skip(fmt.Sprintf("env %q not set", apiKeyEnv))
 		}
-		var err error
 		metadata, err := testsuites.GetInstanceMetadataFromNodeSpec(cs)
 		if err != nil {
 			Skip(fmt.Sprintf("Could not get cloudInstanceId : %v", err))
 		}
 
 		cloud, err = powervscloud.NewPowerVSCloud(metadata.GetCloudInstanceId(), metadata.GetZone(), debug)
-		if err != nil {
-			Fail(fmt.Sprintf("could not get NewCloud: %v", err))
-		}
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Client creation for instances and volumes has failed. err: %v", err))
 
 		r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 		disk, err := cloud.CreateDisk(fmt.Sprintf("pvc-%d", r1.Uint64()), diskOptions)
-		if err != nil {
-			Fail(fmt.Sprintf("Create Disk failed: %v", err))
-		}
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Disk creation has failed. err: %v", err))
 
 		volumeID = disk.VolumeID
 		diskSize = fmt.Sprintf("%dGi", defaultDiskSize)
@@ -99,13 +97,9 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 		skipManuallyDeletingVolume = true
 		if !skipManuallyDeletingVolume {
 			err := cloud.WaitForVolumeState(volumeID, "detached")
-			if err != nil {
-				Fail(fmt.Sprintf("could not detach volume %q: %v", volumeID, err))
-			}
-			ok, err := cloud.DeleteDisk(volumeID)
-			if err != nil || !ok {
-				Fail(fmt.Sprintf("could not delete volume %q: %v", volumeID, err))
-			}
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Detach volume has failed. err: %v", err))
+			err = cloud.DeleteDisk(volumeID)
+			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Disk deletion has failed. err: %v", err))
 		}
 	})
 
