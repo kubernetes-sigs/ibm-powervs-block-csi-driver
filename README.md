@@ -1,5 +1,5 @@
 # IBM PowerVS Block CSI Driver
-CSI Driver for IBM® Power Systems™ Virtual Servers
+CSI Driver for IBM® Power Virtual Server. This driver supports both Public (off-prem) and Private (on-prem) Power Virtual Server environments.
 
 # Overview
 The IBM Power Virtual Systems Container Storage Interface (CSI) Driver provides a CSI interface used by Container Orchestrators to manage the lifecycle of Power Virtual System volumes.
