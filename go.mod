@@ -20,7 +20,7 @@ require (
 	k8s.io/api v0.29.4
 	k8s.io/apimachinery v0.29.4
 	k8s.io/client-go v0.29.4
-	k8s.io/klog/v2 v2.120.1
+	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubernetes v1.29.4
 	k8s.io/mount-utils v0.29.4
 	k8s.io/pod-security-admission v0.29.4
