@@ -39,9 +39,9 @@ func main() {
 		driver.WithCloudConfig(options.ServerOptions.Cloudconfig),
 	)
 	if err != nil {
-		klog.Fatalln(err)
+		klog.Fatalf("unable to create CSI driver. err: %v", err)
 	}
 	if err := drv.Run(); err != nil {
-		klog.Fatalln(err)
+		klog.Fatalf("failed to run the CSI driver. err: %v", err)
 	}
 }

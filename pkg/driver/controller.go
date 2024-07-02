@@ -230,7 +230,7 @@ func (d *controllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		}
 	}
 
-	if _, err := d.cloud.DeleteDisk(volumeID); err != nil {
+	if err := d.cloud.DeleteDisk(volumeID); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete volume ID %q: %v", volumeID, err)
 	}
 
@@ -282,8 +282,7 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 
 	pvInfo := map[string]string{WWNKey: disk.WWN}
 
-	attached, _ := d.cloud.IsAttached(volumeID, nodeID)
-	if attached {
+	if err = d.cloud.IsAttached(volumeID, nodeID); err == nil {
 		klog.V(5).Infof("ControllerPublishVolume: volume %s already attached to node %s, returning success", volumeID, nodeID)
 		return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
 	}
@@ -324,7 +323,7 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		}
 	}
 
-	if attached, err := d.cloud.IsAttached(volumeID, nodeID); !attached {
+	if err := d.cloud.IsAttached(volumeID, nodeID); err != nil {
 		klog.V(4).Infof("ControllerUnpublishVolume: volume %s is not attached to %s, err: %v, returning with success", volumeID, nodeID, err)
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}

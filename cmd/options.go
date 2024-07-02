@@ -89,15 +89,15 @@ func GetOptions(fs *flag.FlagSet) *Options {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		klog.Fatal(err)
+		klog.Fatalf("Error while parsing flag options. err: %v", err)
 	}
 
 	if *version {
 		info, err := driver.GetVersionJSON()
 		if err != nil {
-			klog.Fatalln(err)
+			klog.Fatalf("error while retriving the CSI driver version. err: %v", err)
 		}
-		klog.Infoln(info)
+		klog.Info(info)
 		osExit(0)
 	}
 
