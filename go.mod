@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/IBM-Cloud/power-go-client v1.6.0
 	github.com/IBM/go-sdk-core/v5 v5.17.4
-	github.com/IBM/platform-services-go-sdk v0.63.1
+	github.com/IBM/platform-services-go-sdk v0.64.2
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.6.0
