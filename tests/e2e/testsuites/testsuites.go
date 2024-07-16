@@ -474,7 +474,7 @@ func (t *TestPod) Cleanup() {
 }
 
 func (t *TestPod) WaitForSuccess() {
-	err := e2epod.WaitForPodSuccessInNamespaceSlow(context.TODO(), t.client, t.pod.Name, t.namespace.Name)
+	err := e2epod.WaitForPodSuccessInNamespaceTimeout(context.TODO(), t.client, t.pod.Name, t.namespace.Name, 15*time.Minute)
 	framework.ExpectNoError(err)
 }
 
