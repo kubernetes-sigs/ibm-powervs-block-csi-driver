@@ -13,5 +13,5 @@
 # limitations under the License.
 
 # centos base image
-FROM quay.io/centos/centos:stream8 AS centos-base
+FROM quay.io/centos/centos:stream9 AS centos-base
 RUN yum install -y util-linux nfs-utils e2fsprogs xfsprogs ca-certificates && yum clean all && rm -rf /var/cache/yum
