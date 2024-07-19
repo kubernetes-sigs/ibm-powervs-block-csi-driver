@@ -747,7 +747,7 @@ func TestDeleteVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().DeleteDisk(gomock.Eq(req.VolumeId)).Return(true, nil)
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(req.VolumeId)).Return(nil)
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(req.VolumeId)).Return(nil, nil)
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -811,7 +811,7 @@ func TestDeleteVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().DeleteDisk(gomock.Eq(req.VolumeId)).Return(false, fmt.Errorf("DeleteDisk could not delete volume"))
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(req.VolumeId)).Return(fmt.Errorf("DeleteDisk could not delete volume"))
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(req.VolumeId)).Return(nil, nil)
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -906,7 +906,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetPVMInstanceByID(gomock.Eq(expInstanceID)).Return(nil, nil)
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(volumeName)).Return(&cloud.Disk{WWN: expDevicePath}, nil)
-				mockCloud.EXPECT().IsAttached(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(false, nil)
+				mockCloud.EXPECT().IsAttached(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(fmt.Errorf("the disk is unattached"))
 				mockCloud.EXPECT().AttachDisk(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(nil)
 
 				powervsDriver := controllerService{
@@ -1199,7 +1199,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq("vol-test")).Return(&cloud.Disk{WWN: expDevicePath}, nil)
-				mockCloud.EXPECT().IsAttached(gomock.Eq("vol-test"), gomock.Eq(expInstanceID)).Return(true, nil)
+				mockCloud.EXPECT().IsAttached(gomock.Eq("vol-test"), gomock.Eq(expInstanceID)).Return(nil)
 				mockCloud.EXPECT().DetachDisk(req.VolumeId, req.NodeId).Return(nil)
 
 				powervsDriver := controllerService{

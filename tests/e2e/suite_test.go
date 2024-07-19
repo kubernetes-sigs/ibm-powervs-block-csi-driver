@@ -54,7 +54,6 @@ func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
-	var r []Reporter
 	if framework.TestContext.ReportDir != "" {
 		// Create the directory if it doesn't already exists
 		// NOTE: junit report can be created with new --junit-report flag
@@ -64,5 +63,5 @@ func TestE2E(t *testing.T) {
 		}
 	}
 
-	RunSpecsWithDefaultAndCustomReporters(t, "IBM PowerVS Block CSI Driver End-to-End Tests", r)
+	RunSpecs(t, "IBM PowerVS Block CSI Driver End-to-End Tests")
 }

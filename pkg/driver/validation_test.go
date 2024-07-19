@@ -43,7 +43,7 @@ func TestValidateMode(t *testing.T) {
 		{
 			name:   "invalid mode: unknown",
 			mode:   Mode("unknown"),
-			expErr: fmt.Errorf("Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode}),
+			expErr: fmt.Errorf("Mode is not supported (actual: unknown, supported: %v)", supportedModes),
 		},
 	}
 
@@ -72,7 +72,7 @@ func TestValidateDriverOptions(t *testing.T) {
 		{
 			name:   "fail because validateMode fails",
 			mode:   Mode("unknown"),
-			expErr: fmt.Errorf("invalid mode: Mode is not supported (actual: unknown, supported: %v)", []Mode{AllMode, ControllerMode, NodeMode}),
+			expErr: fmt.Errorf("invalid mode: Mode is not supported (actual: unknown, supported: %v)", supportedModes),
 		},
 	}
 
