@@ -65,6 +65,7 @@ var (
 
 // controllerService represents the controller service of CSI driver
 type controllerService struct {
+	csi.UnimplementedControllerServer
 	cloud         cloud.Cloud
 	driverOptions *Options
 	volumeLocks   *util.VolumeLocks

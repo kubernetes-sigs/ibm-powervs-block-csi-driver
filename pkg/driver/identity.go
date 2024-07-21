@@ -23,7 +23,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
+type indentityService struct {
+	csi.UnimplementedIdentityServer
+}
+
+func (i *indentityService) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
 	klog.V(6).Infof("GetPluginInfo: called with args %+v", *req)
 	resp := &csi.GetPluginInfoResponse{
 		Name:          DriverName,
@@ -33,8 +37,8 @@ func (d *Driver) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoReques
 	return resp, nil
 }
 
-func (d *Driver) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
-	klog.V(6).Infof("GetPluginCapabilities: called with args %+v", *req)
+func (i *indentityService) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
+	klog.V(6).Infof("GetPluginCapabilities: called with args %+v", req.String())
 	resp := &csi.GetPluginCapabilitiesResponse{
 		Capabilities: []*csi.PluginCapability{
 			{
@@ -57,7 +61,7 @@ func (d *Driver) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCa
 	return resp, nil
 }
 
-func (d *Driver) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	klog.V(6).Infof("Probe: called with args %+v", *req)
+func (i *indentityService) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
+	klog.V(6).Infof("Probe: called with args %+v", req.String())
 	return &csi.ProbeResponse{}, nil
 }

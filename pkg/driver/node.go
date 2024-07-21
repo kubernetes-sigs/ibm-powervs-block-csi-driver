@@ -64,6 +64,7 @@ var (
 
 // nodeService represents the node service of CSI driver
 type nodeService struct {
+	csi.UnimplementedNodeServer
 	cloud         cloud.Cloud
 	mounter       Mounter
 	driverOptions *Options
