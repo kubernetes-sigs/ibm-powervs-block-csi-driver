@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 set -euo pipefail
 set -x
 
@@ -35,3 +34,4 @@ for MOD in "${MODS[@]}"; do
         sed -n 's|.*"Version": "\(.*\)".*|\1|p'
     )
     go mod edit "-replace=${MOD}=${MOD}@${V}"
+done
