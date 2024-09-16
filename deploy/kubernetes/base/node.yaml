@@ -45,12 +45,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: IBMCLOUD_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: ibm-secret
-                  key: IBMCLOUD_API_KEY
+            - name: API_KEY_PATH
+              value: /etc/secrets/IBMCLOUD_API_KEY
           volumeMounts:
+            - name: ibm-secret
+              mountPath: /etc/secrets
+              readOnly: true
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
               mountPropagation: "Bidirectional"
@@ -120,3 +120,6 @@ spec:
           hostPath:
             path: /sys
             type: Directory
+        - name: ibm-secret
+          secret:
+            secretName: ibm-secret

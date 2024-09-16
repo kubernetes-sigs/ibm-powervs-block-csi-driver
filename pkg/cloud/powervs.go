@@ -30,6 +30,7 @@ import (
 	"github.com/IBM/platform-services-go-sdk/resourcecontrollerv2"
 	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
@@ -60,7 +61,10 @@ func NewPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 }
 
 func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
-	apikey := os.Getenv("IBMCLOUD_API_KEY")
+	apikey, err := readCredentials()
+	if err != nil {
+		return nil, err
+	}
 
 	authenticator := &core.IamAuthenticator{ApiKey: apikey, URL: os.Getenv("IBMCLOUD_IAM_API_ENDPOINT")}
 
@@ -251,4 +255,36 @@ func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 		Shareable:   *v.Shareable,
 		CapacityGiB: int64(*v.Size),
 	}, nil
+}
+
+func readCredentials() (string, error) {
+	apiKey, err := readCredentialsFromFile()
+	if err != nil {
+		return "", err
+	}
+	if apiKey != "" {
+		return apiKey, nil
+	}
+
+	klog.Info("Falling back to read IBMCLOUD_API_KEY environment variable for the key")
+	apiKey = os.Getenv("IBMCLOUD_API_KEY")
+	if apiKey == "" {
+		return "", fmt.Errorf("IBMCLOUD_API_KEY is not provided")
+	}
+
+	return apiKey, nil
+}
+
+func readCredentialsFromFile() (string, error) {
+	apiKeyPath := os.Getenv("API_KEY_PATH")
+	if apiKeyPath == "" {
+		klog.Warning("API_KEY_PATH is undefined")
+		return "", nil
+	}
+
+	byteData, err := os.ReadFile(apiKeyPath)
+	if err != nil {
+		return "", fmt.Errorf("error reading apikey: %v", err)
+	}
+	return string(byteData), nil
 }
