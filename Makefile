@@ -92,7 +92,7 @@ bin/mockgen: | bin
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.59.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.61.0
 
 bin/govulncheck: | bin
 	echo "Installing govulncheck..."

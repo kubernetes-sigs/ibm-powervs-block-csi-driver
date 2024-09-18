@@ -39,7 +39,7 @@ function produce_junit_xmlreport {
 
   if ! command -v gotestsum >/dev/null 2>&1; then
     echo "gotestsum not found; installing now"
-    go install gotest.tools/gotestsum@v1.8.2
+    go install gotest.tools/gotestsum@v1.12.0
   fi
   export PATH=$GOBIN:$GOPATH/bin:$PATH
   gotestsum --junitfile "${junit_xml_filename}" --raw-command cat "${junit_filename_prefix}"*.stdout
