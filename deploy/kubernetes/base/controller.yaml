@@ -41,13 +41,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: IBMCLOUD_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: ibm-secret
-                  key: IBMCLOUD_API_KEY
-                  optional: true
+            - name: API_KEY_PATH
+              value: /etc/secrets/IBMCLOUD_API_KEY
           volumeMounts:
+            - name: ibm-secret
+              mountPath: /etc/secrets
+              readOnly: true
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
           ports:
@@ -65,6 +64,9 @@ spec:
         - name: node-update-controller
           image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           command: ["/node-update-controller"]
+          env:
+            - name: API_KEY_PATH
+              value: /etc/secrets/IBMCLOUD_API_KEY
           ports:
             - name: metrics
               containerPort: 8081
@@ -80,13 +82,10 @@ spec:
             initialDelaySeconds: 5
             timeoutSeconds: 10
             periodSeconds: 30
-          env:
-            - name: IBMCLOUD_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: ibm-secret
-                  key: IBMCLOUD_API_KEY
-                  optional: true
+          volumeMounts:
+            - name: ibm-secret
+              mountPath: /etc/secrets
+              readOnly: true
         - name: csi-provisioner
           image: registry.k8s.io/sig-storage/csi-provisioner:v5.0.1
           args:
@@ -136,3 +135,6 @@ spec:
       volumes:
         - name: socket-dir
           emptyDir: {}
+        - name: ibm-secret
+          secret:
+            secretName: ibm-secret
