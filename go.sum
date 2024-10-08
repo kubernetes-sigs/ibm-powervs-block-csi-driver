@@ -2,8 +2,8 @@ github.com/IBM-Cloud/power-go-client v1.8.1 h1:tx1aPJmIQrNru1MD1VHGNasGx3eRIs0zz
 github.com/IBM-Cloud/power-go-client v1.8.1/go.mod h1:N4RxrsMUvBQjSQ/qPk0iMZ8zK+fZPRTnHi/gTaASw0g=
 github.com/IBM/go-sdk-core/v5 v5.17.5 h1:AjGC7xNee5tgDIjndekBDW5AbypdERHSgib3EZ1KNsA=
 github.com/IBM/go-sdk-core/v5 v5.17.5/go.mod h1:KsAAI7eStAWwQa4F96MLy+whYSh39JzNjklZRbN/8ns=
-github.com/IBM/platform-services-go-sdk v0.69.1 h1:Wb8BYVpsPIppWbOQCgF7ytm+BbSOXdWWCf9zcZ6xGA4=
-github.com/IBM/platform-services-go-sdk v0.69.1/go.mod h1:ZP3zUDxR1qRdUqzFdnJOlQN0QpVYol2eOUCv4uk03Jc=
+github.com/IBM/platform-services-go-sdk v0.69.2 h1:8XNI8rBZShutuybFN5v8BsWlrdUa1eF0L6nOS+lDXmI=
+github.com/IBM/platform-services-go-sdk v0.69.2/go.mod h1:ZP3zUDxR1qRdUqzFdnJOlQN0QpVYol2eOUCv4uk03Jc=
 github.com/Microsoft/go-winio v0.6.0 h1:slsWYD/zyx7lCXoZVlvQrj0hPTM1HI4+v1sIda2yDvg=
 github.com/Microsoft/go-winio v0.6.0/go.mod h1:cTAf44im0RAYeL23bpB+fzCyDH2MJiz2BO69KH/soAE=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
