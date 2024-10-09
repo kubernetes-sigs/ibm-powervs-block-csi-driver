@@ -18,6 +18,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -43,7 +44,7 @@ var DefaultKubernetesAPIClient = func(kubeconfig string) (kubernetes.Interface, 
 func KubernetesAPIInstanceInfo(clientset kubernetes.Interface) (*Metadata, error) {
 	nodeName := os.Getenv("CSI_NODE_NAME")
 	if nodeName == "" {
-		return nil, fmt.Errorf("CSI_NODE_NAME env var not set")
+		return nil, errors.New("CSI_NODE_NAME env var not set")
 	}
 	return GetInstanceInfoFromProviderID(clientset, nodeName)
 }

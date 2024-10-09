@@ -18,6 +18,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -269,7 +270,7 @@ func readCredentials() (string, error) {
 	klog.Info("Falling back to read IBMCLOUD_API_KEY environment variable for the key")
 	apiKey = os.Getenv("IBMCLOUD_API_KEY")
 	if apiKey == "" {
-		return "", fmt.Errorf("IBMCLOUD_API_KEY is not provided")
+		return "", errors.New("IBMCLOUD_API_KEY is not provided")
 	}
 
 	return apiKey, nil

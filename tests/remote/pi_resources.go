@@ -18,6 +18,7 @@ package remote
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -205,7 +206,7 @@ func (r *Remote) createInstance(image, network string) (string, string, error) {
 	}
 
 	if publicIP == "" {
-		return "", "", fmt.Errorf("error while getting pvm instance public IP")
+		return "", "", errors.New("error while getting pvm instance public IP")
 	}
 
 	err = waitForInstanceSSH(publicIP)
@@ -250,7 +251,7 @@ func waitForInstanceHealth(insID string, ic *instance.IBMPIInstanceClient) (*mod
 			if pvm.Fault != nil {
 				return false, fmt.Errorf("failed to create a PowerVS instance: %s", pvm.Fault.Message)
 			}
-			return false, fmt.Errorf("failed to create a PowerVS instance")
+			return false, errors.New("failed to create a PowerVS instance")
 		}
 		// Check for `instanceReadyStatus` health status and also the final health status "OK"
 		if *pvm.Status == cloud.PowerVSInstanceStateACTIVE && (pvm.Health.Status == cloud.PowerVSInstanceHealthWARNING || pvm.Health.Status == cloud.PowerVSInstanceHealthOK) {
