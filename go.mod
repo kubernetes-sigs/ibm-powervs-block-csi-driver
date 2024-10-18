@@ -12,7 +12,7 @@ require (
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/onsi/ginkgo/v2 v2.20.2
 	github.com/onsi/gomega v1.34.2
-	go.uber.org/mock v0.4.0
+	go.uber.org/mock v0.5.0
 	golang.org/x/sys v0.26.0
 	google.golang.org/grpc v1.67.1
 	gopkg.in/gcfg.v1 v1.2.3
