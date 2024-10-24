@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	github.com/IBM-Cloud/power-go-client v1.8.3
 	github.com/IBM/go-sdk-core/v5 v5.18.1
-	github.com/IBM/platform-services-go-sdk v0.69.2
+	github.com/IBM/platform-services-go-sdk v0.70.0
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/google/go-cmp v0.6.0
@@ -54,7 +54,7 @@ require (
 	github.com/go-openapi/loads v0.21.3 // indirect
 	github.com/go-openapi/runtime v0.26.2 // indirect
 	github.com/go-openapi/spec v0.20.12 // indirect
-	github.com/go-openapi/strfmt v0.22.1 // indirect
+	github.com/go-openapi/strfmt v0.23.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-openapi/validate v0.22.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
