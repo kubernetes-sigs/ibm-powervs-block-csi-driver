@@ -7,7 +7,7 @@ require (
 	github.com/IBM/go-sdk-core/v5 v5.18.1
 	github.com/IBM/platform-services-go-sdk v0.70.0
 	github.com/container-storage-interface/spec v1.9.0
-	github.com/davecgh/go-spew v1.1.1
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/google/go-cmp v0.6.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/onsi/ginkgo/v2 v2.20.2
@@ -20,7 +20,7 @@ require (
 	k8s.io/apimachinery v0.30.3
 	k8s.io/client-go v0.30.3
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubernetes v1.30.3
+	k8s.io/kubernetes v1.31.2
 	k8s.io/mount-utils v0.30.3
 	k8s.io/pod-security-admission v0.30.3
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
@@ -29,7 +29,7 @@ require (
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -64,7 +64,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/cel-go v0.17.8 // indirect
+	github.com/google/cel-go v0.20.1 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
@@ -80,7 +80,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/spdystream v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
@@ -95,9 +94,9 @@ require (
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.17.0 // indirect
+	github.com/prometheus/client_golang v1.19.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.44.0 // indirect
+	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
