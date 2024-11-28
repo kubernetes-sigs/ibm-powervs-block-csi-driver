@@ -50,6 +50,7 @@ const (
 
 type Driver struct {
 	controllerService
+	indentityService
 	nodeService
 
 	srv     *grpc.Server
