@@ -70,6 +70,7 @@ type nodeService struct {
 	pvmInstanceId string
 	volumeLocks   *util.VolumeLocks
 	stats         StatsUtils
+	csi.UnimplementedNodeServer
 }
 
 // newNodeService creates a new node service

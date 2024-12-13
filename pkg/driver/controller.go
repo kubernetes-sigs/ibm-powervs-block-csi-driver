@@ -68,6 +68,7 @@ type controllerService struct {
 	cloud         cloud.Cloud
 	driverOptions *Options
 	volumeLocks   *util.VolumeLocks
+	csi.UnimplementedControllerServer
 }
 
 // Provider holds information from the cloud provider.
