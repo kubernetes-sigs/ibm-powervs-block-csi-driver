@@ -1,13 +1,14 @@
 module sigs.k8s.io/ibm-powervs-block-csi-driver
 
 go 1.22.0
+toolchain go1.23.4
 
 require (
 	github.com/IBM-Cloud/power-go-client v1.9.0
 	github.com/IBM/go-sdk-core/v5 v5.18.1
 	github.com/IBM/platform-services-go-sdk v0.72.0
 	github.com/container-storage-interface/spec v1.10.0
-	github.com/davecgh/go-spew v1.1.1
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/google/go-cmp v0.6.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/onsi/ginkgo/v2 v2.21.0
@@ -21,9 +22,9 @@ require (
 	k8s.io/client-go v0.30.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubernetes v1.30.3
-	k8s.io/mount-utils v0.30.3
+	k8s.io/mount-utils v0.32.0
 	k8s.io/pod-security-admission v0.30.3
-	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
+	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	sigs.k8s.io/controller-runtime v0.18.4
 )
 
@@ -84,6 +85,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/spdystream v0.4.0 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
