@@ -1,7 +1,7 @@
 github.com/IBM-Cloud/power-go-client v1.9.0 h1:nnErpb/7TJQe8P7OfIlJPhSJVq5oyuCJlMje9Ry6XEY=
 github.com/IBM-Cloud/power-go-client v1.9.0/go.mod h1:UDyXeIKEp6r7yWUXYu3r0ZnFSlNZ2YeQTHwM2Tmlgv0=
-github.com/IBM/go-sdk-core/v5 v5.18.1 h1:wdftQO8xejECTWTKF3FGXyW0McKxxDAopH7MKwA187c=
-github.com/IBM/go-sdk-core/v5 v5.18.1/go.mod h1:3ywpylZ41WhWPusqtpJZWopYlt2brebcphV7mA2JncU=
+github.com/IBM/go-sdk-core/v5 v5.18.3 h1:q6IDU3N2bHGwijK9pMnzKC5gqdaRII56NzB4ZNdSFvY=
+github.com/IBM/go-sdk-core/v5 v5.18.3/go.mod h1:5kILxqEWOrwMhoD2b7J6Xv9Z2M6YIdT/6Oy+XRSsCGQ=
 github.com/IBM/platform-services-go-sdk v0.72.0 h1:AfJe6bgqmTQU4ff/2URu3wkRLZD0XIzojn7SLf2yIns=
 github.com/IBM/platform-services-go-sdk v0.72.0/go.mod h1:ApFkvqw7NaluWJ5Uq+afdM/2jQqo5ILc0SzKSVobYNw=
 github.com/Microsoft/go-winio v0.6.0 h1:slsWYD/zyx7lCXoZVlvQrj0hPTM1HI4+v1sIda2yDvg=
