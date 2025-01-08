@@ -15,35 +15,20 @@
 # limitations under the License.
 
 set -o errexit
-set -o nounset
 set -o pipefail
 
-junitFilenamePrefix() {
-  if [[ -z "${JUNIT_REPORT_DIR}" ]]; then
-    echo ""
-    return
-  fi
-  mkdir -p "${JUNIT_REPORT_DIR}"
-  DATE=$( date +%s | base64 | head -c 15 )
-  echo "${JUNIT_REPORT_DIR}/junit_$DATE"
-}
-
 function produce_junit_xmlreport {
-  local -r junit_filename_prefix=$1
-  if [[ -z "${junit_filename_prefix}" ]]; then
+  if [[ -z "${ARTIFACTS}" ]]; then
     return
   fi
 
-  local junit_xml_filename
-  junit_xml_filename="${junit_filename_prefix}.xml"
-
-  if ! command -v gotestsum >/dev/null 2>&1; then
-    echo "gotestsum not found; installing now"
-    go install gotest.tools/gotestsum@v1.12.0
+  if ! command -v gopherage >/dev/null 2>&1; then
+    echo "gopherage not found; installing now"
+    go install k8s.io/test-infra/gopherage@v0.0.0-20250108071429-415d758da0fa
   fi
   export PATH=$GOBIN:$GOPATH/bin:$PATH
-  gotestsum --junitfile "${junit_xml_filename}" --raw-command cat "${junit_filename_prefix}"*.stdout
-  echo "Saved JUnit XML test report to ${junit_xml_filename}"
+  gopherage junit --threshold 0 "cover.out" > "${ARTIFACTS}/junit_coverage.xml"
+  echo "Saved JUnit XML test report."
 }
 
 goTestFlags=""
@@ -56,18 +41,7 @@ if [[ -z "${JUNIT_REPORT_DIR:-}" && -n "${ARTIFACTS:-}" ]]; then
   export JUNIT_REPORT_DIR="${ARTIFACTS}"
 fi
 
-# Used to filter verbose test output.
-go_test_grep_pattern=".*"
+# go test ${goTestFlags} -race ./cmd/... ./pkg/... | tee ${junit_filename_prefix:+"${junit_filename_prefix}.stdout"} | grep --binary-files=text "${go_test_grep_pattern}"
+go test -v -race ./cmd/... ./pkg/... -coverprofile cover.out
 
-if [[ -n "${JUNIT_REPORT_DIR}" ]] ; then
-  goTestFlags+="-v "
-  goTestFlags+="-json "
-  # Show only summary lines by matching lines like "status package/test"
-  go_test_grep_pattern="^[^[:space:]]\+[[:space:]]\+[^[:space:]]\+/[^[[:space:]]\+"
-fi
-
-junit_filename_prefix=$(junitFilenamePrefix)
-
-go test ${goTestFlags} -race ./cmd/... ./pkg/... | tee ${junit_filename_prefix:+"${junit_filename_prefix}.stdout"} | grep --binary-files=text "${go_test_grep_pattern}"
-
-produce_junit_xmlreport "${junit_filename_prefix}"
+produce_junit_xmlreport
