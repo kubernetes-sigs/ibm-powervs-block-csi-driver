@@ -27,6 +27,9 @@ function produce_junit_xmlreport {
     go install k8s.io/test-infra/gopherage@v0.0.0-20250108071429-415d758da0fa
   fi
   export PATH=$GOBIN:$GOPATH/bin:$PATH
+  cp cover.out "${ARTIFACTS}/cover.out"
+  go tool cover -func="${ARTIFACTS}/cover.out" -o "${ARTIFACTS}/cover.txt"
+	go tool cover -html="${ARTIFACTS}/cover.out" -o "${ARTIFACTS}/coverage.html"
   gopherage junit --threshold 0 "cover.out" > "${ARTIFACTS}/junit_coverage.xml"
   echo "Saved JUnit XML test report."
 }
