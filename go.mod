@@ -24,7 +24,7 @@ require (
 	k8s.io/mount-utils v0.31.4
 	k8s.io/pod-security-admission v0.31.4
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	sigs.k8s.io/controller-runtime v0.19.3
+	sigs.k8s.io/controller-runtime v0.19.4
 )
 
 require (
