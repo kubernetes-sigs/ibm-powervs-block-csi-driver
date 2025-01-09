@@ -30,6 +30,7 @@ function produce_junit_xmlreport {
   cp cover.out "${ARTIFACTS}/cover.out"
   go tool cover -func="${ARTIFACTS}/cover.out" -o "${ARTIFACTS}/cover.txt"
 	go tool cover -html="${ARTIFACTS}/cover.out" -o "${ARTIFACTS}/coverage.html"
+  gopherage filter --exclude-path="zz_generated,generated\.go" "${ARTIFACTS}/cover.out" > "${ARTIFACTS}/filtered.cov"
   gopherage junit --threshold 0 "cover.out" > "${ARTIFACTS}/junit_coverage.xml"
   echo "Saved JUnit XML test report."
 }
