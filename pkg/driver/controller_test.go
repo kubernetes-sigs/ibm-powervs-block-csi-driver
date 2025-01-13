@@ -148,7 +148,6 @@ func TestCreateVolume(t *testing.T) {
 					}
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
-
 			},
 		},
 		{
@@ -204,7 +203,6 @@ func TestCreateVolume(t *testing.T) {
 					}
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
-
 			},
 		},
 		{
@@ -260,7 +258,6 @@ func TestCreateVolume(t *testing.T) {
 					}
 					t.Fatalf("Unexpected error: %v", srvErr.Code())
 				}
-
 			},
 		},
 
@@ -1167,7 +1164,6 @@ func TestControllerPublishVolume(t *testing.T) {
 
 				_, err := powervsDriver.ControllerPublishVolume(ctx, req)
 				checkExpectedErrorCode(t, err, codes.Aborted)
-
 			},
 		},
 	}
@@ -1423,7 +1419,6 @@ func TestControllerExpandVolume(t *testing.T) {
 
 				_, err := powervsDriver.ControllerExpandVolume(ctx, tc.req)
 				checkExpectedErrorCode(t, err, codes.Aborted)
-
 			} else {
 				mockCloud.EXPECT().ResizeDisk(gomock.Eq(tc.req.VolumeId), gomock.Any()).Return(retSizeGiB, nil).AnyTimes()
 				resp, err := powervsDriver.ControllerExpandVolume(ctx, tc.req)
@@ -1447,7 +1442,6 @@ func TestControllerExpandVolume(t *testing.T) {
 					t.Fatalf("Expected size %d GiB, got %d GiB", expSizeGiB, sizeGiB)
 				}
 			}
-
 		})
 	}
 }
@@ -1509,7 +1503,6 @@ func TestIsShareableVolume(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func checkExpectedErrorCode(t *testing.T, err error, expectedCode codes.Code) {
