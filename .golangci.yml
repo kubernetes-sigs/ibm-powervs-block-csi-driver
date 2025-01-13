@@ -108,7 +108,7 @@ linters-settings:
       - whyNoLint
       - wrapperFunc
   unused:
-    go: "1.22"
+    go: "1.23"
 issues:
   exclude-files:
     - "zz_generated.*\\.go$"
@@ -199,4 +199,4 @@ run:
     - tools
     - e2e
   allow-parallel-runners: true
-  go: "1.22"
+  go: "1.23"
