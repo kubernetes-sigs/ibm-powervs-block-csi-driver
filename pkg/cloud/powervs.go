@@ -234,6 +234,9 @@ func (p *powerVSCloud) CloneDisk(sourceVolumeID string, cloneVolumeName string) 
 	if err != nil {
 		return nil, err
 	}
+	if len(clonedVolumeDetails.ClonedVolumes) == 0 {
+		return nil, errors.New("cloned volume not found")
+	}
 	clonedVolumeID := clonedVolumeDetails.ClonedVolumes[0].ClonedVolumeID
 	err = p.WaitForVolumeState(clonedVolumeID, VolumeAvailableState)
 	if err != nil {
@@ -255,7 +258,8 @@ func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
 }
 
 func (p *powerVSCloud) WaitForCloneStatus(cloneTaskId string) error {
-	err := wait.PollImmediate(PollInterval, PollTimeout, func() (bool, error) {
+	ctx := context.Background()
+	return wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
 		c, err := p.cloneVolumeClient.Get(cloneTaskId)
 		if err != nil {
 			return false, err
@@ -263,10 +267,6 @@ func (p *powerVSCloud) WaitForCloneStatus(cloneTaskId string) error {
 		spew.Dump(*c)
 		return *c.Status == "completed", nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
