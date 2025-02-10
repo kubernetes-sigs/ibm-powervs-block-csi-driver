@@ -175,44 +175,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	if req.GetVolumeContentSource() != nil {
-		volumeSource := req.VolumeContentSource
-		switch volumeSource.Type.(type) {
-		case *csi.VolumeContentSource_Volume:
-			diskDetails, _ := d.cloud.GetDiskByNamePrefix("clone-" + volName)
-			if diskDetails != nil {
-				err := verifyVolumeDetails(opts, diskDetails)
-				if err != nil {
-					return nil, err
-				}
-				return newCreateVolumeResponse(diskDetails, req.VolumeContentSource), nil
-			}
-			if srcVolume := volumeSource.GetVolume(); srcVolume != nil {
-				srcVolumeID := srcVolume.GetVolumeId()
-				diskDetails, err := d.cloud.GetDiskByID(srcVolumeID)
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not get the source volume %q: %v", srcVolumeID, err)
-				}
-				if util.GiBToBytes(diskDetails.CapacityGiB) != volSizeBytes {
-					return nil, status.Errorf(codes.Internal, "Cannot clone volume %v, source volume size is not equal to the clone volume", srcVolumeID)
-				}
-				err = verifyVolumeDetails(opts, diskDetails)
-				if err != nil {
-					return nil, err
-				}
-				diskFromSourceVolume, err := d.cloud.CloneDisk(srcVolumeID, volName)
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
-				}
-
-				cloneDiskDetails, err := d.cloud.GetDiskByID(diskFromSourceVolume.VolumeID)
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
-				}
-				return newCreateVolumeResponse(cloneDiskDetails, req.VolumeContentSource), nil
-			}
-		default:
-			return nil, status.Errorf(codes.InvalidArgument, "%v not a proper volume source", volumeSource)
-		}
+		return handleClone(d.cloud, req, volName, volSizeBytes, opts)
 	}
 
 	// check if disk exists
@@ -535,4 +498,43 @@ func verifyVolumeDetails(payload *cloud.DiskOptions, diskDetails *cloud.Disk) er
 		return status.Errorf(codes.Internal, "capacityBytes in payload and capacityGIB in disk details don't match")
 	}
 	return nil
+}
+
+func handleClone(cloud cloud.Cloud, req *csi.CreateVolumeRequest, volName string, volSizeBytes int64, opts *cloud.DiskOptions) (*csi.CreateVolumeResponse, error) {
+	volumeSource := req.VolumeContentSource
+	switch volumeSource.Type.(type) {
+	case *csi.VolumeContentSource_Volume:
+		diskDetails, _ := cloud.GetDiskByNamePrefix("clone-" + req.GetName())
+		if diskDetails != nil {
+			err := verifyVolumeDetails(opts, diskDetails)
+			if err != nil {
+				return nil, err
+			}
+			return newCreateVolumeResponse(diskDetails, req.VolumeContentSource), nil
+		}
+		if srcVolume := volumeSource.GetVolume(); srcVolume != nil {
+			srcVolumeID := srcVolume.GetVolumeId()
+			diskDetails, err := cloud.GetDiskByID(srcVolumeID)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get the source volume %q: %v", srcVolumeID, err)
+			}
+			if util.GiBToBytes(diskDetails.CapacityGiB) != volSizeBytes {
+				return nil, status.Errorf(codes.Internal, "Cannot clone volume %v, source volume size is not equal to the clone volume", srcVolumeID)
+			}
+			err = verifyVolumeDetails(opts, diskDetails)
+			if err != nil {
+				return nil, err
+			}
+			diskFromSourceVolume, err := cloud.CloneDisk(srcVolumeID, volName)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not clone volume %q: %v", volName, err)
+			}
+			cloneDiskDetails, err := cloud.GetDiskByID(diskFromSourceVolume.VolumeID)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get volume %q after clone: %v", volName, err)
+			}
+			return newCreateVolumeResponse(cloneDiskDetails, req.VolumeContentSource), nil
+		}
+	}
+	return nil, status.Errorf(codes.InvalidArgument, "%v not a proper volume source", volumeSource)
 }

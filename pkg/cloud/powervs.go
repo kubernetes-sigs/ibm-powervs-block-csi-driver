@@ -234,7 +234,7 @@ func (p *powerVSCloud) CloneDisk(sourceVolumeID string, cloneVolumeName string) 
 	if err != nil {
 		return nil, err
 	}
-	if len(clonedVolumeDetails.ClonedVolumes) == 0 {
+	if clonedVolumeDetails == nil || len(clonedVolumeDetails.ClonedVolumes) == 0 {
 		return nil, errors.New("cloned volume not found")
 	}
 	clonedVolumeID := clonedVolumeDetails.ClonedVolumes[0].ClonedVolumeID
