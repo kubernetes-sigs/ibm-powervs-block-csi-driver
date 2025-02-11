@@ -10,7 +10,6 @@ linters:
     - dogsled
     - errcheck
     - errchkjson
-    - execinquery
     # - gci
     - goconst
     # - gocritic
