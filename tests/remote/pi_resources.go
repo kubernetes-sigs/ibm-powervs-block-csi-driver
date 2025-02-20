@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/IBM-Cloud/power-go-client/clients/instance"
@@ -271,20 +272,24 @@ func waitForInstanceHealth(insID string, ic *instance.IBMPIInstanceClient) (*mod
 // Wait till SSH test is complete.
 func waitForInstanceSSH(publicIP string) error {
 	err := wait.PollUntilContextTimeout(context.Background(), 20*time.Second, 30*time.Minute, true, func(context.Context) (bool, error) {
-		var err error
 		outp, err := runRemoteCommand(publicIP, "hostname")
-		klog.Infof("out: %s err: %v", outp, err)
+		klog.Infof("out: %s, err: %v", outp, err)
+		if strings.Contains(outp, "Connection timed out") {
+			klog.Warningf("Ignoring SSH Connection timed out error")
+			return false, nil
+		}
 		if err != nil {
+			klog.Warningf("Unexpected SSH error: %v.", err)
 			return false, err
 		}
 		return true, nil
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to get ssh connection: %v", err)
+		return fmt.Errorf("failed to get SSH connection: %v", err)
 	}
 
-	return err
+	return nil
 }
 
 // Delete the VM and SSH key.
