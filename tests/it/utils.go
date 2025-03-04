@@ -18,16 +18,17 @@ package it
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
-
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 
@@ -123,7 +124,10 @@ func newCSIClient() (*CSIClient, error) {
 				var conn net.Conn
 				err = wait.PollUntilContextTimeout(context.Background(), 10*time.Second, 3*time.Minute, true, func(context.Context) (bool, error) {
 					conn, err = net.Dial(scheme, addr)
-					if err != nil {
+					if errors.Is(err, syscall.ECONNREFUSED) {
+						klog.Info("Endpoint is not available yet")
+						return false, nil
+					} else if err != nil {
 						klog.Warningf("Client failed to dial endpoint %v", endpoint)
 						return false, err
 					}
