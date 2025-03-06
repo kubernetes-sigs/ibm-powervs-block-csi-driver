@@ -13,7 +13,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.23.0
 	github.com/onsi/gomega v1.36.2
 	go.uber.org/mock v0.5.0
-	golang.org/x/sys v0.30.0
+	golang.org/x/sys v0.31.0
 	google.golang.org/grpc v1.71.0
 	gopkg.in/gcfg.v1 v1.2.3
 	k8s.io/api v0.31.6
