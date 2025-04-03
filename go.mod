@@ -2,6 +2,8 @@ module sigs.k8s.io/ibm-powervs-block-csi-driver
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	github.com/IBM-Cloud/power-go-client v1.11.0
 	github.com/IBM/go-sdk-core/v5 v5.19.0
@@ -20,7 +22,7 @@ require (
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubernetes v1.32.2
+	k8s.io/kubernetes v1.32.3
 	k8s.io/mount-utils v0.32.3
 	k8s.io/pod-security-admission v0.32.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
