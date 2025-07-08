@@ -8,7 +8,7 @@ The IBM Power Virtual Systems Container Storage Interface (CSI) Driver provides 
 # CSI Specification Compatibility Matrix
 | PowerVS CSI Driver | Kubernetes | CSI | Golang |
 | ----------------------------- | ----------- | -------- | -------- |
-| main | 1.32 | 1.11.0 | 1.24 |
+| main | 1.32 | 1.11.0 | 1.24.4 |
 | 0.9.0 | 1.32 | 1.11.0 | 1.23 |
 | 0.8.0 | 1.31 | 1.10.0 | 1.23 |
 | 0.7.0 | 1.30 | 1.9.0 | 1.22 |
