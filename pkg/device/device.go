@@ -206,15 +206,20 @@ func (d *Device) createLinuxDevice() (err error) {
 
 // scsiHostRescan: scans all scsi hosts.
 func scsiHostRescan() error {
-	scsiPath := "/sys/class/scsi_host/"
+	scsiPath := "/sys/class/scsi_host"
 	dirs, err := os.ReadDir(scsiPath)
 	if err != nil {
 		return err
 	}
 	for _, f := range dirs {
-		name := filepath.Clean(scsiPath + f.Name() + "/scan")
+		name := f.Name()
+		// Reject any suspicious names
+		if strings.Contains(name, "..") || strings.ContainsAny(name, "/\\") {
+			continue
+		}
+		path := filepath.Join(scsiPath, name, "scan")
 		data := []byte("- - -")
-		if err := os.WriteFile(name, data, 0666); err != nil {
+		if err := os.WriteFile(path, data, 0666); err != nil {
 			return fmt.Errorf("scsi host rescan failed: %v", err)
 		}
 	}
