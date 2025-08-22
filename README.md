@@ -78,6 +78,14 @@ kubectl apply -f secret.yaml
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
 
+The providerID field in a Node object uniquely identifies the node within a cloud provider's infrastructure, typically set by the cloud provider manager (CCM). However, when deploying clusters using methods like kubeadm or kubespray on cloud platforms, it's crucial to manually set the providerID.
+
+Set the ProviderID on the cluster nodes as: `ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>`, for example:
+```sh
+spec:
+  providerID: ibmpowervs://syd/syd05/862032d5-xxxx-xxxx-xxxx-c18594456427/2c6cbaec-xxxx-xxxx-xxxx-a6aa35315596
+```
+
 To deploy the CSI driver:
 ```sh
 kubectl apply -k "https://github.com/kubernetes-sigs/ibm-powervs-block-csi-driver/deploy/kubernetes/overlays/stable/?ref=v0.6.0"
