@@ -11,7 +11,7 @@ require (
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/google/go-cmp v0.7.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
-	github.com/onsi/ginkgo/v2 v2.25.2
+	github.com/onsi/ginkgo/v2 v2.25.3
 	github.com/onsi/gomega v1.38.2
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/mock v0.6.0
