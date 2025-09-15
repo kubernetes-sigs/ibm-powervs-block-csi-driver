@@ -28,8 +28,7 @@ spec:
   containers:
   - name: app
     image: busybox
-    command: ["/bin/sh", "-c"]
-    args: ["tail -f /dev/null"]
+    command: ["/bin/sh", "-c", "echo 'Hello World' > /data/out.txt && tail -f /dev/null"]
     volumeMounts:
     - name: persistent-storage
       mountPath: /data
