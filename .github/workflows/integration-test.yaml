@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
     inputs: {}
 
+permissions:
+  contents: read
+
 jobs:
   it:
     name: Integration tests
