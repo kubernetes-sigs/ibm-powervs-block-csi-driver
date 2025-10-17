@@ -23,15 +23,20 @@ import (
 )
 
 // PowerVS volume types.
+// More information: https://cloud.ibm.com/docs/power-iaas?topic=power-iaas-on-cloud-architecture#storage-tiers
 const (
-	VolumeTypeTier1 = "tier1"
-	VolumeTypeTier3 = "tier3"
+	VolumeTypeTier0  = "tier0"  // 25 IOPS/GB
+	VolumeTypeTier1  = "tier1"  // 10 IOPS/GB
+	VolumeTypeTier3  = "tier3"  // 3 IOPS/GB
+	VolumeTypeTier5k = "tier5k" // 5000 IOPS regardless of size
 )
 
 var (
 	ValidVolumeTypes = []string{
 		VolumeTypeTier1,
 		VolumeTypeTier3,
+		VolumeTypeTier5k,
+		VolumeTypeTier0,
 	}
 )
 

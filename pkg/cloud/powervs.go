@@ -52,6 +52,7 @@ type powerVSCloud struct {
 	pvmInstancesClient *instance.IBMPIInstanceClient
 	volClient          *instance.IBMPIVolumeClient
 	cloneVolumeClient  *instance.IBMPICloneVolumeClient
+	storageTierClient  *instance.IBMPIStorageTierClient
 }
 
 type PVMInstance struct {
@@ -98,6 +99,7 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 		pvmInstancesClient: instance.NewIBMPIInstanceClient(context.Background(), piSession, cloudInstanceID),
 		volClient:          instance.NewIBMPIVolumeClient(context.Background(), piSession, cloudInstanceID),
 		cloneVolumeClient:  instance.NewIBMPICloneVolumeClient(context.Background(), piSession, cloudInstanceID),
+		storageTierClient:  instance.NewIBMPIStorageTierClient(context.Background(), piSession, cloudInstanceID),
 	}, nil
 }
 
@@ -137,12 +139,19 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
-	case VolumeTypeTier1, VolumeTypeTier3:
+	case VolumeTypeTier1, VolumeTypeTier3, VolumeTypeTier0, VolumeTypeTier5k:
 		volumeType = diskOptions.VolumeType
 	case "":
 		volumeType = DefaultVolumeType
 	default:
 		return nil, fmt.Errorf("invalid PowerVS VolumeType %q", diskOptions.VolumeType)
+	}
+
+	// tier1 and tier3 storages are by default available in all regions.
+	if diskOptions.VolumeType == VolumeTypeTier0 || diskOptions.VolumeType == VolumeTypeTier5k {
+		if err = p.CheckStorageTierAvailability(diskOptions.VolumeType); err != nil {
+			return nil, err
+		}
 	}
 
 	dataVolume := &models.CreateDataVolume{
@@ -355,4 +364,23 @@ func readCredentialsFromFile() (string, error) {
 		return "", fmt.Errorf("error reading apikey: %v", err)
 	}
 	return string(byteData), nil
+}
+
+// checkStorageTierAvailability confirms if the provided cloud instance ID supports the required storageType.
+func (p *powerVSCloud) CheckStorageTierAvailability(storageType string) error {
+	// Supported tiers are Tier0, Tier1, Tier3 and Tier 5k
+	// The use of fixed IOPS is limited to volumes with a size of 200 GB or less, which is the break even size with Tier 0
+	// (200 GB @ 25 IOPS/GB = 5000 IOPS).
+	// Ref: https://cloud.ibm.com/docs/power-iaas?topic=power-iaas-on-cloud-architecture#storage-tiers
+	// API Docs for Storagetypes: https://cloud.ibm.com/docs/power-iaas?topic=power-iaas-on-cloud-architecture#IOPS-api
+	storageTiers, err := p.storageTierClient.GetAll()
+	if err != nil {
+		return fmt.Errorf("an error occurred while retriving the Storage tier availability. err:%v", err)
+	}
+	for _, storageTier := range storageTiers {
+		if storageTier.Name == storageType && *storageTier.State == "inactive" {
+			return fmt.Errorf("the requested storage tier is not available in the provided cloud instance. Please retry with a different tier")
+		}
+	}
+	return nil
 }

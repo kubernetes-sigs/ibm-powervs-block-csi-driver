@@ -701,6 +701,55 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "success with volume type tier5k",
+			testFunc: func(t *testing.T) {
+				// iops 5000 requires at least 10GB
+				volSize := int64(20 * 1024 * 1024 * 1024)
+				capRange := &csi.CapacityRange{RequiredBytes: volSize}
+				req := &csi.CreateVolumeRequest{
+					Name:               "vol-test",
+					CapacityRange:      capRange,
+					VolumeCapabilities: stdVolCap,
+					Parameters: map[string]string{
+						VolumeTypeKey: cloud.VolumeTypeTier5k,
+					},
+				}
+
+				ctx := context.Background()
+
+				mockDisk := &cloud.Disk{
+					VolumeID:    req.Name,
+					CapacityGiB: util.BytesToGiB(volSize),
+					DiskType:    cloud.VolumeTypeTier5k,
+				}
+				mockDiskOpts := &cloud.DiskOptions{
+					CapacityBytes: volSize,
+					VolumeType:    cloud.VolumeTypeTier5k,
+				}
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().GetDiskByName(gomock.Eq(req.Name)).Return(nil, nil)
+				mockCloud.EXPECT().CreateDisk(gomock.Eq(req.Name), mockDiskOpts).Return(mockDisk, nil)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				if _, err := powervsDriver.CreateVolume(ctx, req); err != nil {
+					srvErr, ok := status.FromError(err)
+					if !ok {
+						t.Fatalf("Could not get error status code from error: %v", srvErr)
+					}
+					t.Fatalf("Unexpected error: %v", srvErr.Code())
+				}
+			},
+		},
+		{
 			name: "fail with invalid volume parameter",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
