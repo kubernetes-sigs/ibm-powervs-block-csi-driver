@@ -55,12 +55,6 @@ type powerVSCloud struct {
 	storageTierClient  *instance.IBMPIStorageTierClient
 }
 
-type PVMInstance struct {
-	ID       string
-	DiskType string
-	Name     string
-}
-
 func NewPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 	return newPowerVSCloud(cloudInstanceID, zone, debug)
 }
@@ -100,36 +94,6 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 		volClient:          instance.NewIBMPIVolumeClient(context.Background(), piSession, cloudInstanceID),
 		cloneVolumeClient:  instance.NewIBMPICloneVolumeClient(context.Background(), piSession, cloudInstanceID),
 		storageTierClient:  instance.NewIBMPIStorageTierClient(context.Background(), piSession, cloudInstanceID),
-	}, nil
-}
-
-func (p *powerVSCloud) GetPVMInstanceByName(name string) (*PVMInstance, error) {
-	in, err := p.pvmInstancesClient.GetAll()
-	if err != nil {
-		return nil, err
-	}
-	for _, pvmInstance := range in.PvmInstances {
-		if name == *pvmInstance.ServerName {
-			return &PVMInstance{
-				ID:       *pvmInstance.PvmInstanceID,
-				DiskType: pvmInstance.StorageType,
-				Name:     *pvmInstance.ServerName,
-			}, nil
-		}
-	}
-	return nil, ErrNotFound
-}
-
-func (p *powerVSCloud) GetPVMInstanceByID(instanceID string) (*PVMInstance, error) {
-	in, err := p.pvmInstancesClient.Get(instanceID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &PVMInstance{
-		ID:       *in.PvmInstanceID,
-		DiskType: *in.StorageType,
-		Name:     *in.ServerName,
 	}, nil
 }
 
@@ -183,6 +147,14 @@ func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
 		return err
 	}
 	return p.WaitForVolumeState(volumeID, VolumeInUseState)
+}
+
+func (p *powerVSCloud) GetAllPVMInstanceDisks(nodeId string) (*models.Volumes, error) {
+	vols, err := p.volClient.GetAllInstanceVolumes(nodeId)
+	if err != nil {
+		return nil, err
+	}
+	return vols, nil
 }
 
 func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {

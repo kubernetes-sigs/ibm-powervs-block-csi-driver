@@ -584,16 +584,17 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 }
 
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+	var segments map[string]string
 	klog.V(4).Infof("NodeGetInfo: called with args %+v", req)
 
-	in, err := d.cloud.GetPVMInstanceByID(d.pvmInstanceId)
-	if err != nil {
+	in, err := d.cloud.GetPVMInstanceDetails(d.pvmInstanceId)
+	if err != nil || in == nil {
 		klog.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", d.pvmInstanceId, err)
 		return nil, fmt.Errorf("failed to get the instance for pvmInstanceId %s, err: %s", d.pvmInstanceId, err)
 	}
 
-	segments := map[string]string{
-		DiskTypeKey: in.DiskType,
+	segments = map[string]string{
+		DiskTypeKey: *in.StorageType,
 	}
 
 	topology := &csi.Topology{Segments: segments}
