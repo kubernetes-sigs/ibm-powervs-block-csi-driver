@@ -19,13 +19,14 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
-	mocks "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud/mocks"
+	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud/mocks"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
 )
 
@@ -57,7 +58,7 @@ func TestCreateVolume(t *testing.T) {
 	}{
 
 		{
-			name: "success normal",
+			name: "create a standard volume",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
@@ -92,7 +93,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
@@ -146,7 +147,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
@@ -192,7 +193,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
@@ -246,7 +247,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
@@ -301,7 +302,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
@@ -356,11 +357,10 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
-
 		{
 			name: "fail no name",
 			testFunc: func(t *testing.T) {
@@ -397,7 +397,6 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			name: "success same name and same capacity",
 			testFunc: func(t *testing.T) {
@@ -445,7 +444,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 
 				// Subsequent call returns the created disk
@@ -457,7 +456,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 
 				vol := resp.GetVolume()
@@ -487,7 +486,6 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
-
 		{
 			name: "success no capacity range",
 			testFunc: func(t *testing.T) {
@@ -529,7 +527,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 
 				vol := resp.GetVolume()
@@ -591,7 +589,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 
 				vol := resp.GetVolume()
@@ -649,7 +647,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
@@ -698,7 +696,7 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
@@ -738,12 +736,12 @@ func TestCreateVolume(t *testing.T) {
 					t.Fatalf("Could not get error status code from error: %v", srvErr)
 				}
 				if srvErr.Code() != codes.InvalidArgument {
-					t.Fatalf("Expect InvalidArgument but got: %s", srvErr.Code())
+					t.Fatalf("Expect InvalidArgument but got: %s", srvErr)
 				}
 			},
 		},
 		{
-			name: "Pass with no volume type parameter",
+			name: "pass with no volume type parameter",
 			testFunc: func(t *testing.T) {
 				// iops 5000 requires at least 10GB
 				volSize := int64(20 * 1024 * 1024 * 1024)
@@ -786,12 +784,12 @@ func TestCreateVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 			},
 		},
 		{
-			name: "fail locked volume request",
+			name: "perform operation on a volume that has a lock",
 			testFunc: func(t *testing.T) {
 				req := &csi.CreateVolumeRequest{
 					Name:               "random-vol-name",
@@ -832,7 +830,7 @@ func TestDeleteVolume(t *testing.T) {
 		testFunc func(t *testing.T)
 	}{
 		{
-			name: "success normal",
+			name: "successful deletion of volume",
 			testFunc: func(t *testing.T) {
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "vol-test",
@@ -857,7 +855,7 @@ func TestDeleteVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 				if !reflect.DeepEqual(resp, expResp) {
 					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
@@ -865,7 +863,7 @@ func TestDeleteVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "success invalid volume id",
+			name: "return error if an invalid volume ID is passed",
 			testFunc: func(t *testing.T) {
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "invalid-volume-name",
@@ -889,7 +887,7 @@ func TestDeleteVolume(t *testing.T) {
 					if !ok {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
-					t.Fatalf("Unexpected error: %v", srvErr.Code())
+					t.Fatalf("Unexpected error: %v", srvErr)
 				}
 				if !reflect.DeepEqual(resp, expResp) {
 					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
@@ -922,7 +920,7 @@ func TestDeleteVolume(t *testing.T) {
 						t.Fatalf("Could not get error status code from error: %v", srvErr)
 					}
 					if srvErr.Code() != codes.Internal {
-						t.Fatalf("Unexpected error: %v", srvErr.Code())
+						t.Fatalf("Unexpected error: %v", srvErr)
 					}
 				} else {
 					t.Fatalf("Expected error, got nil")
@@ -984,12 +982,15 @@ func TestControllerPublishVolume(t *testing.T) {
 	}{
 
 		{
-			name: "success normal",
+			name: "successful publication of a newly provisioned volume",
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerPublishVolumeRequest{
 					NodeId:           expInstanceID,
 					VolumeCapability: stdVolCap,
 					VolumeId:         volumeName,
+					VolumeContext: map[string]string{
+						WWNKey: expDevicePath,
+					},
 				}
 				expResp := &csi.ControllerPublishVolumeResponse{
 					PublishContext: map[string]string{WWNKey: expDevicePath},
@@ -1001,9 +1002,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceByID(gomock.Eq(expInstanceID)).Return(nil, nil)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq(volumeName)).Return(&cloud.Disk{WWN: expDevicePath}, nil)
-				mockCloud.EXPECT().IsAttached(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(errors.New("the disk is unattached"))
+				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"ea0a8972-2132-486d-b9f2-6d97d2a52592", "e3fdc39b-5df8-43c4-9b82-d268d2a7230b"}}, nil)
 				mockCloud.EXPECT().AttachDisk(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(nil)
 
 				powervsDriver := controllerService{
@@ -1179,7 +1178,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceByID(gomock.Eq("does-not-exist")).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq("does-not-exist")).Return(nil, cloud.ErrNotFound)
 				// mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(false)
 
 				powervsDriver := controllerService{
@@ -1217,8 +1216,8 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceByID(gomock.Eq(expInstanceID)).Return(nil, nil)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq("does-not-exist")).Return(&cloud.Disk{}, cloud.ErrNotFound)
+				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"ea0a8972-2132-486d-b9f2-6d97d2a52592", "e3fdc39b-5df8-43c4-9b82-d268d2a7230b"}}, nil)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq("does-not-exist"), gomock.Eq(expInstanceID)).Return(cloud.ErrNotFound)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1274,7 +1273,6 @@ func TestControllerPublishVolume(t *testing.T) {
 }
 
 func TestControllerUnpublishVolume(t *testing.T) {
-	expDevicePath := "/dev/xvda"
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
@@ -1294,8 +1292,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq("vol-test")).Return(&cloud.Disk{WWN: expDevicePath}, nil)
-				mockCloud.EXPECT().IsAttached(gomock.Eq("vol-test"), gomock.Eq(expInstanceID)).Return(nil)
+				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"vol-test", "boot-vol"}}, nil)
 				mockCloud.EXPECT().DetachDisk(req.VolumeId, req.NodeId).Return(nil)
 
 				powervsDriver := controllerService{
@@ -1329,7 +1326,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq("vol-test")).Return(&cloud.Disk{WWN: expDevicePath}, cloud.ErrNotFound)
+				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"boot-vol"}}, nil)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
