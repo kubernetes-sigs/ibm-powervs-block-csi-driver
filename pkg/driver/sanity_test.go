@@ -12,7 +12,9 @@ import (
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
+
 	"k8s.io/mount-utils"
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
@@ -147,6 +149,15 @@ func (p *fakeCloudProvider) GetPVMInstanceByID(instanceID string) (*cloud.PVMIns
 		ID:       instanceID,
 		DiskType: "tier3",
 		Name:     strings.Split(instanceID, "-")[0],
+	}, nil
+}
+
+func (p *fakeCloudProvider) GetAllDisks(_ string) (volumes *models.Volumes, err error) {
+	return &models.Volumes{
+		Volumes: []*models.VolumeReference{{
+			VolumeID: ptr.To("123"),
+		},
+		},
 	}, nil
 }
 

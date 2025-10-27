@@ -59,6 +59,7 @@ type Disk struct {
 	Name        string
 	Shareable   bool
 	CapacityGiB int64
+	State       string
 }
 
 // DiskOptions represents parameters to create an PowerVS volume.

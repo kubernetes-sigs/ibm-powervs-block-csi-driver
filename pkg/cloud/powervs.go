@@ -180,6 +180,14 @@ func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
 	return p.WaitForVolumeState(volumeID, VolumeInUseState)
 }
 
+func (p *powerVSCloud) GetAllDisks(nodeId string) (*models.Volumes, error) {
+	vols, err := p.volClient.GetAllInstanceVolumes(nodeId)
+	if err != nil {
+		return nil, err
+	}
+	return vols, nil
+}
+
 func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
 	if err = p.volClient.Detach(nodeID, volumeID); err != nil {
 		return err
@@ -283,6 +291,7 @@ func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
 				WWN:         strings.ToLower(*v.Wwn),
 				Shareable:   *v.Shareable,
 				CapacityGiB: int64(*v.Size),
+				State:       *v.State,
 			}, nil
 		}
 	}
