@@ -60,7 +60,6 @@ func GetInstanceInfoFromProviderID(clientset kubernetes.Interface, nodeName stri
 		providerId := node.Spec.ProviderID
 		klog.Infof("Node Name: %s, Provider ID: %s", nodeName, providerId)
 		return TokenizeProviderID(providerId)
-	} else {
-		return nil, fmt.Errorf("ProviderID is empty for the node: %s", nodeName)
 	}
+	return nil, fmt.Errorf("ProviderID is empty for the node: %s", nodeName)
 }

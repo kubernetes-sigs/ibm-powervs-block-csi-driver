@@ -94,15 +94,10 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 		return nil, err
 	}
 
-	backgroundContext := context.Background()
-	volClient := instance.NewIBMPIVolumeClient(backgroundContext, piSession, cloudInstanceID)
-	pvmInstancesClient := instance.NewIBMPIInstanceClient(backgroundContext, piSession, cloudInstanceID)
-	cloneVolumeClient := instance.NewIBMPICloneVolumeClient(backgroundContext, piSession, cloudInstanceID)
-
 	return &powerVSCloud{
-		pvmInstancesClient: pvmInstancesClient,
-		volClient:          volClient,
-		cloneVolumeClient:  cloneVolumeClient,
+		pvmInstancesClient: instance.NewIBMPIInstanceClient(context.Background(), piSession, cloudInstanceID),
+		volClient:          instance.NewIBMPIVolumeClient(context.Background(), piSession, cloudInstanceID),
+		cloneVolumeClient:  instance.NewIBMPICloneVolumeClient(context.Background(), piSession, cloudInstanceID),
 	}, nil
 }
 
@@ -138,6 +133,7 @@ func (p *powerVSCloud) GetPVMInstanceByID(instanceID string) (*PVMInstance, erro
 
 func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error) {
 	var volumeType string
+	start := time.Now()
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
@@ -165,7 +161,7 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 	if err != nil {
 		return nil, err
 	}
-
+	klog.V(4).Infof("Volume %s has been provisioned successfully, took %v", *v.Name, time.Since(start))
 	return &Disk{CapacityGiB: capacityGiB, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
 }
 
@@ -247,6 +243,7 @@ func (p *powerVSCloud) CloneDisk(sourceVolumeID string, cloneVolumeName string) 
 
 func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
 	ctx := context.Background()
+	klog.V(4).Infof("Waiting for volume %s to be in %q state", volumeID, state)
 	return wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
 		v, err := p.volClient.Get(volumeID)
 		if err != nil {
@@ -283,10 +280,10 @@ func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
 				WWN:         strings.ToLower(*v.Wwn),
 				Shareable:   *v.Shareable,
 				CapacityGiB: int64(*v.Size),
+				State:       *v.State,
 			}, nil
 		}
 	}
-
 	return nil, ErrNotFound
 }
 
@@ -304,10 +301,10 @@ func (p *powerVSCloud) GetDiskByNamePrefix(namePrefix string) (disk *Disk, err e
 				WWN:         strings.ToLower(*v.Wwn),
 				Shareable:   *v.Shareable,
 				CapacityGiB: int64(*v.Size),
+				State:       *v.State,
 			}, nil
 		}
 	}
-
 	return nil, ErrNotFound
 }
 
@@ -326,6 +323,7 @@ func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 		WWN:         strings.ToLower(v.Wwn),
 		Shareable:   *v.Shareable,
 		CapacityGiB: int64(*v.Size),
+		State:       v.State,
 	}, nil
 }
 
@@ -343,7 +341,6 @@ func readCredentials() (string, error) {
 	if apiKey == "" {
 		return "", errors.New("IBMCLOUD_API_KEY is not provided")
 	}
-
 	return apiKey, nil
 }
 
@@ -353,7 +350,6 @@ func readCredentialsFromFile() (string, error) {
 		klog.Warning("API_KEY_PATH is undefined")
 		return "", nil
 	}
-
 	byteData, err := os.ReadFile(apiKeyPath)
 	if err != nil {
 		return "", fmt.Errorf("error reading apikey: %v", err)
