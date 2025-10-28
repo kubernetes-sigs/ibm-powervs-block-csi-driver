@@ -283,6 +283,7 @@ func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
 				WWN:         strings.ToLower(*v.Wwn),
 				Shareable:   *v.Shareable,
 				CapacityGiB: int64(*v.Size),
+				State:       *v.State,
 			}, nil
 		}
 	}
