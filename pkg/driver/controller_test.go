@@ -19,13 +19,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud/mocks"
@@ -894,7 +891,6 @@ func TestDeleteVolume(t *testing.T) {
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(req.VolumeId)).Return(nil)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq(req.VolumeId)).Return(nil, nil)
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
 					driverOptions: &Options{},
@@ -919,26 +915,23 @@ func TestDeleteVolume(t *testing.T) {
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "invalid-volume-name",
 				}
-				expResp := &csi.DeleteVolumeResponse{}
+				var expResp *csi.DeleteVolumeResponse = nil
+				expectErr := errors.New("Unexpected error: rpc error: code = Internal desc = Could not delete volume ID \"invalid-volume-name\": Bad Request: the following volumes do not exist")
 
 				ctx := context.Background()
 				mockCtl := gomock.NewController(t)
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq(req.VolumeId)).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().DeleteDisk(gomock.Eq(req.VolumeId)).Return(cloud.ErrBadRequestVolumeNotFound)
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
 					driverOptions: &Options{},
 					volumeLocks:   util.NewVolumeLocks(),
 				}
 				resp, err := powervsDriver.DeleteVolume(ctx, req)
-				if err != nil {
-					srvErr, ok := status.FromError(err)
-					if !ok {
-						t.Fatalf("Could not get error status code from error: %v", srvErr)
-					}
-					t.Fatalf("Unexpected error: %v", srvErr)
+				if errors.Is(err, expectErr) {
+					t.Fatalf("Expected error: %s, got: %s", expectErr, err)
 				}
 				if !reflect.DeepEqual(resp, expResp) {
 					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
@@ -958,7 +951,6 @@ func TestDeleteVolume(t *testing.T) {
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().DeleteDisk(gomock.Eq(req.VolumeId)).Return(errors.New("DeleteDisk could not delete volume"))
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq(req.VolumeId)).Return(nil, nil)
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
 					driverOptions: &Options{},
@@ -1053,8 +1045,6 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{
-					Volumes: []*models.VolumeReference{{VolumeID: ptr.To("123"), Name: ptr.To("req")}}}, nil)
 				mockCloud.EXPECT().AttachDisk(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(nil)
 
 				powervsDriver := controllerService{
@@ -1230,7 +1220,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(nil, cloud.ErrNotFound)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(volumeName), gomock.Eq(req.NodeId)).Return(cloud.ErrPVInstanceNotFound)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1267,10 +1257,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-
-				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{
-					Volumes: []*models.VolumeReference{{VolumeID: ptr.To("123"), Name: ptr.To("test-vol")}}}, nil)
-				mockCloud.EXPECT().AttachDisk(gomock.Eq("does-not-exist"), gomock.Eq(expInstanceID)).Return(cloud.ErrNotFound)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq("does-not-exist"), gomock.Eq(expInstanceID)).Return(cloud.ErrBadRequestVolumeNotFound)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1345,10 +1332,6 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{Volumes: []*models.VolumeReference{
-					{VolumeID: ptr.To("12345"), Name: ptr.To("vol-test")},
-					{VolumeID: ptr.To("67899"), Name: ptr.To("boot-vol")},
-				}}, nil)
 				mockCloud.EXPECT().DetachDisk(req.VolumeId, req.NodeId).Return(nil)
 
 				powervsDriver := controllerService{
@@ -1382,8 +1365,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{Volumes: []*models.VolumeReference{
-					{VolumeID: ptr.To("67899"), Name: ptr.To("boot-vol")}}}, nil)
+				mockCloud.EXPECT().DetachDisk(req.VolumeId, req.NodeId).Return(nil)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,

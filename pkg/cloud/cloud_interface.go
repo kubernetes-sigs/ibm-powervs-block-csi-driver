@@ -31,7 +31,6 @@ type Cloud interface {
 	WaitForCloneStatus(taskId string) error
 	GetDiskByName(name string) (disk *Disk, err error)
 	GetDiskByNamePrefix(namePrefix string) (disk *Disk, err error)
-	GetAllPVMInstanceDisks(instanceID string) (volumes *models.Volumes, err error)
 	GetDiskByID(volumeID string) (disk *Disk, err error)
 	GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error)
 	UpdateStoragePoolAffinity(instanceID string) error

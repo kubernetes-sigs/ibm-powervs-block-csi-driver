@@ -120,16 +120,14 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 
 	dataVolume := &models.CreateDataVolume{
 		Name:      &volumeName,
-		Size:      ptr.To[float64](float64(capacityGiB)),
+		Size:      ptr.To(float64(capacityGiB)),
 		Shareable: &diskOptions.Shareable,
 		DiskType:  volumeType,
 	}
-
 	v, err := p.volClient.CreateVolume(dataVolume)
 	if err != nil {
 		return nil, err
 	}
-
 	err = p.WaitForVolumeState(*v.VolumeID, VolumeAvailableState)
 	if err != nil {
 		return nil, err
@@ -139,7 +137,18 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 }
 
 func (p *powerVSCloud) DeleteDisk(volumeID string) (err error) {
-	return p.volClient.DeleteVolume(volumeID)
+	klog.V(4).Infof("Deleting Disk with ID: %s", volumeID)
+	start := time.Now()
+	err = p.volClient.DeleteVolume(volumeID)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), ErrVolumeNotFound.Error()) {
+			klog.Warningf("Volume %s not found, assuming deleted", volumeID)
+			return nil
+		}
+		return err
+	}
+	klog.V(4).Infof("DeleteDisk: Deleted disk %s successfully. Took %s", volumeID, time.Since(start))
+	return nil
 }
 
 func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
@@ -147,14 +156,6 @@ func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
 		return err
 	}
 	return p.WaitForVolumeState(volumeID, VolumeInUseState)
-}
-
-func (p *powerVSCloud) GetAllPVMInstanceDisks(nodeId string) (*models.Volumes, error) {
-	vols, err := p.volClient.GetAllInstanceVolumes(nodeId)
-	if err != nil {
-		return nil, err
-	}
-	return vols, nil
 }
 
 func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
@@ -292,7 +293,7 @@ func (p *powerVSCloud) GetDiskByNamePrefix(namePrefix string) (disk *Disk, err e
 func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 	v, err := p.volClient.Get(volumeID)
 	if err != nil {
-		if strings.Contains(err.Error(), "Resource not found") {
+		if strings.Contains(strings.ToLower(err.Error()), ErrVolumeNotFound.Error()) {
 			return nil, ErrNotFound
 		}
 		return nil, err

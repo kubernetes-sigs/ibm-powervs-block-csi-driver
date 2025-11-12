@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	csi "github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const (

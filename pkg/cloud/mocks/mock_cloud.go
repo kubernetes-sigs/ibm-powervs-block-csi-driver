@@ -127,21 +127,6 @@ func (mr *MockCloudMockRecorder) DetachDisk(volumeID, nodeID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachDisk", reflect.TypeOf((*MockCloud)(nil).DetachDisk), volumeID, nodeID)
 }
 
-// GetAllPVMInstanceDisks mocks base method.
-func (m *MockCloud) GetAllPVMInstanceDisks(instanceID string) (*models.Volumes, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllPVMInstanceDisks", instanceID)
-	ret0, _ := ret[0].(*models.Volumes)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAllPVMInstanceDisks indicates an expected call of GetAllPVMInstanceDisks.
-func (mr *MockCloudMockRecorder) GetAllPVMInstanceDisks(instanceID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllPVMInstanceDisks", reflect.TypeOf((*MockCloud)(nil).GetAllPVMInstanceDisks), instanceID)
-}
-
 // GetDiskByID mocks base method.
 func (m *MockCloud) GetDiskByID(volumeID string) (*cloud.Disk, error) {
 	m.ctrl.T.Helper()
