@@ -55,7 +55,7 @@ type powerVSCloud struct {
 	pvmInstancesClient *instance.IBMPIInstanceClient
 	volClient          *instance.IBMPIVolumeClient
 	cloneVolumeClient  *instance.IBMPICloneVolumeClient
-	diskOpMap          map[string]interface{}
+	diskOpMap          map[string]string
 }
 
 type PVMInstance struct {
@@ -102,7 +102,7 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 		pvmInstancesClient: instance.NewIBMPIInstanceClient(context.Background(), piSession, cloudInstanceID),
 		volClient:          instance.NewIBMPIVolumeClient(context.Background(), piSession, cloudInstanceID),
 		cloneVolumeClient:  instance.NewIBMPICloneVolumeClient(context.Background(), piSession, cloudInstanceID),
-		diskOpMap:          make(map[string]interface{}),
+		diskOpMap:          make(map[string]string),
 	}, nil
 }
 
@@ -138,7 +138,6 @@ func (p *powerVSCloud) GetPVMInstanceByID(instanceID string) (*PVMInstance, erro
 
 func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error) {
 	var volumeType string
-	start := time.Now()
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
@@ -152,24 +151,24 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 
 	dataVolume := &models.CreateDataVolume{
 		Name:      &volumeName,
-		Size:      ptr.To[float64](float64(capacityGiB)),
+		Size:      ptr.To(float64(capacityGiB)),
 		Shareable: &diskOptions.Shareable,
 		DiskType:  volumeType,
 	}
 	// CreateVolume invoked for a particular PV for the first time
 	if _, ok := p.diskOpMap[volumeName]; !ok {
-		// Mark as already op-ed.
-		p.diskOpMap[volumeName] = struct{}{}
-		_, err := p.volClient.CreateVolume(dataVolume)
+		vol, err := p.volClient.CreateVolume(dataVolume)
 		if err != nil {
-			// worst case, the pod restarted and lost the map. Handle such case with finding the available volume on cloud.
-			// based on the diskOp Map, there is an entry, so check if it's available and proceed to check for volume state
+			// Worst case, the pod restarted and has lost the entries. Handle such case with finding the available volume on cloud.
+			// Then, CreateVolume would trigger, and handle the error related to existing volume and return successfully.
 			if strings.Contains(strings.ToLower(err.Error()), ErrVolumeNameAlreadyExists.Error()) {
 				return p.ensureVolumeAvailable(volumeName)
 			}
 			// Some other error apart from the creation of volume with conflicting names.
 			return nil, err
 		}
+		// Mark as already op-ed.
+		p.diskOpMap[volumeName] = *vol.VolumeID
 	}
 	return p.ensureVolumeAvailable(volumeName)
 }
@@ -182,7 +181,6 @@ func (p *powerVSCloud) ensureVolumeAvailable(volumeName string) (*Disk, error) {
 			return nil, status.Errorf(codes.Internal, "Disk exists, but not in required state. Current:%s Required:%s", disk.State, VolumeAvailableState)
 		}
 	}
-	delete(p.diskOpMap, volumeName)
 	return &Disk{CapacityGiB: disk.CapacityGiB, VolumeID: disk.VolumeID, DiskType: disk.DiskType, WWN: strings.ToLower(disk.WWN)}, nil
 }
 func (p *powerVSCloud) DeleteDisk(volumeID string) (err error) {
@@ -201,6 +199,11 @@ func (p *powerVSCloud) DeleteDisk(volumeID string) (err error) {
 }
 
 func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
+	for _, value := range p.diskOpMap {
+		if value == volumeID {
+			delete(p.diskOpMap, value)
+		}
+	}
 	if err = p.volClient.Attach(nodeID, volumeID); err != nil {
 		return err
 	}
