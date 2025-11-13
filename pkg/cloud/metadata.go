@@ -65,23 +65,17 @@ func TokenizeProviderID(providerID string) (*Metadata, error) {
 	if len(data) != ProviderIDValidLength {
 		return nil, fmt.Errorf(errFormat, providerID, "invalid length")
 	}
-	if data[2] == "" {
-		return nil, fmt.Errorf(errFormat, providerID, "region can't be empty")
-	}
-	if data[3] == "" {
-		return nil, fmt.Errorf(errFormat, providerID, "zone can't be empty")
-	}
-	if data[4] == "" {
-		return nil, fmt.Errorf(errFormat, providerID, "service_instance_id can't be empty")
-	}
-	if data[5] == "" {
-		return nil, fmt.Errorf(errFormat, providerID, "powervs_machine_id can't be empty")
+	metadata := map[string]string{"region": data[2], "zone": data[3], "service_instance_id": data[4], "powervs_machine_id": data[5]}
+	for key, field := range metadata {
+		if field == "" {
+			return nil, fmt.Errorf(errFormat, providerID, fmt.Sprintf("%v can't be empty", key))
+		}
 	}
 	return &Metadata{
-		region:          data[2],
-		zone:            data[3],
-		cloudInstanceId: data[4],
-		pvmInstanceId:   data[5],
+		region:          metadata["region"],
+		zone:            metadata["zone"],
+		cloudInstanceId: metadata["service_instance_id"],
+		pvmInstanceId:   metadata["powervs_machine_id"],
 	}, nil
 }
 
