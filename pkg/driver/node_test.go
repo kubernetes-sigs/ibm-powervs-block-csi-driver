@@ -1093,7 +1093,7 @@ func TestNodeGetInfo(t *testing.T) {
 			mockMounter := mocks.NewMockMounter(mockCtl)
 			mockCloud := cloudmocks.NewMockCloud(mockCtl)
 
-			mockCloud.EXPECT().GetPVMInstanceByID(tc.instanceID).Return(&cloud.PVMInstance{
+			mockCloud.EXPECT().GetPVMInstanceDetails(tc.instanceID).Return(&cloud.PVMInstance{
 				ID:       tc.instanceID,
 				Name:     tc.name,
 				DiskType: "tier3",
