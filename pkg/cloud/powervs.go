@@ -32,6 +32,9 @@ import (
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/platform-services-go-sdk/resourcecontrollerv2"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -52,6 +55,7 @@ type powerVSCloud struct {
 	pvmInstancesClient *instance.IBMPIInstanceClient
 	volClient          *instance.IBMPIVolumeClient
 	cloneVolumeClient  *instance.IBMPICloneVolumeClient
+	diskOpMap          map[string]string
 }
 
 type PVMInstance struct {
@@ -98,6 +102,7 @@ func newPowerVSCloud(cloudInstanceID, zone string, debug bool) (Cloud, error) {
 		pvmInstancesClient: instance.NewIBMPIInstanceClient(context.Background(), piSession, cloudInstanceID),
 		volClient:          instance.NewIBMPIVolumeClient(context.Background(), piSession, cloudInstanceID),
 		cloneVolumeClient:  instance.NewIBMPICloneVolumeClient(context.Background(), piSession, cloudInstanceID),
+		diskOpMap:          make(map[string]string),
 	}, nil
 }
 
@@ -133,7 +138,6 @@ func (p *powerVSCloud) GetPVMInstanceByID(instanceID string) (*PVMInstance, erro
 
 func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error) {
 	var volumeType string
-	start := time.Now()
 	capacityGiB := util.BytesToGiB(diskOptions.CapacityBytes)
 
 	switch diskOptions.VolumeType {
@@ -147,29 +151,59 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 
 	dataVolume := &models.CreateDataVolume{
 		Name:      &volumeName,
-		Size:      ptr.To[float64](float64(capacityGiB)),
+		Size:      ptr.To(float64(capacityGiB)),
 		Shareable: &diskOptions.Shareable,
 		DiskType:  volumeType,
 	}
-
-	v, err := p.volClient.CreateVolume(dataVolume)
-	if err != nil {
-		return nil, err
+	// CreateVolume invoked for a particular PV for the first time
+	if _, ok := p.diskOpMap[volumeName]; !ok {
+		vol, err := p.volClient.CreateVolume(dataVolume)
+		if err != nil {
+			// Worst case, the pod restarted and has lost the entries. Handle such case with finding the available volume on cloud.
+			// Then, CreateVolume would trigger, and handle the error related to existing volume and return successfully.
+			if strings.Contains(strings.ToLower(err.Error()), ErrVolumeNameAlreadyExists.Error()) {
+				return p.ensureVolumeAvailable(volumeName)
+			}
+			// Some other error apart from the creation of volume with conflicting names.
+			return nil, err
+		}
+		// Mark as already op-ed.
+		p.diskOpMap[volumeName] = *vol.VolumeID
 	}
-
-	err = p.WaitForVolumeState(*v.VolumeID, VolumeAvailableState)
-	if err != nil {
-		return nil, err
-	}
-	klog.V(4).Infof("Volume %s has been provisioned successfully, took %v", *v.Name, time.Since(start))
-	return &Disk{CapacityGiB: capacityGiB, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
+	return p.ensureVolumeAvailable(volumeName)
 }
 
+func (p *powerVSCloud) ensureVolumeAvailable(volumeName string) (*Disk, error) {
+	disk, _ := p.GetDiskByName(volumeName)
+	if disk.State != VolumeAvailableState {
+		err := p.WaitForVolumeState(disk.VolumeID, VolumeAvailableState)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Disk exists, but not in required state. Current:%s Required:%s", disk.State, VolumeAvailableState)
+		}
+	}
+	return &Disk{CapacityGiB: disk.CapacityGiB, VolumeID: disk.VolumeID, DiskType: disk.DiskType, WWN: strings.ToLower(disk.WWN)}, nil
+}
 func (p *powerVSCloud) DeleteDisk(volumeID string) (err error) {
-	return p.volClient.DeleteVolume(volumeID)
+	klog.V(4).Infof("Deleting Disk with ID: %s", volumeID)
+	start := time.Now()
+	err = p.volClient.DeleteVolume(volumeID)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), ErrVolumeNotFound.Error()) {
+			klog.Warningf("Volume %s not found, assuming deleted", volumeID)
+			return nil
+		}
+		return err
+	}
+	klog.V(4).Infof("DeleteDisk: Deleted disk %s successfully. Took %s", volumeID, time.Since(start))
+	return nil
 }
 
 func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
+	for _, value := range p.diskOpMap {
+		if value == volumeID {
+			delete(p.diskOpMap, value)
+		}
+	}
 	if err = p.volClient.Attach(nodeID, volumeID); err != nil {
 		return err
 	}
@@ -311,7 +345,7 @@ func (p *powerVSCloud) GetDiskByNamePrefix(namePrefix string) (disk *Disk, err e
 func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 	v, err := p.volClient.Get(volumeID)
 	if err != nil {
-		if strings.Contains(err.Error(), "Resource not found") {
+		if strings.Contains(strings.ToLower(err.Error()), ErrVolumeNotFound.Error()) {
 			return nil, ErrNotFound
 		}
 		return nil, err
