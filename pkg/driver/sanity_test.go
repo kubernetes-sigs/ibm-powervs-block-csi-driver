@@ -12,10 +12,10 @@ import (
 
 	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
-	"k8s.io/mount-utils"
-
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
+
+	"k8s.io/mount-utils"
 )
 
 func TestSanity(t *testing.T) {
@@ -140,6 +140,13 @@ func (p *fakeCloudProvider) GetPVMInstanceByName(name string) (*cloud.PVMInstanc
 		DiskType: "tier3",
 		Name:     name,
 	}, nil
+}
+
+func (p *fakeCloudProvider) CheckStorageTierAvailability(storageTier string) error {
+	if storageTier == "tier3" || storageTier == "tier1" || storageTier == "tier5k" || storageTier == "tier0" {
+		return nil
+	}
+	return errors.New("not a valid storageTier")
 }
 
 func (p *fakeCloudProvider) GetPVMInstanceByID(instanceID string) (*cloud.PVMInstance, error) {
