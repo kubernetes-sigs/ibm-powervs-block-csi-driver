@@ -375,11 +375,11 @@ func (p *powerVSCloud) CheckStorageTierAvailability(storageType string) error {
 	// API Docs for Storagetypes: https://cloud.ibm.com/docs/power-iaas?topic=power-iaas-on-cloud-architecture#IOPS-api
 	storageTiers, err := p.storageTierClient.GetAll()
 	if err != nil {
-		return fmt.Errorf("an error occurred while retriving the Storage tier availability. err:%v", err)
+		return fmt.Errorf("unable to fetch all volume types for the given cloud instance. err:%v", err)
 	}
 	for _, storageTier := range storageTiers {
 		if storageTier.Name == storageType && *storageTier.State == "inactive" {
-			return fmt.Errorf("the requested storage tier is not available in the provided cloud instance. Please retry with a different tier")
+			return fmt.Errorf("the requested volume type is not available in the provided cloud instance. Please retry with a different tier")
 		}
 	}
 	return nil
