@@ -382,19 +382,9 @@ func (t *TestDeployment) Exec(command []string, expectedString string) {
 
 func (t *TestDeployment) DeletePodAndWait() {
 	framework.Logf("Deleting pod %q in namespace %q", t.podName, t.namespace.Name)
-	err := t.client.CoreV1().Pods(t.namespace.Name).Delete(context.TODO(), t.podName, metav1.DeleteOptions{})
+	err := e2epod.DeletePodWithWaitByName(context.TODO(), t.client, t.podName, t.namespace.Name)
 	if err != nil {
-		if !apierrs.IsNotFound(err) {
-			framework.ExpectNoError(fmt.Errorf("pod %q Delete API error: %v", t.podName, err))
-		}
-		return
-	}
-	framework.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
-	err = e2epod.WaitForPodNoLongerRunningInNamespace(context.TODO(), t.client, t.podName, t.namespace.Name)
-	if err != nil {
-		if !apierrs.IsNotFound(err) {
-			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %v", t.podName, err))
-		}
+		framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %v", t.podName, err))
 	}
 }
 

@@ -20,7 +20,10 @@ package driver
 
 // constants of keys in PublishContext.
 const (
-	WWNKey = "wwn"
+	WWNKey      = "wwn"
+	DiskType    = "diskType"
+	DiskName    = "name"
+	IsShareable = "shareable"
 )
 
 // constants of keys in volume parameters.
