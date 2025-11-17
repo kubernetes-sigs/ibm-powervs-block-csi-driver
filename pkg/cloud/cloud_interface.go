@@ -37,4 +37,5 @@ type Cloud interface {
 	GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error)
 	UpdateStoragePoolAffinity(instanceID string) error
 	IsAttached(volumeID string, nodeID string) (err error)
+	CheckStorageTierAvailability(storageType string) error
 }
