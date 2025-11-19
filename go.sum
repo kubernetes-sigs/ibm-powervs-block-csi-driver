@@ -1,7 +1,7 @@
 cel.dev/expr v0.24.0 h1:56OvJKSH3hDGL0ml5uSxZmz3/3Pq4tJ+fb1unVLAFcY=
 cel.dev/expr v0.24.0/go.mod h1:hLPLo1W4QUmuYdA72RBX06QTs6MXw941piREPl3Yfiw=
-github.com/IBM-Cloud/power-go-client v1.13.0 h1:TqxPlkJe0VkNdV9hYOD5NRepxEFhhyKXWXfg22x2zhU=
-github.com/IBM-Cloud/power-go-client v1.13.0/go.mod h1:SpTK1ttW8bfMNUVQS8qOEuWn2KOkzaCLyzfze8MG1JE=
+github.com/IBM-Cloud/power-go-client v1.14.3 h1:qRA+DnqKSRfcgCeJRDUQXlqipYd6nWtNblubDeRYmhY=
+github.com/IBM-Cloud/power-go-client v1.14.3/go.mod h1:SpTK1ttW8bfMNUVQS8qOEuWn2KOkzaCLyzfze8MG1JE=
 github.com/IBM/go-sdk-core/v5 v5.21.1 h1:RvRth40PoOTC0v8F1wQlvW54ciThpHNqqxabDax6xB8=
 github.com/IBM/go-sdk-core/v5 v5.21.1/go.mod h1:Tdc8FZmYa0A6Aomj4zOEJ22d2gQ/WAIAvJ5273pOn2s=
 github.com/IBM/platform-services-go-sdk v0.90.1 h1:F5DGDxS0I2TjOcDm5brz/GuFe8iA52njOii8aO7z5KQ=
