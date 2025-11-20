@@ -19,9 +19,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/IBM-Cloud/power-go-client/power/models"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"go.uber.org/mock/gomock"
-	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	cloudmocks "sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud/mocks"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/device"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/driver/mocks"
@@ -29,6 +29,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"k8s.io/utils/ptr"
 )
 
 // constants of keys in PublishContext.
@@ -1067,7 +1069,6 @@ func TestNodeGetInfo(t *testing.T) {
 	testCases := []struct {
 		name              string
 		instanceID        string
-		instanceType      string
 		availabilityZone  string
 		volumeAttachLimit int64
 		expMaxVolumes     int64
@@ -1075,8 +1076,7 @@ func TestNodeGetInfo(t *testing.T) {
 		{
 			name:              "success normal",
 			instanceID:        "i-123456789abcdef01",
-			instanceType:      "t2.medium",
-			availabilityZone:  "us-west-2b",
+			availabilityZone:  "syd05",
 			volumeAttachLimit: 30,
 			expMaxVolumes:     30,
 		},
@@ -1093,10 +1093,10 @@ func TestNodeGetInfo(t *testing.T) {
 			mockMounter := mocks.NewMockMounter(mockCtl)
 			mockCloud := cloudmocks.NewMockCloud(mockCtl)
 
-			mockCloud.EXPECT().GetPVMInstanceByID(tc.instanceID).Return(&cloud.PVMInstance{
-				ID:       tc.instanceID,
-				Name:     tc.name,
-				DiskType: "tier3",
+			mockCloud.EXPECT().GetPVMInstanceDetails(tc.instanceID).Return(&models.PVMInstance{
+				PvmInstanceID: ptr.To(tc.instanceID),
+				ServerName:    ptr.To(tc.name),
+				StorageType:   ptr.To("tier3"),
 			}, nil)
 
 			powervsDriver := &nodeService{

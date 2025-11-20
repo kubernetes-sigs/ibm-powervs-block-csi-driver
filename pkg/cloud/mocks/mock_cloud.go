@@ -127,6 +127,21 @@ func (mr *MockCloudMockRecorder) DetachDisk(volumeID, nodeID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachDisk", reflect.TypeOf((*MockCloud)(nil).DetachDisk), volumeID, nodeID)
 }
 
+// GetAllPVMInstanceDisks mocks base method.
+func (m *MockCloud) GetAllPVMInstanceDisks(instanceID string) (*models.Volumes, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllPVMInstanceDisks", instanceID)
+	ret0, _ := ret[0].(*models.Volumes)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllPVMInstanceDisks indicates an expected call of GetAllPVMInstanceDisks.
+func (mr *MockCloudMockRecorder) GetAllPVMInstanceDisks(instanceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllPVMInstanceDisks", reflect.TypeOf((*MockCloud)(nil).GetAllPVMInstanceDisks), instanceID)
+}
+
 // GetDiskByID mocks base method.
 func (m *MockCloud) GetDiskByID(volumeID string) (*cloud.Disk, error) {
 	m.ctrl.T.Helper()
@@ -170,36 +185,6 @@ func (m *MockCloud) GetDiskByNamePrefix(namePrefix string) (*cloud.Disk, error) 
 func (mr *MockCloudMockRecorder) GetDiskByNamePrefix(namePrefix any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDiskByNamePrefix", reflect.TypeOf((*MockCloud)(nil).GetDiskByNamePrefix), namePrefix)
-}
-
-// GetPVMInstanceByID mocks base method.
-func (m *MockCloud) GetPVMInstanceByID(instanceID string) (*cloud.PVMInstance, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPVMInstanceByID", instanceID)
-	ret0, _ := ret[0].(*cloud.PVMInstance)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPVMInstanceByID indicates an expected call of GetPVMInstanceByID.
-func (mr *MockCloudMockRecorder) GetPVMInstanceByID(instanceID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPVMInstanceByID", reflect.TypeOf((*MockCloud)(nil).GetPVMInstanceByID), instanceID)
-}
-
-// GetPVMInstanceByName mocks base method.
-func (m *MockCloud) GetPVMInstanceByName(instanceName string) (*cloud.PVMInstance, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPVMInstanceByName", instanceName)
-	ret0, _ := ret[0].(*cloud.PVMInstance)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPVMInstanceByName indicates an expected call of GetPVMInstanceByName.
-func (mr *MockCloudMockRecorder) GetPVMInstanceByName(instanceName any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPVMInstanceByName", reflect.TypeOf((*MockCloud)(nil).GetPVMInstanceByName), instanceName)
 }
 
 // GetPVMInstanceDetails mocks base method.

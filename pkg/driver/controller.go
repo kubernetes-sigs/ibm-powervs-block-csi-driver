@@ -262,17 +262,17 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		errString := fmt.Sprintf("Volume capabilities %s not supported. Only AccessModes [ReadWriteOnce], [ReadWriteMany], [ReadOnlyMany] supported.", stringModes)
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
-	// Retrieve the details of the VM, which contains the set of disks attached too.
-	pvInst, err := d.cloud.GetPVMInstanceDetails(nodeID)
+	// Retrieve disks attached to the VM.
+	vols, err := d.cloud.GetAllPVMInstanceDisks(nodeID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Instance %q not found, err: %v", nodeID, err)
 	}
 
 	pvInfo := map[string]string{WWNKey: req.VolumeContext[WWNKey]}
 
-	for _, vId := range pvInst.VolumeIDs {
+	for _, volume := range vols.Volumes {
 		// If the volumeID of the request matches with the ID of the disk that is attached to the VM, return success.
-		if vId == volumeID {
+		if *volume.VolumeID == volumeID {
 			klog.V(4).Infof("ControllerPublishVolume: volume %s already attached to node %s, took %s", volumeID, nodeID, time.Since(start))
 			return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
 		}
@@ -310,13 +310,13 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		return nil, status.Error(codes.InvalidArgument, "Node ID not provided")
 	}
 
-	pvInst, err := d.cloud.GetPVMInstanceDetails(nodeID)
+	vols, err := d.cloud.GetAllPVMInstanceDisks(nodeID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "Instance %q not found, err: %v", nodeID, err)
 	}
 
-	for _, vId := range pvInst.VolumeIDs {
-		if vId == volumeID {
+	for _, volume := range vols.Volumes {
+		if *volume.VolumeID == volumeID {
 			klog.V(4).Infof("ControllerUnpublishVolume: Detaching volume %s from node %s", volumeID, nodeID)
 			if err := d.cloud.DetachDisk(volumeID, nodeID); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)

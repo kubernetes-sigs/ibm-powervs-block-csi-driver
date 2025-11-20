@@ -25,6 +25,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"k8s.io/utils/ptr"
+
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/cloud/mocks"
 	"sigs.k8s.io/ibm-powervs-block-csi-driver/pkg/util"
@@ -1051,7 +1053,8 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"ea0a8972-2132-486d-b9f2-6d97d2a52592", "e3fdc39b-5df8-43c4-9b82-d268d2a7230b"}}, nil)
+				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{
+					Volumes: []*models.VolumeReference{{VolumeID: ptr.To("123"), Name: ptr.To("req")}}}, nil)
 				mockCloud.EXPECT().AttachDisk(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(nil)
 
 				powervsDriver := controllerService{
@@ -1227,8 +1230,7 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq("does-not-exist")).Return(nil, cloud.ErrNotFound)
-				// mockCloud.EXPECT().IsExistInstance(gomock.Eq(ctx), gomock.Eq(req.NodeId)).Return(false)
+				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(nil, cloud.ErrNotFound)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
@@ -1265,7 +1267,9 @@ func TestControllerPublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"ea0a8972-2132-486d-b9f2-6d97d2a52592", "e3fdc39b-5df8-43c4-9b82-d268d2a7230b"}}, nil)
+
+				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{
+					Volumes: []*models.VolumeReference{{VolumeID: ptr.To("123"), Name: ptr.To("test-vol")}}}, nil)
 				mockCloud.EXPECT().AttachDisk(gomock.Eq("does-not-exist"), gomock.Eq(expInstanceID)).Return(cloud.ErrNotFound)
 
 				powervsDriver := controllerService{
@@ -1331,7 +1335,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				req := &csi.ControllerUnpublishVolumeRequest{
 					NodeId:   expInstanceID,
-					VolumeId: "vol-test",
+					VolumeId: "12345",
 				}
 				expResp := &csi.ControllerUnpublishVolumeResponse{}
 
@@ -1341,7 +1345,10 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"vol-test", "boot-vol"}}, nil)
+				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{Volumes: []*models.VolumeReference{
+					{VolumeID: ptr.To("12345"), Name: ptr.To("vol-test")},
+					{VolumeID: ptr.To("67899"), Name: ptr.To("boot-vol")},
+				}}, nil)
 				mockCloud.EXPECT().DetachDisk(req.VolumeId, req.NodeId).Return(nil)
 
 				powervsDriver := controllerService{
@@ -1375,7 +1382,8 @@ func TestControllerUnpublishVolume(t *testing.T) {
 				defer mockCtl.Finish()
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
-				mockCloud.EXPECT().GetPVMInstanceDetails(gomock.Eq(expInstanceID)).Return(&models.PVMInstance{VolumeIDs: []string{"boot-vol"}}, nil)
+				mockCloud.EXPECT().GetAllPVMInstanceDisks(req.NodeId).Return(&models.Volumes{Volumes: []*models.VolumeReference{
+					{VolumeID: ptr.To("67899"), Name: ptr.To("boot-vol")}}}, nil)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
