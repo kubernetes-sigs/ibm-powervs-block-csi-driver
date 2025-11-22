@@ -180,7 +180,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if req.GetVolumeContentSource() != nil {
 		return handleClone(d.cloud, req, volName, volSizeBytes, opts)
 	}
-
 	// Check if the disk already exists
 	// Disk exists only if previous createVolume request fails due to any network/tcp error
 	disk, _ := d.cloud.GetDiskByName(volName)
@@ -219,17 +218,9 @@ func (d *controllerService) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 	defer d.volumeLocks.Release(volumeID)
 
-	if _, err := d.cloud.GetDiskByID(volumeID); err != nil {
-		if err == cloud.ErrNotFound {
-			klog.V(4).Info("DeleteVolume: volume not found, returning with success")
-			return &csi.DeleteVolumeResponse{}, nil
-		}
-	}
-
 	if err := d.cloud.DeleteDisk(volumeID); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete volume ID %q: %v", volumeID, err)
 	}
-
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
@@ -262,28 +253,15 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		errString := fmt.Sprintf("Volume capabilities %s not supported. Only AccessModes [ReadWriteOnce], [ReadWriteMany], [ReadOnlyMany] supported.", stringModes)
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
-	// Retrieve disks attached to the VM.
-	vols, err := d.cloud.GetAllPVMInstanceDisks(nodeID)
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "Instance %q not found, err: %v", nodeID, err)
-	}
 
 	pvInfo := map[string]string{WWNKey: req.VolumeContext[WWNKey]}
 
-	for _, volume := range vols.Volumes {
-		// If the volumeID of the request matches with the ID of the disk that is attached to the VM, return success.
-		if *volume.VolumeID == volumeID {
-			klog.V(4).Infof("ControllerPublishVolume: volume %s already attached to node %s, took %s", volumeID, nodeID, time.Since(start))
-			return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
-		}
-	}
-	// When there are no associated disks, attach the created disk to the VM.
-	err = d.cloud.AttachDisk(volumeID, nodeID)
+	err := d.cloud.AttachDisk(volumeID, nodeID)
 	if err != nil {
-		if err == cloud.ErrAlreadyExists {
+		if strings.Contains(err.Error(), cloud.ErrConflictVolumeAlreadyExists.Error()) {
 			return nil, status.Error(codes.AlreadyExists, err.Error())
 		}
-		if err == cloud.ErrNotFound {
+		if strings.Contains(err.Error(), cloud.ErrBadRequestVolumeNotFound.Error()) || strings.Contains(err.Error(), cloud.ErrPVInstanceNotFound.Error()) {
 			return nil, status.Errorf(codes.NotFound, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
@@ -310,18 +288,13 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		return nil, status.Error(codes.InvalidArgument, "Node ID not provided")
 	}
 
-	vols, err := d.cloud.GetAllPVMInstanceDisks(nodeID)
+	err := d.cloud.DetachDisk(volumeID, nodeID)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "Instance %q not found, err: %v", nodeID, err)
-	}
-
-	for _, volume := range vols.Volumes {
-		if *volume.VolumeID == volumeID {
-			klog.V(4).Infof("ControllerUnpublishVolume: Detaching volume %s from node %s", volumeID, nodeID)
-			if err := d.cloud.DetachDisk(volumeID, nodeID); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not detach volume %q from node %q: %v", volumeID, nodeID, err)
-			}
+		if strings.Contains(err.Error(), cloud.ErrVolumeDetachNotFound.Error()) {
+			klog.V(4).Infof("ControllerUnpublishVolume: volume %s is detached from node %s, took %s", volumeID, nodeID, time.Since(start))
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
+		return nil, status.Errorf(codes.Internal, "Could not attach volume %q to node %q: %v", volumeID, nodeID, err)
 	}
 	// The volume in not associated, return success.
 	klog.V(4).Infof("ControllerUnpublishVolume: volume %s is detached from node %s, took %s", volumeID, nodeID, time.Since(start))

@@ -54,6 +54,18 @@ var (
 
 	// ErrAlreadyExists is returned when a resource is already existent.
 	ErrAlreadyExists = errors.New("resource already exists")
+
+	ErrVolumeNameAlreadyExists = errors.New("volume name already exists for cloud instance")
+
+	ErrVolumeNotFound = errors.New("volume not found")
+
+	ErrConflictVolumeAlreadyExists = errors.New("Conflict: unable to attach volumes to the server")
+
+	ErrBadRequestVolumeNotFound = errors.New("Bad Request: the following volumes do not exist")
+
+	ErrPVInstanceNotFound = errors.New("pvm-instance not found")
+
+	ErrVolumeDetachNotFound = errors.New("volume does not exist")
 )
 
 // Disk represents a PowerVS volume.

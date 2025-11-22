@@ -143,12 +143,6 @@ func (p *fakeCloudProvider) CheckStorageTierAvailability(storageTier string) err
 	return errors.New("not a valid storageTier")
 }
 
-func (p *fakeCloudProvider) GetAllPVMInstanceDisks(_ string) (volumes *models.Volumes, err error) {
-	return &models.Volumes{Volumes: []*models.VolumeReference{{
-		VolumeID: ptr.To("123"),
-	}}}, nil
-}
-
 func (p *fakeCloudProvider) GetPVMInstanceDetails(instanceID string) (*models.PVMInstance, error) {
 	return &models.PVMInstance{
 		PvmInstanceID: &instanceID,
