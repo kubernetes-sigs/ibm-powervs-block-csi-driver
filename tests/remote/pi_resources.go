@@ -132,6 +132,7 @@ func (r *Remote) createPublicNetwork(network string) (string, error) {
 		if _, err := nc.Create(&models.NetworkCreate{Name: network, Type: &netType}); err != nil {
 			return "", err
 		}
+		time.Sleep(20 * time.Second)
 		net, err := waitForNetworkVLAN(network, nc)
 		if err != nil {
 			return "", err
@@ -196,6 +197,7 @@ func (r *Remote) createInstance(image, network string) (string, string, error) {
 		return "", "", fmt.Errorf("error while fetching pvm instance: %v", err)
 	}
 
+	time.Sleep(1 * time.Minute)
 	in, err := waitForInstanceHealth(insID, ic)
 	if err != nil {
 		return "", "", fmt.Errorf("error while waiting for pvm instance status: %v", err)
