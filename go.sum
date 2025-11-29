@@ -4,8 +4,8 @@ github.com/IBM-Cloud/power-go-client v1.14.3 h1:qRA+DnqKSRfcgCeJRDUQXlqipYd6nWtN
 github.com/IBM-Cloud/power-go-client v1.14.3/go.mod h1:SpTK1ttW8bfMNUVQS8qOEuWn2KOkzaCLyzfze8MG1JE=
 github.com/IBM/go-sdk-core/v5 v5.21.2 h1:mJ5QbLPOm4g5qhZiVB6wbSllfpeUExftGoyPek2hk4M=
 github.com/IBM/go-sdk-core/v5 v5.21.2/go.mod h1:ngpMgwkjur1VNUjqn11LPk3o5eCyOCRbcfg/0YAY7Hc=
-github.com/IBM/platform-services-go-sdk v0.90.1 h1:F5DGDxS0I2TjOcDm5brz/GuFe8iA52njOii8aO7z5KQ=
-github.com/IBM/platform-services-go-sdk v0.90.1/go.mod h1:0SsqAJWpr0GQjvh3ityn0qHdknMPIqOMl6QW05ebz0g=
+github.com/IBM/platform-services-go-sdk v0.90.2 h1:U0bUZrQ03PPpcKXJzGBU4FWkm3+xAjKENJrGO3k4xjs=
+github.com/IBM/platform-services-go-sdk v0.90.2/go.mod h1:KAnBhxKaYsu9It2aVXV6oCPEj78imvTs2qSG0ScZKpM=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/antlr4-go/antlr/v4 v4.13.0 h1:lxCg3LAv+EUK6t1i0y1V6/SLeUi0eKEKdhQAlS8TVTI=
