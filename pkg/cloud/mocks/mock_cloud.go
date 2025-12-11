@@ -42,11 +42,12 @@ func (m *MockCloud) EXPECT() *MockCloudMockRecorder {
 }
 
 // AttachDisk mocks base method.
-func (m *MockCloud) AttachDisk(volumeID, nodeID string) error {
+func (m *MockCloud) AttachDisk(volumeID, nodeID string) (*models.Volume, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AttachDisk", volumeID, nodeID)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*models.Volume)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AttachDisk indicates an expected call of AttachDisk.
@@ -114,11 +115,12 @@ func (mr *MockCloudMockRecorder) DeleteDisk(volumeID any) *gomock.Call {
 }
 
 // DetachDisk mocks base method.
-func (m *MockCloud) DetachDisk(volumeID, nodeID string) error {
+func (m *MockCloud) DetachDisk(volumeID, nodeID string) (*models.Volume, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DetachDisk", volumeID, nodeID)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*models.Volume)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // DetachDisk indicates an expected call of DetachDisk.
@@ -245,11 +247,12 @@ func (mr *MockCloudMockRecorder) WaitForCloneStatus(taskId any) *gomock.Call {
 }
 
 // WaitForVolumeState mocks base method.
-func (m *MockCloud) WaitForVolumeState(volumeID, state string) error {
+func (m *MockCloud) WaitForVolumeState(volumeID, state string) (*models.Volume, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForVolumeState", volumeID, state)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*models.Volume)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // WaitForVolumeState indicates an expected call of WaitForVolumeState.

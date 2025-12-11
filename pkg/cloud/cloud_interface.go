@@ -23,11 +23,11 @@ import (
 type Cloud interface {
 	CreateDisk(volumeName string, diskOptions *DiskOptions) (disk *Disk, err error)
 	DeleteDisk(volumeID string) (err error)
-	AttachDisk(volumeID string, nodeID string) (err error)
-	DetachDisk(volumeID string, nodeID string) (err error)
+	AttachDisk(volumeID string, nodeID string) (*models.Volume, error)
+	DetachDisk(volumeID string, nodeID string) (*models.Volume, error)
 	ResizeDisk(volumeID string, reqSize int64) (newSize int64, err error)
 	CloneDisk(sourceVolumeName string, cloneVolumeName string) (disk *Disk, err error)
-	WaitForVolumeState(volumeID, state string) error
+	WaitForVolumeState(volumeID, state string) (*models.Volume, error)
 	WaitForCloneStatus(taskId string) error
 	GetDiskByName(name string) (disk *Disk, err error)
 	GetDiskByNamePrefix(namePrefix string) (disk *Disk, err error)

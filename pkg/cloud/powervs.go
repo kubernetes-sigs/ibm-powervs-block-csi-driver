@@ -128,7 +128,7 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 	if err != nil {
 		return nil, err
 	}
-	err = p.WaitForVolumeState(*v.VolumeID, VolumeAvailableState)
+	v, err = p.WaitForVolumeState(*v.VolumeID, VolumeAvailableState)
 	if err != nil {
 		return nil, err
 	}
@@ -151,16 +151,16 @@ func (p *powerVSCloud) DeleteDisk(volumeID string) (err error) {
 	return nil
 }
 
-func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (err error) {
+func (p *powerVSCloud) AttachDisk(volumeID string, nodeID string) (vol *models.Volume, err error) {
 	if err = p.volClient.Attach(nodeID, volumeID); err != nil {
-		return err
+		return nil, err
 	}
 	return p.WaitForVolumeState(volumeID, VolumeInUseState)
 }
 
-func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (err error) {
+func (p *powerVSCloud) DetachDisk(volumeID string, nodeID string) (vol *models.Volume, err error) {
 	if err = p.volClient.Detach(nodeID, volumeID); err != nil {
-		return err
+		return nil, err
 	}
 	return p.WaitForVolumeState(volumeID, VolumeAvailableState)
 }
@@ -216,24 +216,27 @@ func (p *powerVSCloud) CloneDisk(sourceVolumeID string, cloneVolumeName string) 
 		return nil, errors.New("cloned volume not found")
 	}
 	clonedVolumeID := clonedVolumeDetails.ClonedVolumes[0].ClonedVolumeID
-	err = p.WaitForVolumeState(clonedVolumeID, VolumeAvailableState)
+	_, err = p.WaitForVolumeState(clonedVolumeID, VolumeAvailableState)
 	if err != nil {
 		return nil, err
 	}
 	return p.GetDiskByID(clonedVolumeID)
 }
 
-func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) error {
+func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) (*models.Volume, error) {
 	ctx := context.Background()
+	var vol *models.Volume
+	var err error
 	klog.V(4).Infof("Waiting for volume %s to be in %q state", volumeID, state)
-	return wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
-		v, err := p.volClient.Get(volumeID)
+	err = wait.PollUntilContextTimeout(ctx, PollInterval, PollTimeout, true, func(ctx context.Context) (bool, error) {
+		vol, err = p.volClient.Get(volumeID)
 		if err != nil {
 			return false, err
 		}
-		spew.Dump(v)
-		return v.State == state, nil
+		spew.Dump(vol)
+		return vol.State == state, nil
 	})
+	return vol, err
 }
 
 func (p *powerVSCloud) WaitForCloneStatus(cloneTaskId string) error {
@@ -249,12 +252,14 @@ func (p *powerVSCloud) WaitForCloneStatus(cloneTaskId string) error {
 }
 
 func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
+	klog.Infof("Looking for volume by name: %s", name)
 	vols, err := p.volClient.GetAll()
 	if err != nil {
 		return nil, err
 	}
 	for _, v := range vols.Volumes {
 		if name == *v.Name {
+			klog.Infof("Found volume by name: %s", *v.Name)
 			return &Disk{
 				Name:        *v.Name,
 				DiskType:    *v.DiskType,
