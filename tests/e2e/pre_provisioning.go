@@ -96,7 +96,7 @@ var _ = Describe("[powervs-csi-e2e]Pre-Provisioned", func() {
 	AfterEach(func() {
 		skipManuallyDeletingVolume = true
 		if !skipManuallyDeletingVolume {
-			err := cloud.WaitForVolumeState(volumeID, "detached")
+			_, err := cloud.WaitForVolumeState(volumeID, "detached")
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Detach volume has failed. err: %v", err))
 			err = cloud.DeleteDisk(volumeID)
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Disk deletion has failed. err: %v", err))

@@ -27,7 +27,7 @@ type Cloud interface {
 	DetachDisk(volumeID string, nodeID string) (err error)
 	ResizeDisk(volumeID string, reqSize int64) (newSize int64, err error)
 	CloneDisk(sourceVolumeName string, cloneVolumeName string) (disk *Disk, err error)
-	WaitForVolumeState(volumeID, state string) error
+	WaitForVolumeState(volumeID, state string) (*models.Volume, error)
 	WaitForCloneStatus(taskId string) error
 	GetDiskByName(name string) (disk *Disk, err error)
 	GetDiskByNamePrefix(namePrefix string) (disk *Disk, err error)

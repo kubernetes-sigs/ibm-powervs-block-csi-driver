@@ -206,8 +206,8 @@ func (c *fakeCloudProvider) IsAttached(volumeID string, nodeID string) (err erro
 	return nil
 }
 
-func (c *fakeCloudProvider) WaitForVolumeState(volumeID, expectedState string) error {
-	return nil
+func (c *fakeCloudProvider) WaitForVolumeState(volumeID, expectedState string) (*models.Volume, error) {
+	return &models.Volume{VolumeID: ptr.To("a1b2c3-d4e5f6")}, nil
 }
 
 func (c *fakeCloudProvider) WaitForCloneStatus(cloneTaskId string) error {
@@ -224,7 +224,7 @@ func (c *fakeCloudProvider) GetDiskByName(name string) (*cloud.Disk, error) {
 	} else if len(disks) == 1 {
 		return disks[0].Disk, nil
 	}
-	return nil, nil
+	return nil, cloud.ErrNotFound
 }
 
 func (c *fakeCloudProvider) GetDiskByNamePrefix(namePrefix string) (*cloud.Disk, error) {

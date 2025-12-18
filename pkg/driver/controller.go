@@ -18,6 +18,7 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -182,7 +183,7 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	// Check if the disk already exists
 	// Disk exists only if previous createVolume request fails due to any network/tcp error
-	disk, _ := d.cloud.GetDiskByName(volName)
+	disk, err := d.cloud.GetDiskByName(volName)
 	if disk != nil {
 		// wait for volume to be available as the volume already exists
 		klog.V(3).Infof("CreateVolume: Found an existing volume %s in %q state.", volName, disk.State)
@@ -191,15 +192,24 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			return nil, err
 		}
 		if disk.State != cloud.VolumeAvailableState {
-			err = d.cloud.WaitForVolumeState(disk.VolumeID, cloud.VolumeAvailableState)
+			vol, err := d.cloud.WaitForVolumeState(disk.VolumeID, cloud.VolumeAvailableState)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Disk exists, but not in required state. Current:%s Required:%s", disk.State, cloud.VolumeAvailableState)
 			}
+			// When the disk is still in the "Creating" state, the WWN will not be available.
+			// In such a case, once when the volume is available, assign the WWN to the disk if not already assigned.
+			if disk.WWN == "" {
+				disk.WWN = vol.Wwn
+			}
 		}
 	} else {
-		disk, err = d.cloud.CreateDisk(volName, opts)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
+		if errors.Is(err, cloud.ErrNotFound) {
+			disk, err = d.cloud.CreateDisk(volName, opts)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
+			}
+		} else {
+			return nil, status.Errorf(codes.Internal, "Could not find volume by name %q: %v", volName, err)
 		}
 	}
 	klog.V(3).Infof("CreateVolume: created volume %s, took %s", volName, time.Since(start))
