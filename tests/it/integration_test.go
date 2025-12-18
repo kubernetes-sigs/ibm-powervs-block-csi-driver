@@ -29,6 +29,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"k8s.io/klog/v2"
 )
 
@@ -97,35 +98,36 @@ func testCreateAttachWriteReadDetachDelete() {
 	Expect(err).To(BeNil())
 	klog.Infof("Ran NodeGetInfo with response %v", niResp)
 
-	testAttachStagePublishDetach(volume.VolumeId)
+	testAttachStagePublishDetach(volume)
 }
 
-func testAttachStagePublishDetach(volumeID string) {
-	klog.Infof("Attaching volume %s to node %s", volumeID, nodeID)
+func testAttachStagePublishDetach(volume *csi.Volume) {
+	klog.Infof("Attaching volume %s to node %s", volume.VolumeId, nodeID)
 	start := time.Now()
 	respAttach, err := csiClient.ctrl.ControllerPublishVolume(context.Background(), &csi.ControllerPublishVolumeRequest{
-		VolumeId:         volumeID,
+		VolumeId:         volume.VolumeId,
 		NodeId:           nodeID,
 		VolumeCapability: stdVolCap[0],
+		VolumeContext:    volume.VolumeContext,
 	})
-	Expect(err).To(BeNil(), "failed attaching volume %s to node %s", volumeID, nodeID)
+	Expect(err).To(BeNil(), "failed attaching volume %s to node %s", volume.VolumeId, nodeID)
 	// assertAttachmentState(volumeID, "attached")
 	klog.Infof("Attached volume with response %v in %v", respAttach.PublishContext, time.Since(start))
 
 	defer func() {
-		klog.Infof("Detaching volume %s from node %s", volumeID, nodeID)
+		klog.Infof("Detaching volume %s from node %s", volume.VolumeId, nodeID)
 		start := time.Now()
 		_, err = csiClient.ctrl.ControllerUnpublishVolume(context.Background(), &csi.ControllerUnpublishVolumeRequest{
-			VolumeId: volumeID,
+			VolumeId: volume.VolumeId,
 			NodeId:   nodeID,
 		})
-		Expect(err).To(BeNil(), "failed detaching volume %s from node %s", volumeID, nodeID)
+		Expect(err).To(BeNil(), "failed detaching volume %s from node %s", volume.VolumeId, nodeID)
 		// assertAttachmentState(volumeID, "detached")
-		klog.Infof("Detached volume %s from node %s in %v", volumeID, nodeID, time.Since(start))
+		klog.Infof("Detached volume %s from node %s in %v", volume.VolumeId, nodeID, time.Since(start))
 	}()
 
 	if os.Getenv("TEST_REMOTE_NODE") == "1" {
-		testStagePublish(volumeID, respAttach.PublishContext["wwn"])
+		testStagePublish(volume.VolumeId, respAttach.PublishContext["wwn"])
 	}
 }
 
