@@ -17,6 +17,7 @@ limitations under the License.
 package device
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -46,7 +47,7 @@ func getPathsCount(mapper string) (count int, err error) {
 	// TODO: This can be achieved reading the full line processing instead of piped command
 	statusCmd := fmt.Sprintf("dmsetup status --target multipath %s | awk 'BEGIN{RS=\" \";active=0}/[0-9]+:[0-9]+/{dev=1}/A/{if (dev == 1) active++; dev=0} END{ print active }'", mapper)
 
-	outBytes, err := exec.Command("bash", "-c", statusCmd).CombinedOutput()
+	outBytes, err := exec.CommandContext(context.Background(), "bash", "-c", statusCmd).CombinedOutput()
 	out := strings.TrimSuffix(string(outBytes), "\n")
 	if err != nil || isDmsetupStatusError(out) {
 		return 0, fmt.Errorf("error while running dmsetup status command: %s : %v", out, err)
@@ -81,7 +82,7 @@ func retryCleanupDevice(dev *Device) error {
 // multipathDisableQueuing disable queueing on the multipath device.
 func multipathDisableQueuing(mapper string) error {
 	args := []string{"message", mapper, "0", "fail_if_no_path"}
-	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
+	outBytes, err := exec.CommandContext(context.Background(), dmsetupcommand, args...).CombinedOutput()
 	out := string(outBytes)
 	if err != nil {
 		return fmt.Errorf("cannot disable queuing: %s : %v", out, err)
@@ -106,7 +107,7 @@ func multipathRemoveDmDevice(mapper string) error {
 	}
 
 	args := []string{"remove", "--force", mapper}
-	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
+	outBytes, err := exec.CommandContext(context.Background(), dmsetupcommand, args...).CombinedOutput()
 	out := string(outBytes)
 	if err != nil {
 		return fmt.Errorf("failed to remove device map for %s : %s : %v", mapper, out, err)
@@ -125,7 +126,7 @@ func isDmsetupRemoveError(msg string) bool {
 // cleanupOrphanPaths find orphan paths and remove them (best effort).
 func cleanupOrphanPaths() {
 	// run multipathd show paths and fetch orphan maps
-	outBytes, err := exec.Command(multipathd, showPathsFormat...).CombinedOutput()
+	outBytes, err := exec.CommandContext(context.Background(), multipathd, showPathsFormat...).CombinedOutput()
 	if err != nil {
 		klog.Warningf("failed to run multipathd %v, err: %s", showPathsFormat, err)
 		return

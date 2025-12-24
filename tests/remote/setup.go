@@ -17,10 +17,12 @@ limitations under the License.
 package remote
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -30,8 +32,6 @@ import (
 )
 
 const (
-	osLinux         = "linux"
-	arch            = "ppc64le"
 	binName         = "ibm-powervs-block-csi-driver"
 	binPath         = "bin/" + binName
 	tarName         = "powervs-csi-driver-binary.tar.gz"
@@ -112,7 +112,7 @@ func (r *Remote) createDriverArchive() (err error) {
 }
 
 func setupBinariesLocally(tarDir string) error {
-	cmd := exec.Command("make", "GOOS="+osLinux, "GOARCH="+arch, "driver")
+	cmd := exec.CommandContext(context.Background(), "make", "GOOS="+runtime.GOOS, "GOARCH="+runtime.GOARCH, "driver")
 	cmd.Dir = "../.."
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -124,13 +124,13 @@ func setupBinariesLocally(tarDir string) error {
 	if _, err := os.Stat(bPath); err != nil {
 		return fmt.Errorf("failed to locate test binary %s: %v", binPath, err)
 	}
-	out, err = exec.Command("cp", bPath, tarDir).CombinedOutput()
+	out, err = exec.CommandContext(context.Background(), "cp", bPath, tarDir).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to copy %s: %s: %v", bPath, string(out), err)
 	}
 
 	// Build the tar
-	out, err = exec.Command("tar", "-zcvf", tarName, "-C", tarDir, ".").CombinedOutput()
+	out, err = exec.CommandContext(context.Background(), "tar", "-zcvf", tarName, "-C", tarDir, ".").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to build tar: %s: %v", string(out), err)
 	}
@@ -199,7 +199,7 @@ func (r *Remote) createSSHTunnel(endpoint string) error {
 		"-nNT", "-L", fmt.Sprintf("%s:localhost:%s", port, port), fmt.Sprintf("%s@%s", sshUser, r.publicIP)}
 
 	klog.Infof("Executing SSH command: ssh %v", args)
-	sshCmd := exec.Command("ssh", args...)
+	sshCmd := exec.CommandContext(context.Background(), "ssh", args...)
 	err := sshCmd.Start()
 	if err != nil {
 		return err

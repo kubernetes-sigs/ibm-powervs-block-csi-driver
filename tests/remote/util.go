@@ -17,6 +17,7 @@ limitations under the License.
 package remote
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -38,7 +39,7 @@ func runRemoteCommand(publicIP string, arg ...string) (string, error) {
 }
 
 func runCommand(cmd string, args ...string) (string, error) {
-	output, err := exec.Command(cmd, args...).CombinedOutput()
+	output, err := exec.CommandContext(context.Background(), cmd, args...).CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("command [%s %s] failed with error: %v", cmd, strings.Join(args, " "), err.Error())
 	}
