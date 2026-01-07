@@ -41,7 +41,7 @@ func (r *Remote) createPVSResources() (err error) {
 	}
 
 	if image, err = getEnvVar("POWERVS_IMAGE"); err != nil {
-		image = "CentOS-Stream-8"
+		image = "CentOS-Stream-9"
 		if err = r.createImage(image); err != nil {
 			return fmt.Errorf("error while creating ibm pi image: %v", err)
 		}
