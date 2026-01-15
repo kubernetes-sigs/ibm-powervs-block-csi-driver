@@ -1,6 +1,6 @@
 module sigs.k8s.io/ibm-powervs-block-csi-driver
 
-go 1.24.6
+go 1.25.0
 
 require (
 	github.com/IBM-Cloud/power-go-client v1.14.4
@@ -18,13 +18,13 @@ require (
 	golang.org/x/sys v0.40.0
 	google.golang.org/grpc v1.78.0
 	gopkg.in/gcfg.v1 v1.2.3
-	k8s.io/api v0.34.3
-	k8s.io/apimachinery v0.34.3
-	k8s.io/client-go v0.34.3
+	k8s.io/api v0.35.0
+	k8s.io/apimachinery v0.35.0
+	k8s.io/client-go v0.35.0
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubernetes v1.34.3
-	k8s.io/mount-utils v0.34.3
-	k8s.io/pod-security-admission v0.34.3
+	k8s.io/kubernetes v1.35.0
+	k8s.io/mount-utils v0.35.0
+	k8s.io/pod-security-admission v0.35.0
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	sigs.k8s.io/controller-runtime v0.22.4
 )
@@ -92,19 +92,19 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/selinux v1.13.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.22.0 // indirect
-	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.62.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/prometheus/client_golang v1.23.2 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
+	github.com/prometheus/common v0.66.1 // indirect
+	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/spf13/cobra v1.10.0 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.6 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.34.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.34.0 // indirect
@@ -130,16 +130,16 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251029180050-ab9386a59fda // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
-	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.34.3 // indirect
-	k8s.io/apiserver v0.34.3 // indirect
-	k8s.io/component-base v0.34.3 // indirect
-	k8s.io/component-helpers v0.34.3 // indirect
+	k8s.io/apiserver v0.35.0 // indirect
+	k8s.io/component-base v0.35.0 // indirect
+	k8s.io/component-helpers v0.35.0 // indirect
 	k8s.io/controller-manager v0.34.3 // indirect
 	k8s.io/csi-translation-lib v0.34.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
