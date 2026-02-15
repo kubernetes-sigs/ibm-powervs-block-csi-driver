@@ -88,7 +88,7 @@ clean:
 	rm -rf bin/*
 
 bin/mockgen: | bin
-	go install go.uber.org/mock/mockgen@v0.4.0
+	go install go.uber.org/mock/mockgen@v0.6.0
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
@@ -96,7 +96,7 @@ bin/golangci-lint: | bin
 
 bin/govulncheck: | bin
 	echo "Installing govulncheck..."
-	go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
+	go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
 mockgen: bin/mockgen
 	./hack/update-gomock
