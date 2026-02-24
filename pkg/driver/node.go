@@ -35,7 +35,6 @@ import (
 )
 
 const (
-
 	// FSTypeExt2 represents the ext2 filesystem type.
 	FSTypeExt2 = "ext2"
 	// FSTypeExt3 represents the ext3 filesystem type.
@@ -45,10 +44,11 @@ const (
 	// FSTypeXfs represents te xfs filesystem type.
 	FSTypeXfs = "xfs"
 	// default file system type to be used when it is not provided.
-	defaultFsType = "ext4"
+	defaultFsType = FSTypeExt4
 
 	// defaultMaxVolumesPerInstance is the limit of volumes can be attached in the PowerVS environment.
-	// TODO: rightnow 99 is just a placeholder, this needs to be changed post discussion with PowerVS team.
+	// The Virtual Server instance can have more than 127 data volumes (upto 500) but with certain limitations.
+	// See: https://cloud.ibm.com/docs/power-iaas?topic=power-iaas-creating-power-virtual-server#config-large-vol
 	defaultMaxVolumesPerInstance = 127 - 1
 )
 

@@ -268,6 +268,20 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 
 	err := d.cloud.AttachDisk(volumeID, nodeID)
 	if err != nil {
+		// Check if the volume is attached to the Node already, this occurs during an API delay while the subsequent reconcile tries attaching
+		// the volume that is already attached.
+		if strings.Contains(err.Error(), cloud.ErrVolumesPostConflict.Error()) {
+			pvInst, err := d.cloud.GetPVMInstanceDetails(req.NodeId)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get PVM instance details to confirm volume attach: %v", err)
+			}
+			for _, volId := range pvInst.VolumeIDs {
+				if volId == volumeID {
+					return &csi.ControllerPublishVolumeResponse{PublishContext: pvInfo}, nil
+				}
+			}
+			return nil, status.Errorf(codes.Internal, "Volume %s found in a conflicting state that prevents attach to %s node.", volumeID, req.NodeId)
+		}
 		if strings.Contains(err.Error(), cloud.ErrConflictVolumeAlreadyExists.Error()) {
 			return nil, status.Error(codes.AlreadyExists, err.Error())
 		}
