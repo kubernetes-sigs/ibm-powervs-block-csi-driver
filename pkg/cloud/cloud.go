@@ -63,6 +63,8 @@ var (
 
 	ErrBadRequestVolumeNotFound = errors.New("Bad Request: the following volumes do not exist")
 
+	ErrVolumesPostConflict = errors.New("volume has status 'in-use'")
+
 	ErrPVInstanceNotFound = errors.New("pvm-instance not found")
 
 	ErrVolumeDetachNotFound = errors.New("volume does not exist")

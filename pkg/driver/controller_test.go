@@ -1077,7 +1077,6 @@ func TestControllerPublishVolume(t *testing.T) {
 		name     string
 		testFunc func(t *testing.T)
 	}{
-
 		{
 			name: "successful publication of a newly provisioned volume",
 			testFunc: func(t *testing.T) {
@@ -1100,6 +1099,50 @@ func TestControllerPublishVolume(t *testing.T) {
 
 				mockCloud := mocks.NewMockCloud(mockCtl)
 				mockCloud.EXPECT().AttachDisk(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(nil)
+
+				powervsDriver := controllerService{
+					cloud:         mockCloud,
+					driverOptions: &Options{},
+					volumeLocks:   util.NewVolumeLocks(),
+				}
+
+				resp, err := powervsDriver.ControllerPublishVolume(ctx, req)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				if !reflect.DeepEqual(resp, expResp) {
+					t.Fatalf("Expected resp to be %+v, got: %+v", expResp, resp)
+				}
+			},
+		},
+
+		{
+			name: "successful publication of a newly provisioned volume on subsequent reconcile due to API delay",
+			testFunc: func(t *testing.T) {
+				req := &csi.ControllerPublishVolumeRequest{
+					NodeId:           expInstanceID,
+					VolumeCapability: stdVolCap,
+					VolumeId:         volumeName,
+					VolumeContext: map[string]string{
+						WWNKey: expDevicePath,
+					},
+				}
+				expResp := &csi.ControllerPublishVolumeResponse{
+					PublishContext: map[string]string{WWNKey: expDevicePath},
+				}
+
+				ctx := context.Background()
+
+				mockCtl := gomock.NewController(t)
+				defer mockCtl.Finish()
+
+				mockCloud := mocks.NewMockCloud(mockCtl)
+				mockCloud.EXPECT().AttachDisk(gomock.Eq(volumeName), gomock.Eq(expInstanceID)).Return(errors.New("pcloudPvminstancesVolumesPostConflict " +
+					"{\"description\":\"Conflict: volume x attach to server y, " +
+					"volume has status 'in-use' and needs to be 'available', 'creating', or 'in-use' with multiattach enabled\"," +
+					"\"error\":\"Conflict\"} "))
+				mockCloud.EXPECT().GetPVMInstanceDetails(req.NodeId).Return(&models.PVMInstance{VolumeIDs: []string{volumeName}}, nil)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,
