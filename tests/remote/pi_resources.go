@@ -276,8 +276,9 @@ func waitForInstanceSSH(publicIP string) error {
 	err := wait.PollUntilContextTimeout(context.Background(), 20*time.Second, 30*time.Minute, true, func(context.Context) (bool, error) {
 		outp, err := runRemoteCommand(publicIP, "hostname")
 		klog.Infof("out: %s, err: %v", outp, err)
-		if strings.Contains(outp, "Connection timed out") {
-			klog.Warningf("Ignoring SSH Connection timed out error")
+		// Handle (Operation|Connection) timed out and Connection refused due to SSH service initialization.
+		if strings.Contains(outp, "timed out") || strings.Contains(outp, "Connection refused") {
+			klog.Warningf("Ignoring error related to sshd initialization on remote machine")
 			return false, nil
 		}
 		if err != nil {
