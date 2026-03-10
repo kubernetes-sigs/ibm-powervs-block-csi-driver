@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -49,7 +50,7 @@ func (su *VolumeStatUtils) IsBlockDevice(devicePath string) (bool, error) {
 
 // DeviceInfo returns the size of the block device in bytes.
 func (su *VolumeStatUtils) DeviceInfo(devicePath string) (int64, error) {
-	output, err := exec.Command("blockdev", "--getsize64", devicePath).CombinedOutput()
+	output, err := exec.CommandContext(context.Background(), "blockdev", "--getsize64", devicePath).CombinedOutput()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get size of block volume at path %s: output: %s, err: %v", devicePath, string(output), err)
 	}

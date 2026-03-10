@@ -116,14 +116,15 @@ func newCSIClient() (*CSIClient, error) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		// grpc.WithBlock(),
 		grpc.WithContextDialer(
-			func(context.Context, string) (net.Conn, error) {
+			func(ctx context.Context, _ string) (net.Conn, error) {
 				scheme, addr, err := util.ParseEndpoint(endpoint)
 				if err != nil {
 					return nil, err
 				}
 				var conn net.Conn
 				err = wait.PollUntilContextTimeout(context.Background(), 10*time.Second, 3*time.Minute, true, func(context.Context) (bool, error) {
-					conn, err = net.Dial(scheme, addr)
+					dialer := net.Dialer{}
+					conn, err = dialer.DialContext(ctx, scheme, addr)
 					if errors.Is(err, syscall.ECONNREFUSED) {
 						klog.Info("Endpoint is not available yet")
 						return false, nil

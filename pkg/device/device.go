@@ -17,6 +17,7 @@ limitations under the License.
 package device
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -62,7 +63,7 @@ func (d *Device) GetMapper() string {
 // Populate get all linux Devices.
 func (d *Device) Populate(needActivePath bool) error {
 	args := []string{"ls", "--target", "multipath"}
-	outBytes, err := exec.Command(dmsetupcommand, args...).CombinedOutput()
+	outBytes, err := exec.CommandContext(context.Background(), dmsetupcommand, args...).CombinedOutput()
 	out := string(outBytes)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve multipath devices: %s", out)

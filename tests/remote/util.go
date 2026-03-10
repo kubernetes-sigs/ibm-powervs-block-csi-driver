@@ -17,6 +17,7 @@ limitations under the License.
 package remote
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -29,7 +30,8 @@ import (
 )
 
 func runRemoteCommand(publicIP string, arg ...string) (string, error) {
-	args := []string{"-i", sshDefaultKey, "-o", "StrictHostKeyChecking no", fmt.Sprintf("%s@%s", sshUser, publicIP), "--"}
+	args := make([]string, 0, 6+len(arg))
+	args = append(args, "-i", sshDefaultKey, "-o", "StrictHostKeyChecking no", fmt.Sprintf("%s@%s", sshUser, publicIP), "--")
 	args = append(args, arg...)
 
 	// Should we print?; May contain sensitive information
@@ -38,7 +40,7 @@ func runRemoteCommand(publicIP string, arg ...string) (string, error) {
 }
 
 func runCommand(cmd string, args ...string) (string, error) {
-	output, err := exec.Command(cmd, args...).CombinedOutput()
+	output, err := exec.CommandContext(context.Background(), cmd, args...).CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("command [%s %s] failed with error: %v", cmd, strings.Join(args, " "), err.Error())
 	}

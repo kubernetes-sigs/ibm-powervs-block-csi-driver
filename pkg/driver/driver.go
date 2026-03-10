@@ -109,7 +109,8 @@ func (d *Driver) Run() error {
 		return err
 	}
 
-	listener, err := net.Listen(scheme, addr)
+	lc := net.ListenConfig{}
+	listener, err := lc.Listen(context.Background(), scheme, addr)
 	if err != nil {
 		return err
 	}

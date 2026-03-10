@@ -106,7 +106,7 @@ func (pod *PodDetails) SetupWithPreProvisionedVolumes(client clientset.Interface
 }
 
 func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestDeployment, []func()) {
-	cleanupFuncs := make([]func(), 0)
+	cleanupFuncs := make([]func(), 0, 3)
 	volume := pod.Volumes[0]
 	By("setting up the StorageClass")
 
@@ -127,7 +127,7 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 }
 
 func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.PreProvisionedVolumeTestDriver) (*TestPersistentVolumeClaim, []func()) {
-	cleanupFuncs := make([]func(), 0)
+	cleanupFuncs := make([]func(), 0, 2)
 	By("setting up the PV")
 	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.FSType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name)
 	tpv := NewTestPreProvisionedPersistentVolume(client, pv)
@@ -143,7 +143,7 @@ func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client cli
 }
 
 func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPersistentVolumeClaim, []func()) {
-	cleanupFuncs := make([]func(), 0)
+	cleanupFuncs := make([]func(), 0, 2)
 	By("setting up the StorageClass")
 	storageClass := csiDriver.GetDynamicProvisionStorageClass(driver.GetParameters(volume.VolumeType, volume.FSType), volume.MountOptions, volume.ReclaimPolicy, volume.AllowVolumeExpansion, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 	tsc := NewTestStorageClass(client, namespace, storageClass)
