@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/IBM-Cloud/power-go-client/clients/instance"
 	"github.com/IBM-Cloud/power-go-client/ibmpisession"
 	"github.com/IBM-Cloud/power-go-client/power/models"
@@ -235,7 +233,10 @@ func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) (*models.Volum
 		if err != nil {
 			return false, err
 		}
-		spew.Dump(vol)
+		if vol == nil {
+			return false, fmt.Errorf("volume %s returned nil object", volumeID)
+		}
+		klog.V(6).InfoS("Polling volume state", "volumeID", volumeID, "state", vol.State)
 		return vol.State == state, nil
 	})
 	return vol, err
@@ -248,7 +249,10 @@ func (p *powerVSCloud) WaitForCloneStatus(cloneTaskId string) error {
 		if err != nil {
 			return false, err
 		}
-		spew.Dump(*c)
+		if c == nil {
+			return false, fmt.Errorf("clone task %s returned nil object", cloneTaskId)
+		}
+		klog.V(6).InfoS("Polling clone status", "cloneTaskID", cloneTaskId, "status", *c.Status)
 		return *c.Status == "completed", nil
 	})
 }
