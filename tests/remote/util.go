@@ -29,9 +29,13 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func runRemoteCommand(publicIP string, arg ...string) (string, error) {
-	args := make([]string, 0, 6+len(arg))
-	args = append(args, "-i", sshDefaultKey, "-o", "StrictHostKeyChecking no", fmt.Sprintf("%s@%s", sshUser, publicIP), "--")
+func (r *Remote) runRemoteCommand(arg ...string) (string, error) {
+	args := make([]string, 0, 8+len(arg))
+	args = append(args,
+		"-i", r.sshKeyPath,
+		"-o", "StrictHostKeyChecking=yes",
+		"-o", "UserKnownHostsFile="+r.knownHostsFile,
+		fmt.Sprintf("%s@%s", sshUser, r.publicIP), "--")
 	args = append(args, arg...)
 
 	// Should we print?; May contain sensitive information
