@@ -646,7 +646,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	// Just before the mount operation check if device path exist and try again.
-	sourceExists, _ := d.mounter.ExistsPath(globalMountPath)
+	sourceExists, _ := d.mounter.ExistsPath(source)
 	if !sourceExists {
 		klog.Warningf("unable to find device %s", source)
 		err := (*dev).CreateDevice()
