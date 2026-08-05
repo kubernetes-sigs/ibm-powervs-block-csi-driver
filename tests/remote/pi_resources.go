@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -146,11 +147,20 @@ func (r *Remote) createPublicNetwork(network string) (string, error) {
 func (r *Remote) createSSHKey() error {
 	kc := r.powervsClients.kc
 	sshKey := r.resName
-	// Create SSH key pair
-	out, err := runCommand("ssh-keygen", "-t", "rsa", "-f", sshDefaultKey, "-N", "")
+
+	keyDir, err := os.MkdirTemp("", "powervs-csi-ssh-*")
+	if err != nil {
+		return fmt.Errorf("failed to create SSH key temp dir: %v", err)
+	}
+	r.sshKeyDir = keyDir
+	r.sshKeyPath = filepath.Join(keyDir, "id_rsa")
+	r.knownHostsFile = filepath.Join(keyDir, "known_hosts")
+
+	// Create SSH key pair inside the private directory.
+	out, err := runCommand("ssh-keygen", "-t", "rsa", "-f", r.sshKeyPath, "-N", "")
 	klog.Infof("ssh-keygen command output: %s err: %v", out, err)
 
-	publicKey, err := os.ReadFile(sshDefaultKey + ".pub")
+	publicKey, err := os.ReadFile(r.sshKeyPath + ".pub")
 	if err != nil {
 		return fmt.Errorf("error while creating and reading SSH key files: %v", err)
 	}
@@ -215,12 +225,12 @@ func (r *Remote) createInstance(image, network string) (string, string, error) {
 		return "", "", errors.New("error while getting pvm instance public IP")
 	}
 
-	err = waitForInstanceSSH(publicIP)
-	if err != nil {
+	r.publicIP = publicIP
+	if err = r.waitForInstanceSSH(); err != nil {
 		return "", "", fmt.Errorf("error while waiting for pvm instance ssh connection: %v", err)
 	}
 
-	return insID, publicIP, err
+	return insID, publicIP, nil
 }
 
 // Wait till VLAN is attached to the network.
@@ -273,27 +283,27 @@ func waitForInstanceHealth(insID string, ic *instance.IBMPIInstanceClient) (*mod
 	return pvm, err
 }
 
-// Wait till SSH test is complete.
-func waitForInstanceSSH(publicIP string) error {
+// waitForInstanceSSH polls until the host's SSH key can be scanned, pins it
+// in a per-run known_hosts file, then verifies a real SSH session works.
+// Must be called after r.publicIP, r.sshKeyPath and r.knownHostsFile are set.
+func (r *Remote) waitForInstanceSSH() error {
+	// Use ssh-keyscan to wait for sshd readiness and capture the host key.
+	// This avoids StrictHostKeyChecking=no while still handling the boot delay.
 	err := wait.PollUntilContextTimeout(context.Background(), 20*time.Second, 30*time.Minute, true, func(context.Context) (bool, error) {
-		outp, err := runRemoteCommand(publicIP, "hostname")
-		klog.Infof("out: %s, err: %v", outp, err)
-		// Handle (Operation|Connection) timed out and Connection refused due to SSH service initialization.
-		if strings.Contains(outp, "timed out") || strings.Contains(outp, "Connection refused") {
-			klog.Warningf("Ignoring error related to sshd initialization on remote machine")
+		out, err := runCommand("ssh-keyscan", "-T", "10", r.publicIP)
+		if err != nil || strings.TrimSpace(out) == "" {
+			klog.Warningf("ssh-keyscan not ready yet: %v", err)
 			return false, nil
 		}
-		if err != nil {
-			klog.Warningf("Unexpected SSH error: %v.", err)
-			return false, err
+		// Pin the host key; all subsequent SSH/SCP calls enforce it.
+		if writeErr := os.WriteFile(r.knownHostsFile, []byte(out), 0600); writeErr != nil {
+			return false, fmt.Errorf("failed to write known_hosts: %v", writeErr)
 		}
 		return true, nil
 	})
-
 	if err != nil {
-		return fmt.Errorf("failed to get SSH connection: %v", err)
+		return fmt.Errorf("failed to scan SSH host key for %s: %v", r.publicIP, err)
 	}
-
 	return nil
 }
 

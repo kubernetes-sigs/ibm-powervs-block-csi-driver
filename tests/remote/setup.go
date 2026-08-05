@@ -37,7 +37,6 @@ const (
 	binPath         = "bin/" + binName
 	tarName         = "powervs-csi-driver-binary.tar.gz"
 	timestampFormat = "20060102T150405"
-	sshDefaultKey   = "/tmp/id_rsa"
 	sshUser         = "root"
 	outputFile      = "prog.out"
 )
@@ -48,6 +47,9 @@ type Remote struct {
 	sshPID         int
 	tarPath        string
 	remoteDir      string
+	sshKeyDir      string // temp dir holding key pair and known_hosts; cleaned up on teardown
+	sshKeyPath     string // <sshKeyDir>/id_rsa
+	knownHostsFile string // <sshKeyDir>/known_hosts
 	powervsClients PowerVSClients
 }
 
@@ -152,7 +154,10 @@ func (r *Remote) uploadAndRun(endpoint string) error {
 	}
 
 	klog.Infof("Copying test archive %s to %s:%s/", r.tarPath, r.publicIP, r.remoteDir)
-	if output, err := runCommand("scp", "-i", sshDefaultKey, r.tarPath, fmt.Sprintf("%s@%s:%s/", sshUser, r.publicIP, r.remoteDir)); err != nil {
+	if output, err := runCommand("scp", "-i", r.sshKeyPath,
+		"-o", "StrictHostKeyChecking=yes",
+		"-o", "UserKnownHostsFile="+r.knownHostsFile,
+		r.tarPath, fmt.Sprintf("%s@%s:%s/", sshUser, r.publicIP, r.remoteDir)); err != nil {
 		return fmt.Errorf("failed to copy test archive: %s: %v", output, err)
 	}
 
@@ -190,13 +195,15 @@ func (r *Remote) uploadAndRun(endpoint string) error {
 }
 
 func (r *Remote) runSSHCommand(arg ...string) (string, error) {
-	return runRemoteCommand(r.publicIP, arg...)
+	return r.runRemoteCommand(arg...)
 }
 
 func (r *Remote) createSSHTunnel(endpoint string) error {
 	port := endpoint[strings.LastIndex(endpoint, ":")+1:]
 
-	args := []string{"-i", sshDefaultKey, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+	args := []string{"-i", r.sshKeyPath,
+		"-o", "StrictHostKeyChecking=yes",
+		"-o", "UserKnownHostsFile=" + r.knownHostsFile,
 		"-nNT", "-L", fmt.Sprintf("%s:localhost:%s", port, port), fmt.Sprintf("%s@%s", sshUser, r.publicIP)}
 
 	klog.Infof("Executing SSH command: ssh %v", args)
@@ -227,9 +234,12 @@ func (r *Remote) TeardownDriver() {
 
 	r.printRemoteLog()
 
-	// Delete any created ssh key files and tarball
-	os.Remove(sshDefaultKey)
-	os.Remove(sshDefaultKey + ".pub")
+	// Delete the per-run SSH credential directory and the test tarball.
+	if r.sshKeyDir != "" {
+		if err := os.RemoveAll(r.sshKeyDir); err != nil {
+			klog.Warningf("failed to remove SSH key directory %s: %v", r.sshKeyDir, err)
+		}
+	}
 	os.Remove(r.tarPath)
 
 	r.destroyPVSResources()
