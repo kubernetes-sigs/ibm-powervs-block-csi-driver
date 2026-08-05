@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -114,7 +115,7 @@ func newNodeService(driverOptions *Options) nodeService {
 }
 
 func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	klog.V(4).Infof("NodeStageVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeStageVolume: called with args %+v", protosanitizer.StripSecrets(req))
 
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
@@ -255,7 +256,7 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) e
 }
 
 func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	klog.V(4).Infof("NodeUnstageVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeUnstageVolume: called with args %+v", protosanitizer.StripSecrets(req))
 
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
@@ -342,7 +343,7 @@ func (d *nodeService) deleteDevice(deviceName string) error {
 }
 
 func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	klog.V(4).Infof("NodeExpandVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeExpandVolume: called with args %+v", protosanitizer.StripSecrets(req))
 
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
@@ -413,7 +414,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 }
 
 func (d *nodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	klog.V(4).Infof("NodePublishVolume: called with args %+v", req)
+	klog.V(4).Infof("NodePublishVolume: called with args %+v", protosanitizer.StripSecrets(req))
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -469,7 +470,7 @@ func (d *nodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 }
 
 func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	klog.V(4).Infof("NodeUnpublishVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeUnpublishVolume: called with args %+v", protosanitizer.StripSecrets(req))
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -499,7 +500,7 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
 	var resp *csi.NodeGetVolumeStatsResponse
 	if req != nil {
-		klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", req)
+		klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", protosanitizer.StripSecrets(req))
 	}
 
 	if req == nil || req.VolumeId == "" {
@@ -568,7 +569,7 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 }
 
 func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	klog.V(4).Infof("NodeGetCapabilities: called with args %+v", req)
+	klog.V(4).Infof("NodeGetCapabilities: called with args %+v", protosanitizer.StripSecrets(req))
 	caps := make([]*csi.NodeServiceCapability, 0, len(nodeCaps))
 	for _, cap := range nodeCaps {
 		c := &csi.NodeServiceCapability{
@@ -585,7 +586,7 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	var segments map[string]string
-	klog.V(4).Infof("NodeGetInfo: called with args %+v", req)
+	klog.V(4).Infof("NodeGetInfo: called with args %+v", protosanitizer.StripSecrets(req))
 
 	in, err := d.cloud.GetPVMInstanceDetails(d.pvmInstanceId)
 	if err != nil || in == nil {
