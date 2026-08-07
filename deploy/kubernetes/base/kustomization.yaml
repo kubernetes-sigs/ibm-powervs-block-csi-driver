@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: kube-system
 resources:
 - clusterrole-attacher.yaml
+- clusterrole-controller.yaml
 - clusterrole-csi-node.yaml
 - clusterrole-provisioner.yaml
 - clusterrole-resizer.yaml
