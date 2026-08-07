@@ -295,6 +295,55 @@ func TestNodeStageVolume(t *testing.T) {
 			volumeLock:   true,
 			expectedCode: codes.Aborted,
 		},
+		{
+			name: "fail invalid fsType",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
+				StagingTargetPath: targetPath,
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: "ntfs",
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeId: volumeID,
+			},
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				NewDevice = func(wwn string) device.LinuxDevice { return mockDevice }
+				mockDevice.EXPECT().Populate(false).Return(nil)
+				mockDevice.EXPECT().GetMapper().Return(devicePath).Times(1)
+				mockMounter.EXPECT().IsLikelyNotMountPoint(gomock.Any()).Return(true, nil)
+			},
+			expectedCode: codes.Internal,
+		},
+		{
+			name: "success valid fsType case-insensitive (EXT4)",
+			request: &csi.NodeStageVolumeRequest{
+				PublishContext:    map[string]string{WWNKey: volumeWWN},
+				StagingTargetPath: targetPath,
+				VolumeCapability: &csi.VolumeCapability{
+					AccessType: &csi.VolumeCapability_Mount{
+						Mount: &csi.VolumeCapability_MountVolume{
+							FsType: "EXT4",
+						},
+					},
+					AccessMode: &csi.VolumeCapability_AccessMode{
+						Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+					},
+				},
+				VolumeId: volumeID,
+			},
+			expectMock: func(mockMounter *mocks.MockMounter, mockDevice *mocks.MockLinuxDevice) {
+				commonExpectMock(mockMounter, mockDevice)
+				mockMounter.EXPECT().GetDeviceName(gomock.Eq(targetPath)).Return(targetPath, 1, nil)
+				mockMounter.EXPECT().ExistsPath(gomock.Any()).Return(true, nil)
+				mockMounter.EXPECT().FormatAndMount(gomock.Eq(devicePath), gomock.Eq(targetPath), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
 	}
 
 	for _, tc := range testCases {

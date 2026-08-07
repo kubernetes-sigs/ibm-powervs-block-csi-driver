@@ -20,15 +20,23 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
         kubernetes.io/arch: ppc64le
-      hostNetwork: true
       serviceAccountName: powervs-csi-node-sa
       priorityClassName: system-node-critical
       tolerations:
         - operator: Exists
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: powervs-plugin
           securityContext:
             privileged: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           imagePullPolicy: Always
           args:
@@ -78,6 +86,17 @@ spec:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --v=5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
           lifecycle:
             preStop:
               exec:
@@ -92,10 +111,24 @@ spec:
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
+            - name: sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
         - name: liveness-probe
           image: registry.k8s.io/sig-storage/livenessprobe:v2.12.0
           args:
             - --csi-address=/csi/csi.sock
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
           volumeMounts:
             - name: plugin-dir
               mountPath: /csi
@@ -123,3 +156,20 @@ spec:
         - name: ibm-secret
           secret:
             secretName: ibm-secret
+        - name: sa-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  audience: api
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        apiVersion: v1
+                        fieldPath: metadata.namespace

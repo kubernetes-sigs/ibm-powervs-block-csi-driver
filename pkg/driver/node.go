@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -45,7 +47,6 @@ const (
 	FSTypeXfs = "xfs"
 	// default file system type to be used when it is not provided.
 	defaultFsType = FSTypeExt4
-
 	// defaultMaxVolumesPerInstance is the limit of volumes can be attached in the PowerVS environment.
 	// The Virtual Server instance can have more than 127 data volumes (upto 500) but with certain limitations.
 	// See: https://cloud.ibm.com/docs/power-iaas?topic=power-iaas-creating-power-virtual-server#config-large-vol
@@ -55,6 +56,15 @@ const (
 var (
 	NewDevice    = device.NewLinuxDevice
 	GetDeviceWWN = device.GetDeviceWWN
+
+	// validFSTypes is the set of filesystem types the driver will format or mount.
+	// Requests specifying any other type are rejected before reaching mkfs or mount.
+	validFSTypes = map[string]bool{
+		FSTypeExt2: true,
+		FSTypeExt3: true,
+		FSTypeExt4: true,
+		FSTypeXfs:  true,
+	}
 
 	// nodeCaps represents the capability of node service.
 	nodeCaps = []csi.NodeServiceCapability_RPC_Type{
@@ -114,7 +124,7 @@ func newNodeService(driverOptions *Options) nodeService {
 }
 
 func (d *nodeService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	klog.V(4).Infof("NodeStageVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeStageVolume: called with args %+v", protosanitizer.StripSecrets(req))
 
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
@@ -209,6 +219,9 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) e
 	if fsType == "" {
 		fsType = defaultFsType
 	}
+	if !validFSTypes[strings.ToLower(fsType)] {
+		return status.Errorf(codes.InvalidArgument, "unsupported fsType %q for volumeID %s", fsType, req.VolumeId)
+	}
 	var mountOptions []string
 	for _, f := range mnt.MountFlags {
 		if !hasMountOption(mountOptions, f) {
@@ -255,7 +268,7 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) e
 }
 
 func (d *nodeService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	klog.V(4).Infof("NodeUnstageVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeUnstageVolume: called with args %+v", protosanitizer.StripSecrets(req))
 
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
@@ -342,7 +355,7 @@ func (d *nodeService) deleteDevice(deviceName string) error {
 }
 
 func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	klog.V(4).Infof("NodeExpandVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeExpandVolume: called with args %+v", protosanitizer.StripSecrets(req))
 
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
@@ -413,7 +426,7 @@ func (d *nodeService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandV
 }
 
 func (d *nodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	klog.V(4).Infof("NodePublishVolume: called with args %+v", req)
+	klog.V(4).Infof("NodePublishVolume: called with args %+v", protosanitizer.StripSecrets(req))
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -469,7 +482,7 @@ func (d *nodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 }
 
 func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	klog.V(4).Infof("NodeUnpublishVolume: called with args %+v", req)
+	klog.V(4).Infof("NodeUnpublishVolume: called with args %+v", protosanitizer.StripSecrets(req))
 	volumeID := req.GetVolumeId()
 	if volumeID == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -499,7 +512,7 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
 	var resp *csi.NodeGetVolumeStatsResponse
 	if req != nil {
-		klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", req)
+		klog.V(4).Infof("NodeGetVolumeStats: called with args %+v", protosanitizer.StripSecrets(req))
 	}
 
 	if req == nil || req.VolumeId == "" {
@@ -568,7 +581,7 @@ func (d *nodeService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVo
 }
 
 func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	klog.V(4).Infof("NodeGetCapabilities: called with args %+v", req)
+	klog.V(4).Infof("NodeGetCapabilities: called with args %+v", protosanitizer.StripSecrets(req))
 	caps := make([]*csi.NodeServiceCapability, 0, len(nodeCaps))
 	for _, cap := range nodeCaps {
 		c := &csi.NodeServiceCapability{
@@ -585,7 +598,7 @@ func (d *nodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 
 func (d *nodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	var segments map[string]string
-	klog.V(4).Infof("NodeGetInfo: called with args %+v", req)
+	klog.V(4).Infof("NodeGetInfo: called with args %+v", protosanitizer.StripSecrets(req))
 
 	in, err := d.cloud.GetPVMInstanceDetails(d.pvmInstanceId)
 	if err != nil || in == nil {
@@ -645,7 +658,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	// Just before the mount operation check if device path exist and try again.
-	sourceExists, _ := d.mounter.ExistsPath(globalMountPath)
+	sourceExists, _ := d.mounter.ExistsPath(source)
 	if !sourceExists {
 		klog.Warningf("unable to find device %s", source)
 		err := (*dev).CreateDevice()
@@ -679,6 +692,9 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	fsType := mode.Mount.GetFsType()
 	if fsType == "" {
 		fsType = defaultFsType
+	}
+	if !validFSTypes[strings.ToLower(fsType)] {
+		return status.Errorf(codes.InvalidArgument, "unsupported fsType %q for volumeID %s", fsType, volumeID)
 	}
 
 	klog.V(5).Infof("starting mounting %s at %s with option %s as fstype %s for volumeID %s", source, target, mountOptions, fsType, volumeID)
