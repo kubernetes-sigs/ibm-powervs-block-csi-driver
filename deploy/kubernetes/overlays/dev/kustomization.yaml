@@ -4,3 +4,17 @@ resources:
 - ../../base
 patches:
 - path: main_image.yaml
+- target:
+    kind: DaemonSet
+    name: powervs-csi-node
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: --debug
+- target:
+    kind: Deployment
+    name: powervs-csi-controller
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: --debug
