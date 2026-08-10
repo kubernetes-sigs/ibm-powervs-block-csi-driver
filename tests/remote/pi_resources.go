@@ -169,7 +169,7 @@ func (r *Remote) createInstance(image, network string) (string, string, error) {
 	processors := 0.5
 	procType := "shared"
 	sysType := "s1022"
-	storageType := "tier3"
+	storageType := "tier1"
 
 	nets := []*models.PVMInstanceAddNetwork{{NetworkID: &network}}
 	req := &models.PVMInstanceCreate{
