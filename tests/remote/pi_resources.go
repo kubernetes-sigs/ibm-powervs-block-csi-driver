@@ -170,18 +170,20 @@ func (r *Remote) createInstance(image, network string) (string, string, error) {
 	procType := "shared"
 	sysType := "e980"
 	storageType := "tier1"
+	storagePoolAffinity := false
 
 	nets := []*models.PVMInstanceAddNetwork{{NetworkID: &network}}
 	req := &models.PVMInstanceCreate{
-		ImageID:     &image,
-		KeyPairName: name,
-		Networks:    nets,
-		ServerName:  &name,
-		Memory:      &memory,
-		Processors:  &processors,
-		ProcType:    &procType,
-		SysType:     sysType,
-		StorageType: storageType,
+		ImageID:             &image,
+		KeyPairName:         name,
+		Networks:            nets,
+		ServerName:          &name,
+		Memory:              &memory,
+		Processors:          &processors,
+		ProcType:            &procType,
+		SysType:             sysType,
+		StorageType:         storageType,
+		StoragePoolAffinity: &storagePoolAffinity,
 	}
 	resp, err := ic.Create(req)
 	if err != nil {
