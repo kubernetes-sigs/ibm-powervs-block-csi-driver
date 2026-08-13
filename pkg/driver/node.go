@@ -486,9 +486,17 @@ func (d *nodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	}
 	defer d.volumeLocks.Release(volumeID)
 
+	notMounted, err := d.mounter.IsLikelyNotMountPoint(target)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, status.Errorf(codes.Internal, "could not check mount point for %q volumeID %s: %v", target, volumeID, err)
+	}
+	if notMounted || os.IsNotExist(err) {
+		klog.V(4).Infof("target %s is not mounted for volumeID %s, skipping unmount", target, volumeID)
+		return &csi.NodeUnpublishVolumeResponse{}, nil
+	}
+
 	klog.V(5).Infof("starting unmounting %s for volumeID %s", target, volumeID)
-	err := d.mounter.Unmount(target)
-	if err != nil {
+	if err = d.mounter.Unmount(target); err != nil {
 		return nil, status.Errorf(codes.Internal, "could not unmount %q for volumeID %s volumeID: %v", target, volumeID, err)
 	}
 	klog.V(5).Infof("completed unmounting %s for volumeID %s", target, volumeID)
