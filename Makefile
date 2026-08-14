@@ -90,6 +90,9 @@ clean:
 bin/mockgen: | bin
 	go install go.uber.org/mock/mockgen@v0.6.0
 
+bin/ginkgo: | bin
+	go install github.com/onsi/ginkgo/v2/ginkgo@v2.32.0
+
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v2.11.2
@@ -130,5 +133,5 @@ init-buildx:
 test-integration:
 	go test -v -timeout 100m sigs.k8s.io/ibm-powervs-block-csi-driver/tests/it -run ^TestIntegration$
 
-test-e2e:
-	go test -v -timeout 100m sigs.k8s.io/ibm-powervs-block-csi-driver/tests/e2e -run ^TestE2E$
+test-e2e: bin/ginkgo
+	$(GOBIN)/ginkgo --procs=5 --timeout=100m -v ./tests/e2e/...
