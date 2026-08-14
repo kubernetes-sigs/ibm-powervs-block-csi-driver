@@ -9,6 +9,7 @@ require (
 	github.com/container-storage-interface/spec v1.13.0
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/google/go-cmp v0.7.0
+	github.com/kubernetes-csi/csi-lib-utils v0.22.0
 	github.com/kubernetes-csi/csi-test v2.2.0+incompatible
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
