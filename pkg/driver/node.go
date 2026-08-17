@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
@@ -46,7 +47,6 @@ const (
 	FSTypeXfs = "xfs"
 	// default file system type to be used when it is not provided.
 	defaultFsType = FSTypeExt4
-
 	// defaultMaxVolumesPerInstance is the limit of volumes can be attached in the PowerVS environment.
 	// The Virtual Server instance can have more than 127 data volumes (upto 500) but with certain limitations.
 	// See: https://cloud.ibm.com/docs/power-iaas?topic=power-iaas-creating-power-virtual-server#config-large-vol
@@ -56,6 +56,15 @@ const (
 var (
 	NewDevice    = device.NewLinuxDevice
 	GetDeviceWWN = device.GetDeviceWWN
+
+	// validFSTypes is the set of filesystem types the driver will format or mount.
+	// Requests specifying any other type are rejected before reaching mkfs or mount.
+	validFSTypes = map[string]bool{
+		FSTypeExt2: true,
+		FSTypeExt3: true,
+		FSTypeExt4: true,
+		FSTypeXfs:  true,
+	}
 
 	// nodeCaps represents the capability of node service.
 	nodeCaps = []csi.NodeServiceCapability_RPC_Type{
@@ -209,6 +218,9 @@ func (d *nodeService) stageVolume(wwn string, req *csi.NodeStageVolumeRequest) e
 	fsType := mnt.GetFsType()
 	if fsType == "" {
 		fsType = defaultFsType
+	}
+	if !validFSTypes[strings.ToLower(fsType)] {
+		return status.Errorf(codes.InvalidArgument, "unsupported fsType %q for volumeID %s", fsType, req.VolumeId)
 	}
 	var mountOptions []string
 	for _, f := range mnt.MountFlags {
@@ -654,7 +666,7 @@ func (d *nodeService) nodePublishVolumeForBlock(req *csi.NodePublishVolumeReques
 	}
 
 	// Just before the mount operation check if device path exist and try again.
-	sourceExists, _ := d.mounter.ExistsPath(globalMountPath)
+	sourceExists, _ := d.mounter.ExistsPath(source)
 	if !sourceExists {
 		klog.Warningf("unable to find device %s", source)
 		err := (*dev).CreateDevice()
@@ -688,6 +700,9 @@ func (d *nodeService) nodePublishVolumeForFileSystem(req *csi.NodePublishVolumeR
 	fsType := mode.Mount.GetFsType()
 	if fsType == "" {
 		fsType = defaultFsType
+	}
+	if !validFSTypes[strings.ToLower(fsType)] {
+		return status.Errorf(codes.InvalidArgument, "unsupported fsType %q for volumeID %s", fsType, volumeID)
 	}
 
 	klog.V(5).Infof("starting mounting %s at %s with option %s as fstype %s for volumeID %s", source, target, mountOptions, fsType, volumeID)

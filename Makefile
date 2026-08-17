@@ -95,11 +95,11 @@ bin/ginkgo: | bin
 
 bin/golangci-lint: | bin
 	echo "Installing golangci-lint..."
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v2.11.2
+	curl -sSfL https://golangci-lint.run/install.sh | sh -s v2.11.2
 
 bin/govulncheck: | bin
 	echo "Installing govulncheck..."
-	go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+	go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
 
 mockgen: bin/mockgen
 	./hack/update-gomock

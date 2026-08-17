@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -40,19 +39,45 @@ const (
 var (
 	showPathsFormat  = []string{"show", "paths", "raw", "format", "%w %d %t %i %o %T %z %s %m"}
 	orphanPathRegexp = regexp.MustCompile(orphanPathsPattern)
+	// pathGroupPattern matches a dmsetup path-group selector token (e.g. "1:0").
+	pathGroupPattern = regexp.MustCompile(`^\d+:\d+$`)
 )
 
-// getPathsCount get number of slaves for a given device.
-func getPathsCount(mapper string) (count int, err error) {
-	// TODO: This can be achieved reading the full line processing instead of piped command
-	statusCmd := fmt.Sprintf("dmsetup status --target multipath %s | awk 'BEGIN{RS=\" \";active=0}/[0-9]+:[0-9]+/{dev=1}/A/{if (dev == 1) active++; dev=0} END{ print active }'", mapper)
-
-	outBytes, err := exec.CommandContext(context.Background(), "bash", "-c", statusCmd).CombinedOutput()
-	out := strings.TrimSuffix(string(outBytes), "\n")
+// getPathsCount returns the number of active paths for the given multipath device.
+//
+// dmsetup emits one line per device. Each path entry starts with a <major>:<minor>
+// token followed immediately by its state ("A" = active, "F" = failed). Priority
+// group state tokens ("A"/"E") appear in the group header and are never immediately
+// preceded by a <major>:<minor> token, so the parser below skips them naturally.
+//
+// Example (2 priority groups, 8 paths all active, returns 8):
+//
+//	0 251658240 multipath 2 0 1 0 2 1 A 0 4 2 8:96 A 0 0 1  8:0 A 0 0 1  8:48 A 0 0 1  8:64 A 0 0 1 \
+//	  E 0 4 2 8:112 A 0 0 1  8:16 A 0 0 1  8:32 A 0 0 1  8:80 A 0 0 1
+func getPathsCount(mapper string) (int, error) {
+	args := []string{"status", "--target", "multipath", mapper}
+	outBytes, err := exec.CommandContext(context.Background(), dmsetupcommand, args...).CombinedOutput()
+	out := strings.TrimSpace(string(outBytes))
 	if err != nil || isDmsetupStatusError(out) {
 		return 0, fmt.Errorf("error while running dmsetup status command: %s : %v", out, err)
 	}
-	return strconv.Atoi(out)
+
+	// Each path entry is: <major>:<minor> <path_state> <mapped_io> <failed_io> ...
+	// Count tokens that are "A" (Active) and immediately follow a <major>:<minor> token.
+	active := 0
+	tokens := strings.Fields(out)
+	prevIsPathGroup := false
+	for _, tok := range tokens {
+		if pathGroupPattern.MatchString(tok) {
+			prevIsPathGroup = true
+			continue
+		}
+		if prevIsPathGroup && tok == "A" {
+			active++
+		}
+		prevIsPathGroup = false
+	}
+	return active, nil
 }
 
 // isDmsetupStatusError check for command failure or empty stdout msg.
