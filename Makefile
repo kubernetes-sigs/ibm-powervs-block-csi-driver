@@ -59,7 +59,6 @@ build-image-and-push-linux-amd64: init-buildx
 	set -e ;                                                            \
 	docker buildx build \
 		--platform linux/amd64 \
-		--build-arg TARGETPLATFORM=linux/amd64 \
 		-t $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 --push . --target centos-base; \
 	}
 
@@ -68,7 +67,6 @@ build-image-and-push-linux-ppc64le: init-buildx
 	set -e ;                                                            \
 	docker buildx build \
 		--platform linux/ppc64le \
-		--build-arg TARGETPLATFORM=linux/ppc64le \
 		-t $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le --push . --target centos-base; \
 	}
 
