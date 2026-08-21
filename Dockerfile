@@ -16,11 +16,13 @@ FROM --platform=$BUILDPLATFORM golang:1.26.0 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
 
 WORKDIR /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver
 COPY . .
 
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} make driver node-update-controller
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} GIT_COMMIT=${GIT_COMMIT} BUILD_DATE=${BUILD_DATE} make driver node-update-controller
 
 # debian base image
 FROM registry.k8s.io/build-image/debian-base:bookworm-v1.0.8 AS debian-base
