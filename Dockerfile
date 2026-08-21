@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Initialized TARGETPLATFORM with default value
-ARG TARGETPLATFORM=linux/amd64
+FROM --platform=$BUILDPLATFORM golang:1.26.0 AS builder
 
-FROM golang:1.26.0 AS builder
-ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
 WORKDIR /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver
-ADD . .
-RUN GOARCH=$(echo $TARGETPLATFORM | cut -f2 -d '/') make driver node-update-controller
+COPY . .
+
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} make driver node-update-controller
 
 # debian base image
 FROM registry.k8s.io/build-image/debian-base:bookworm-v1.0.8 AS debian-base
@@ -28,7 +29,7 @@ COPY --from=builder /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver/bin/* /
 ENTRYPOINT ["/ibm-powervs-block-csi-driver"]
 
 # centos base image
-FROM --platform=$TARGETPLATFORM quay.io/centos/centos:stream9 AS centos-base
+FROM quay.io/centos/centos:stream9 AS centos-base
 RUN yum install -y util-linux nfs-utils e2fsprogs xfsprogs ca-certificates device-mapper-multipath && yum clean all && rm -rf /var/cache/yum
 COPY --from=builder /go/src/sigs.k8s.io/ibm-powervs-block-csi-driver/bin/* /
 ENTRYPOINT ["/ibm-powervs-block-csi-driver"]
