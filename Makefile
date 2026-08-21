@@ -13,7 +13,7 @@
 # limitations under the License.
 
 PKG=sigs.k8s.io/ibm-powervs-block-csi-driver
-GIT_COMMIT?=$(shell git rev-parse --short HEAD)
+GIT_COMMIT?=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 REGISTRY?=gcr.io/k8s-staging-cloud-provider-ibm
 IMG?=ibm-powervs-block-csi-driver
@@ -48,31 +48,36 @@ test:
 
 .PHONY: image
 image:
-	docker build -t $(REGISTRY)/$(IMG):$(TAG) . --target centos-base
+	docker build -t $(REGISTRY)/$(IMG):$(TAG) \
+		--build-arg GIT_COMMIT=$(GIT_COMMIT) \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		. --target centos-base
 
 .PHONY: push
 push:
 	docker push $(REGISTRY)/$(IMG):$(TAG)
 
-build-image-and-push-linux-amd64: init-buildx
-	{                                                                   \
-	set -e ;                                                            \
-	docker buildx build \
+build-image-linux-amd64: init-buildx
+	BUILDX_NO_DEFAULT_ATTESTATIONS=1 docker buildx build \
 		--platform linux/amd64 \
-		-t $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 --push . --target centos-base; \
-	}
+		--build-arg GIT_COMMIT=$(GIT_COMMIT) \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--output=type=registry \
+		-t $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 . --target centos-base
 
-build-image-and-push-linux-ppc64le: init-buildx
-	{                                                                   \
-	set -e ;                                                            \
-	docker buildx build \
+build-image-linux-ppc64le: init-buildx
+	BUILDX_NO_DEFAULT_ATTESTATIONS=1 docker buildx build \
 		--platform linux/ppc64le \
-		-t $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le --push . --target centos-base; \
-	}
+		--build-arg GIT_COMMIT=$(GIT_COMMIT) \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--output=type=registry \
+		-t $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le . --target centos-base
 
-build-and-push-multi-arch: build-image-and-push-linux-amd64 build-image-and-push-linux-ppc64le
-	docker manifest create --amend $(REGISTRY)/$(IMG):$(TAG) $(REGISTRY)/$(IMG):$(TAG)_linux_amd64 $(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le
-	docker manifest push -p $(REGISTRY)/$(IMG):$(TAG)
+build-and-push-multi-arch: build-image-linux-amd64 build-image-linux-ppc64le
+	docker manifest create --amend $(REGISTRY)/$(IMG):$(TAG) \
+		$(REGISTRY)/$(IMG):$(TAG)_linux_amd64 \
+		$(REGISTRY)/$(IMG):$(TAG)_linux_ppc64le
+	docker manifest push --purge $(REGISTRY)/$(IMG):$(TAG)
 
 .PHONY: release-alias-tag
 release-alias-tag: # Adds the tag to the last build tag.
