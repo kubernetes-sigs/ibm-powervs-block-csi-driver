@@ -18,13 +18,13 @@ require (
 	golang.org/x/sys v0.47.0
 	google.golang.org/grpc v1.83.1
 	gopkg.in/gcfg.v1 v1.2.3
-	k8s.io/api v0.36.3
-	k8s.io/apimachinery v0.36.3
-	k8s.io/client-go v0.36.3
+	k8s.io/api v0.36.4
+	k8s.io/apimachinery v0.36.4
+	k8s.io/client-go v0.36.4
 	k8s.io/klog/v2 v2.140.0
-	k8s.io/kubernetes v1.36.3
-	k8s.io/mount-utils v0.36.3
-	k8s.io/pod-security-admission v0.36.3
+	k8s.io/kubernetes v1.36.4
+	k8s.io/mount-utils v0.36.4
+	k8s.io/pod-security-admission v0.36.4
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.24.1
 )
@@ -133,15 +133,15 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.36.3 // indirect
-	k8s.io/apiserver v0.36.3 // indirect
-	k8s.io/component-base v0.36.3 // indirect
+	k8s.io/apiserver v0.36.4 // indirect
+	k8s.io/component-base v0.36.4 // indirect
 	k8s.io/component-helpers v0.36.3 // indirect
 	k8s.io/controller-manager v0.36.3 // indirect
 	k8s.io/csi-translation-lib v0.36.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
 	k8s.io/kubectl v0.36.3 // indirect
 	k8s.io/kubelet v0.36.3 // indirect
-	k8s.io/streaming v0.36.3 // indirect
+	k8s.io/streaming v0.36.4 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.34.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
