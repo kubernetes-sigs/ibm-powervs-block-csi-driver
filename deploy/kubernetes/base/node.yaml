@@ -32,8 +32,8 @@ spec:
         - name: powervs-plugin
           securityContext:
             privileged: true
-          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
-          imagePullPolicy: Always
+          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:v0.13.1
+          imagePullPolicy: IfNotPresent
           args:
             - node
             - --endpoint=$(CSI_ENDPOINT)
@@ -75,7 +75,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-driver-registrar
-          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.10.1
+          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.16.0
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -95,7 +95,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: liveness-probe
-          image: registry.k8s.io/sig-storage/livenessprobe:v2.12.0
+          image: registry.k8s.io/sig-storage/livenessprobe:v2.18.0
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:

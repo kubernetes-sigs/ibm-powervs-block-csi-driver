@@ -26,8 +26,8 @@ spec:
         - operator: Exists
       containers:
         - name: powervs-plugin
-          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
-          imagePullPolicy: Always
+          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:v0.13.1
+          imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
             - --endpoint=$(CSI_ENDPOINT)
@@ -61,7 +61,8 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-update-controller
-          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
+          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:v0.13.1
+          imagePullPolicy: IfNotPresent
           command: ["/node-update-controller"]
           env:
             - name: API_KEY_PATH
@@ -86,7 +87,7 @@ spec:
               mountPath: /etc/secrets
               readOnly: true
         - name: csi-provisioner
-          image: registry.k8s.io/sig-storage/csi-provisioner:v5.0.1
+          image: registry.k8s.io/sig-storage/csi-provisioner:v6.2.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -100,7 +101,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: registry.k8s.io/sig-storage/csi-attacher:v4.6.1
+          image: registry.k8s.io/sig-storage/csi-attacher:v4.11.0
           args:
             - --csi-address=$(ADDRESS)
             - --timeout=120s
@@ -114,7 +115,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-resizer
-          image: registry.k8s.io/sig-storage/csi-resizer:v1.9.4
+          image: registry.k8s.io/sig-storage/csi-resizer:v2.1.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=2
@@ -125,7 +126,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: liveness-probe
-          image: registry.k8s.io/sig-storage/livenessprobe:v2.12.0
+          image: registry.k8s.io/sig-storage/livenessprobe:v2.18.0
           args:
             - --csi-address=/csi/csi.sock
           volumeMounts:
