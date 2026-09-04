@@ -4,8 +4,8 @@ go 1.26.0
 
 require (
 	github.com/IBM-Cloud/power-go-client v1.16.2
-	github.com/IBM/go-sdk-core/v5 v5.23.2
-	github.com/IBM/platform-services-go-sdk v0.103.0
+	github.com/IBM/go-sdk-core/v5 v5.23.3
+	github.com/IBM/platform-services-go-sdk v0.103.1
 	github.com/container-storage-interface/spec v1.13.0
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/google/go-cmp v0.7.0
