@@ -24,7 +24,7 @@ PULL_BASE_REF ?= $(RELEASE_TAG) # PULL_BASE_REF will be provided by Prow
 RELEASE_ALIAS_TAG ?= $(PULL_BASE_REF)
 
 GO111MODULE=on
-GOPROXY=direct
+GOPROXY?=https://proxy.golang.org,direct
 GOPATH=$(shell go env GOPATH)
 GOOS=$(shell go env GOOS)
 GOBIN=$(shell pwd)/bin
