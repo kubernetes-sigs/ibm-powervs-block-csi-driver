@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+images:
+- name: registry.k8s.io/sig-storage/csi-provisioner
+  newTag: v6.2.0
+  digest: sha256:6863095413dd767d7a9c14a842863194bdd287fa95582c8b1101a612e7cd3da0
+- name: registry.k8s.io/sig-storage/csi-attacher
+  newTag: v4.11.0
+  digest: sha256:46f46dfdb9b2baadb60d507b2088a64cf3e547de198a7dd6b85e10ebb70bab76
+- name: registry.k8s.io/sig-storage/csi-resizer
+  newTag: v2.1.0
+  digest: sha256:434e643fbb16a52ce2c38869150f02e4894332fb856182487b81a4231293008b
+- name: registry.k8s.io/sig-storage/livenessprobe
+  newTag: v2.18.0
+  digest: sha256:83361094048fe4c598fe2cea519fd351291e3e06c284f7bd0b0b059035582f9a
+- name: registry.k8s.io/sig-storage/csi-node-driver-registrar
+  newTag: v2.16.0
+  digest: sha256:56cfcbc18ca3abbcfb09250175962d464b9bdad59fe46076ffc887fc5bb2d215

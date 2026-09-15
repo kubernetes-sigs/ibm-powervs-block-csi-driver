@@ -24,10 +24,18 @@ spec:
       priorityClassName: system-cluster-critical
       tolerations:
         - operator: Exists
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: powervs-plugin
-          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
-          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:v0.13.1
+          imagePullPolicy: IfNotPresent
           args:
             # - {all,controller,node} # specify the driver mode
             - --endpoint=$(CSI_ENDPOINT)
@@ -48,10 +56,19 @@ spec:
               readOnly: true
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            - name: controller-sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
           ports:
             - name: healthz
               containerPort: 9808
               protocol: TCP
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           livenessProbe:
             httpGet:
               path: /healthz
@@ -61,7 +78,13 @@ spec:
             periodSeconds: 10
             failureThreshold: 5
         - name: node-update-controller
-          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:v0.13.1
+          imagePullPolicy: IfNotPresent
           command: ["/node-update-controller"]
           env:
             - name: API_KEY_PATH
@@ -70,23 +93,37 @@ spec:
             - name: metrics
               containerPort: 8081
               protocol: TCP
-            - name: healthz
+            - name: healthz-nuc
               containerPort: 8082
               protocol: TCP
           livenessProbe:
             failureThreshold: 5
             httpGet:
               path: /healthz
-              port: healthz
+              port: healthz-nuc
             initialDelaySeconds: 5
             timeoutSeconds: 10
             periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           volumeMounts:
             - name: ibm-secret
               mountPath: /etc/secrets
               readOnly: true
+            - name: controller-sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
         - name: csi-provisioner
-          image: registry.k8s.io/sig-storage/csi-provisioner:v5.0.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          image: registry.k8s.io/sig-storage/csi-provisioner:v6.2.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=5
@@ -96,11 +133,25 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            - name: controller-sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
         - name: csi-attacher
-          image: registry.k8s.io/sig-storage/csi-attacher:v4.6.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          image: registry.k8s.io/sig-storage/csi-attacher:v4.11.0
           args:
             - --csi-address=$(ADDRESS)
             - --timeout=120s
@@ -110,24 +161,58 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            - name: controller-sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
         - name: csi-resizer
-          image: registry.k8s.io/sig-storage/csi-resizer:v1.9.4
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          image: registry.k8s.io/sig-storage/csi-resizer:v2.1.0
           args:
             - --csi-address=$(ADDRESS)
             - --v=2
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            - name: controller-sa-token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
         - name: liveness-probe
-          image: registry.k8s.io/sig-storage/livenessprobe:v2.12.0
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          image: registry.k8s.io/sig-storage/livenessprobe:v2.18.0
           args:
             - --csi-address=/csi/csi.sock
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -137,3 +222,20 @@ spec:
         - name: ibm-secret
           secret:
             secretName: ibm-secret
+        - name: controller-sa-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        apiVersion: v1
+                        fieldPath: metadata.namespace
