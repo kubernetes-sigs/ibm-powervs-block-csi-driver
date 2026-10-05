@@ -12,6 +12,8 @@ resources:
 - clusterrolebinding-resizer.yaml
 - controller.yaml
 - csidriver.yaml
+- networkpolicy-csi-controller.yaml
+- networkpolicy-csi-node.yaml
 - node.yaml
 - serviceaccount-csi-controller.yaml
 - serviceaccount-csi-node.yaml

@@ -377,7 +377,7 @@ var _ = Describe("[powervs-csi-e2e]Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	It("should create a volume on demand and resize it ", func() {
+	It("should create a volume on demand and resize it", func() {
 		allowVolumeExpansion := true
 		pod := testsuites.PodDetails{
 			Cmd: "echo 'hello world' >> /mnt/test-1/data && grep 'hello world' /mnt/test-1/data && sync",
