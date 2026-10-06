@@ -81,13 +81,15 @@ kubectl apply -f secret.yaml
 #### Deploy driver
 Please see the compatibility matrix above before you deploy the driver
 
-The providerID field in a Node object uniquely identifies the node within a cloud provider's infrastructure, typically set by the cloud provider manager (CCM). However, when deploying clusters using methods like kubeadm or kubespray on cloud platforms, it's crucial to manually set the providerID.
+The `providerID` field in a Node object uniquely identifies the node within a cloud provider's infrastructure, typically set by the cloud provider manager (CCM). When deploying clusters using methods like kubeadm, the driver resolves instance identity in the following order:
 
-Set the ProviderID on the cluster nodes as: `ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>`, for example:
-```sh
-spec:
-  providerID: ibmpowervs://syd/syd05/862032d5-xxxx-xxxx-xxxx-c18594456427/2c6cbaec-xxxx-xxxx-xxxx-a6aa35315596
-```
+1. **ProviderID** – if the node's `spec.providerID` is set, the driver parses it directly.
+   Format: `ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>`, for example:
+   ```sh
+   spec:
+     providerID: ibmpowervs://syd/syd05/862032d5-xxxx-xxxx-xxxx-c18594456427/2c6cbaec-xxxx-xxxx-xxxx-a6aa35315596
+   ```
+2. **PowerVS Metadata Service** – if `spec.providerID` is **not** set, the driver automatically queries the link-local PowerVS metadata service (`https://api.metadata.power-iaas.cloud.ibm.com`) to retrieve the region, zone, service instance ID, and Workspace ID. This requires the metadata service to be enabled on the VSI. See the [IBM documentation](https://www.ibm.com/docs/en/power-virtual-server?topic=deploying-configuring-managing-metadata-service-power-virtual-server) for details.
 
 To deploy the CSI driver:
 ```sh
