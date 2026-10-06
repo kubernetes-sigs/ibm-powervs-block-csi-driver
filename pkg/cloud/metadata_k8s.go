@@ -18,15 +18,23 @@ package cloud
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 )
+
+// powerVSMetadataNewFunc is the constructor used to reach the PowerVS metadata service
+// when a node's ProviderID is not set by the CCM.
+var powerVSMetadataNewFunc = func() (MetadataService, error) {
+	return NewPowerVSMetadataService()
+}
 
 type KubernetesAPIClient func(kubeconfig string) (kubernetes.Interface, error)
 
@@ -61,5 +69,43 @@ func GetInstanceInfoFromProviderID(clientset kubernetes.Interface, nodeName stri
 		klog.Infof("Node Name: %s, Provider ID: %s", nodeName, providerId)
 		return TokenizeProviderID(providerId)
 	}
-	return nil, fmt.Errorf("ProviderID is empty for the node: %s", nodeName)
+
+	klog.Warningf("ProviderID is empty for node %s, falling back to PowerVS metadata service", nodeName)
+	svc, err := powerVSMetadataNewFunc()
+	if err != nil {
+		return nil, fmt.Errorf("ProviderID is empty for node %s and PowerVS metadata service fallback failed: %w", nodeName, err)
+	}
+	klog.Infof("PowerVS metadata service: region=%s zone=%s cloudInstanceID=%s pvmInstanceID=%s",
+		svc.GetRegion(), svc.GetZone(), svc.GetCloudInstanceId(), svc.GetPvmInstanceId())
+
+	// Patch the resolved ProviderID back onto the node so the controller and
+	// subsequent startups can use it directly without calling the metadata service.
+	// We only reach this path when node.Spec.ProviderID is already confirmed empty,
+	// so a merge patch scoped to spec.providerID is safe and sufficient.
+	providerID := fmt.Sprintf("ibmpowervs://%s/%s/%s/%s",
+		svc.GetRegion(), svc.GetZone(), svc.GetCloudInstanceId(), svc.GetPvmInstanceId())
+	type specPatch struct {
+		Spec struct {
+			ProviderID string `json:"providerID"`
+		} `json:"spec"`
+	}
+	var sp specPatch
+	sp.Spec.ProviderID = providerID
+	patch, err := json.Marshal(sp)
+	if err != nil {
+		klog.Warningf("failed to marshal ProviderID patch for node %s: %v", nodeName, err)
+	} else if _, patchErr := clientset.CoreV1().Nodes().Patch(
+		context.TODO(), nodeName, types.MergePatchType, patch, metav1.PatchOptions{},
+	); patchErr != nil {
+		klog.Warningf("failed to patch ProviderID onto node %s: %v", nodeName, patchErr)
+	} else {
+		klog.Infof("patched ProviderID %s onto node %s", providerID, nodeName)
+	}
+
+	return &Metadata{
+		region:          svc.GetRegion(),
+		zone:            svc.GetZone(),
+		cloudInstanceId: svc.GetCloudInstanceId(),
+		pvmInstanceId:   svc.GetPvmInstanceId(),
+	}, nil
 }
