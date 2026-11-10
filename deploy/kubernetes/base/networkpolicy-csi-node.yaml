@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: powervs-csi-node
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
+spec:
+  podSelector:
+    matchLabels:
+      app: powervs-csi-node
+  policyTypes:
+    - Ingress
+  ingress:
+    # kubelet liveness/readiness probes originate from the node's host network.
+    - ports:
+        - protocol: TCP
+          port: 9808
