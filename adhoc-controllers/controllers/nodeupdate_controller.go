@@ -58,46 +58,50 @@ func (r *NodeUpdateReconciler) Reconcile(_ context.Context, req ctrl.Request) (c
 	}
 
 	// ProviderID format: ibmpowervs://<region>/<zone>/<service_instance_id>/<powervs_machine_id>
-	if node.Spec.ProviderID != "" {
-		klog.Infof("PROVIDER-ID: %s", node.Spec.ProviderID)
-		metadata, err := cloud.TokenizeProviderID(node.Spec.ProviderID)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to tokenize the providerID. err: %v", err)
-		}
+	if node.Spec.ProviderID == "" {
+		// ProviderID not yet set; the node DaemonSet will patch it once available,
+		// triggering a new reconcile via the Node update event.
+		klog.Infof("ProviderID is empty for node %s, waiting for it to be set", node.Name)
+		return ctrl.Result{}, nil
+	}
+	klog.Infof("PROVIDER-ID: %s", node.Spec.ProviderID)
+	metadata, err := cloud.TokenizeProviderID(node.Spec.ProviderID)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to tokenize the providerID. err: %v", err)
+	}
 
-		nodeUpdateScope, err := cloud.NewNodeUpdateScope(cloud.NodeUpdateScopeParams{
-			ServiceInstanceId: metadata.GetCloudInstanceId(),
-			InstanceId:        metadata.GetPvmInstanceId(),
-			Zone:              metadata.GetZone(),
-		})
+	nodeUpdateScope, err := cloud.NewNodeUpdateScope(cloud.NodeUpdateScopeParams{
+		ServiceInstanceId: metadata.GetCloudInstanceId(),
+		InstanceId:        metadata.GetPvmInstanceId(),
+		Zone:              metadata.GetZone(),
+	})
 
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to create nodeUpdateScope: %w", err)
-		}
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create nodeUpdateScope: %w", err)
+	}
 
-		instance, err := nodeUpdateScope.Cloud.GetPVMInstanceDetails(nodeUpdateScope.InstanceId)
-		if err != nil {
-			klog.Errorf("unable to fetch instance details. err: %v", err)
-			return ctrl.Result{}, nil
-		}
+	instance, err := nodeUpdateScope.Cloud.GetPVMInstanceDetails(nodeUpdateScope.InstanceId)
+	if err != nil {
+		klog.Errorf("unable to fetch instance details. err: %v", err)
+		return ctrl.Result{}, nil
+	}
 
-		if instance != nil {
-			klog.Infof("StoragePoolAffinity: %v", *instance.StoragePoolAffinity)
-			if *instance.StoragePoolAffinity {
-				switch *instance.Status {
-				case cloud.PowerVSInstanceStateSHUTOFF, cloud.PowerVSInstanceStateACTIVE:
-					if *instance.StoragePoolAffinity == cloud.StoragePoolAffinity {
-						klog.Infof("PowerVS instance - %v Storage pool affinity already %t", instance.PvmInstanceID, cloud.StoragePoolAffinity)
-					} else {
-						err := r.getOrUpdate(nodeUpdateScope)
-						if err != nil {
-							klog.Errorf("unable to update instance StoragePoolAffinity. err: %v", err)
-							return ctrl.Result{}, fmt.Errorf("failed to reconcile VSI for IBMPowerVSMachine %s/%s. err: %w", node.Namespace, node.Name, err)
-						}
+	if instance != nil {
+		klog.Infof("StoragePoolAffinity: %v", *instance.StoragePoolAffinity)
+		if *instance.StoragePoolAffinity {
+			switch *instance.Status {
+			case cloud.PowerVSInstanceStateSHUTOFF, cloud.PowerVSInstanceStateACTIVE:
+				if *instance.StoragePoolAffinity == cloud.StoragePoolAffinity {
+					klog.Infof("PowerVS instance - %v Storage pool affinity already %t", instance.PvmInstanceID, cloud.StoragePoolAffinity)
+				} else {
+					err := r.getOrUpdate(nodeUpdateScope)
+					if err != nil {
+						klog.Errorf("unable to update instance StoragePoolAffinity. err: %v", err)
+						return ctrl.Result{}, fmt.Errorf("failed to reconcile VSI for IBMPowerVSMachine %s/%s. err: %w", node.Namespace, node.Name, err)
 					}
-				default:
-					klog.Infof("PowerVS instance - %v state not ACTIVE/SHUTOFF yet", instance.PvmInstanceID)
 				}
+			default:
+				klog.Infof("PowerVS instance - %v state not ACTIVE/SHUTOFF yet", instance.PvmInstanceID)
 			}
 		}
 	}
