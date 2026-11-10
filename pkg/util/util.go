@@ -16,8 +16,6 @@ limitations under the License.
 
 package util
 
-// DONE.
-
 import (
 	"fmt"
 	"net/url"

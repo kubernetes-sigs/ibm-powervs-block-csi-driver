@@ -16,8 +16,6 @@ limitations under the License.
 
 package main
 
-// DONE.
-
 import (
 	"flag"
 	"os"

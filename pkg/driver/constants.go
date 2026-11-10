@@ -16,8 +16,6 @@ limitations under the License.
 
 package driver
 
-// DONE.
-
 // constants of keys in PublishContext.
 const (
 	WWNKey      = "wwn"
