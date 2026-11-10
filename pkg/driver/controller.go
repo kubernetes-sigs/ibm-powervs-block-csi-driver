@@ -479,10 +479,11 @@ func (d *controllerService) getOrCreateDisk(volName string, opts *cloud.DiskOpti
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Disk exists, but not in required state. Current:%s Required:%s", disk.State, cloud.VolumeAvailableState)
 			}
+			disk.State = vol.State
 			// When the disk is still in the "Creating" state, the WWN will not be available.
 			// In such a case, once when the volume is available, assign the WWN to the disk if not already assigned.
 			if disk.WWN == "" {
-				disk.WWN = vol.Wwn
+				disk.WWN = strings.ToLower(vol.Wwn)
 			}
 		}
 		return disk, nil
