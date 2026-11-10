@@ -140,11 +140,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
 
-	if acquired := d.volumeLocks.TryAcquire(volName); !acquired {
-		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volName)
-	}
-	defer d.volumeLocks.Release(volName)
-
 	volSizeBytes, err := getVolSizeBytes(req)
 	if err != nil {
 		return nil, err
@@ -163,7 +158,6 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	volumeType := cloud.DefaultVolumeType
-
 	for key, value := range req.GetParameters() {
 		switch strings.ToLower(key) {
 		case VolumeTypeKey:
@@ -172,6 +166,11 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid parameter key %s for CreateVolume", key)
 		}
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volName); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volName)
+	}
+	defer d.volumeLocks.Release(volName)
 
 	opts := &cloud.DiskOptions{
 		Shareable:     isShareableVolume(volCaps),
@@ -182,36 +181,9 @@ func (d *controllerService) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if req.GetVolumeContentSource() != nil {
 		return handleClone(d.cloud, req, volName, volSizeBytes, opts)
 	}
-	// Check if the disk already exists
-	// Disk exists only if previous createVolume request fails due to any network/tcp error
-	disk, err := d.cloud.GetDiskByName(volName)
-	if disk != nil {
-		// wait for volume to be available as the volume already exists
-		klog.V(3).Infof("CreateVolume: Found an existing volume %s in %q state.", volName, disk.State)
-		err := verifyVolumeDetails(opts, disk)
-		if err != nil {
-			return nil, err
-		}
-		if disk.State != cloud.VolumeAvailableState {
-			vol, err := d.cloud.WaitForVolumeState(disk.VolumeID, cloud.VolumeAvailableState)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Disk exists, but not in required state. Current:%s Required:%s", disk.State, cloud.VolumeAvailableState)
-			}
-			// When the disk is still in the "Creating" state, the WWN will not be available.
-			// In such a case, once when the volume is available, assign the WWN to the disk if not already assigned.
-			if disk.WWN == "" {
-				disk.WWN = vol.Wwn
-			}
-		}
-	} else {
-		if errors.Is(err, cloud.ErrNotFound) {
-			disk, err = d.cloud.CreateDisk(volName, opts)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
-			}
-		} else {
-			return nil, status.Errorf(codes.Internal, "Could not find volume by name %q: %v", volName, err)
-		}
+	disk, err := d.getOrCreateDisk(volName, opts)
+	if err != nil {
+		return nil, err
 	}
 	klog.V(3).Infof("CreateVolume: created volume %s, took %s", volName, time.Since(start))
 	return newCreateVolumeResponse(disk, req.VolumeContentSource), nil
@@ -243,11 +215,6 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
-		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
-	}
-	defer d.volumeLocks.Release(volumeID)
-
 	nodeID := req.GetNodeId()
 	if nodeID == "" {
 		return nil, status.Error(codes.InvalidArgument, "Node ID not provided")
@@ -264,6 +231,11 @@ func (d *controllerService) ControllerPublishVolume(ctx context.Context, req *cs
 		errString := fmt.Sprintf("Volume capabilities %s not supported. Only AccessModes [ReadWriteOnce], [ReadWriteMany], [ReadOnlyMany] supported.", stringModes)
 		return nil, status.Error(codes.InvalidArgument, errString)
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(volumeID)
 
 	pvInfo := map[string]string{WWNKey: req.VolumeContext[WWNKey]}
 
@@ -303,15 +275,15 @@ func (d *controllerService) ControllerUnpublishVolume(ctx context.Context, req *
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
-		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
-	}
-	defer d.volumeLocks.Release(volumeID)
-
 	nodeID := req.GetNodeId()
 	if nodeID == "" {
 		return nil, status.Error(codes.InvalidArgument, "Node ID not provided")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(volumeID)
 
 	err := d.cloud.DetachDisk(volumeID, nodeID)
 	if err != nil {
@@ -387,11 +359,6 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
-		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
-	}
-	defer d.volumeLocks.Release(volumeID)
-
 	capRange := req.GetCapacityRange()
 	if capRange == nil {
 		return nil, status.Error(codes.InvalidArgument, "Capacity range not provided")
@@ -402,6 +369,11 @@ func (d *controllerService) ControllerExpandVolume(ctx context.Context, req *csi
 	if maxVolSize > 0 && maxVolSize < newSize {
 		return nil, status.Error(codes.InvalidArgument, "After round-up, volume size exceeds the limit specified")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
+		return nil, status.Errorf(codes.Aborted, util.VolumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(volumeID)
 
 	actualSizeGiB, err := d.cloud.ResizeDisk(volumeID, newSize)
 	if err != nil {
@@ -490,6 +462,42 @@ func getVolSizeBytes(req *csi.CreateVolumeRequest) (int64, error) {
 		}
 	}
 	return volSizeBytes, nil
+}
+
+func (d *controllerService) getOrCreateDisk(volName string, opts *cloud.DiskOptions) (*cloud.Disk, error) {
+	// Check if the disk already exists
+	// Disk exists only if previous createVolume request fails due to any network/tcp error
+	disk, err := d.cloud.GetDiskByName(volName)
+	if disk != nil {
+		// wait for volume to be available as the volume already exists
+		klog.V(3).Infof("CreateVolume: Found an existing volume %s in %q state.", volName, disk.State)
+		if err := verifyVolumeDetails(opts, disk); err != nil {
+			return nil, err
+		}
+		if disk.State != cloud.VolumeAvailableState {
+			vol, err := d.cloud.WaitForVolumeState(disk.VolumeID, cloud.VolumeAvailableState)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Disk exists, but not in required state. Current:%s Required:%s", disk.State, cloud.VolumeAvailableState)
+			}
+			disk.State = vol.State
+			// When the disk is still in the "Creating" state, the WWN will not be available.
+			// In such a case, once when the volume is available, assign the WWN to the disk if not already assigned.
+			if disk.WWN == "" {
+				disk.WWN = strings.ToLower(vol.Wwn)
+			}
+		}
+		return disk, nil
+	}
+
+	if errors.Is(err, cloud.ErrNotFound) {
+		disk, err = d.cloud.CreateDisk(volName, opts)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not create volume %q: %v", volName, err)
+		}
+		return disk, nil
+	}
+
+	return nil, status.Errorf(codes.Internal, "Could not find volume by name %q: %v", volName, err)
 }
 
 func verifyVolumeDetails(payload *cloud.DiskOptions, diskDetails *cloud.Disk) error {

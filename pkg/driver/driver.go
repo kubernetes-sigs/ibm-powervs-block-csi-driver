@@ -16,8 +16,6 @@ limitations under the License.
 
 package driver
 
-// DONE.
-
 import (
 	"context"
 	"fmt"
