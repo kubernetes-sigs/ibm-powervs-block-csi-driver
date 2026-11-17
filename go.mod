@@ -6,7 +6,7 @@ require (
 	github.com/IBM-Cloud/power-go-client v1.17.0
 	github.com/IBM/go-sdk-core/v5 v5.24.0
 	github.com/IBM/platform-services-go-sdk v0.103.4
-	github.com/container-storage-interface/spec v1.13.0
+	github.com/container-storage-interface/spec v1.14.0
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/google/go-cmp v0.7.0
 	github.com/kubernetes-csi/csi-lib-utils v0.24.0
