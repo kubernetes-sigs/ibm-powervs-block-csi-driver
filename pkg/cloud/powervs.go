@@ -131,7 +131,7 @@ func (p *powerVSCloud) CreateDisk(volumeName string, diskOptions *DiskOptions) (
 		return nil, err
 	}
 	klog.V(4).Infof("Volume %s has been provisioned successfully, took %v", *v.Name, time.Since(start))
-	return &Disk{CapacityGiB: capacityGiB, VolumeID: *v.VolumeID, DiskType: v.DiskType, WWN: strings.ToLower(v.Wwn)}, nil
+	return volumeToDisk(v), nil
 }
 
 func (p *powerVSCloud) DeleteDisk(volumeID string) (err error) {
@@ -216,11 +216,11 @@ func (p *powerVSCloud) CloneDisk(sourceVolumeID string, cloneVolumeName string) 
 		return nil, errors.New("cloned volume not found")
 	}
 	clonedVolumeID := clonedVolumeDetails.ClonedVolumes[0].ClonedVolumeID
-	_, err = p.WaitForVolumeState(clonedVolumeID, VolumeAvailableState)
+	vol, err := p.WaitForVolumeState(clonedVolumeID, VolumeAvailableState)
 	if err != nil {
 		return nil, err
 	}
-	return p.GetDiskByID(clonedVolumeID)
+	return volumeToDisk(vol), nil
 }
 
 func (p *powerVSCloud) WaitForVolumeState(volumeID, state string) (*models.Volume, error) {
@@ -257,47 +257,30 @@ func (p *powerVSCloud) WaitForCloneStatus(cloneTaskId string) error {
 	})
 }
 
-func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
+// findDisk returns the first volume whose name satisfies match, or ErrNotFound.
+func (p *powerVSCloud) findDisk(match func(name string) bool) (*Disk, error) {
 	vols, err := p.volClient.GetAll()
 	if err != nil {
 		return nil, err
 	}
 	for _, v := range vols.Volumes {
-		if name == *v.Name {
-			return &Disk{
-				Name:        *v.Name,
-				DiskType:    *v.DiskType,
-				VolumeID:    *v.VolumeID,
-				WWN:         strings.ToLower(*v.Wwn),
-				Shareable:   *v.Shareable,
-				CapacityGiB: int64(*v.Size),
-				State:       *v.State,
-			}, nil
+		if match(*v.Name) {
+			return volumeRefToDisk(v), nil
 		}
 	}
-	klog.Warningf("Cannot find volume by name %q", name)
 	return nil, ErrNotFound
 }
 
+func (p *powerVSCloud) GetDiskByName(name string) (disk *Disk, err error) {
+	disk, err = p.findDisk(func(n string) bool { return n == name })
+	if errors.Is(err, ErrNotFound) {
+		klog.Warningf("Cannot find volume by name %q", name)
+	}
+	return disk, err
+}
+
 func (p *powerVSCloud) GetDiskByNamePrefix(namePrefix string) (disk *Disk, err error) {
-	vols, err := p.volClient.GetAll()
-	if err != nil {
-		return nil, err
-	}
-	for _, v := range vols.Volumes {
-		if strings.HasPrefix(*v.Name, namePrefix) {
-			return &Disk{
-				Name:        *v.Name,
-				DiskType:    *v.DiskType,
-				VolumeID:    *v.VolumeID,
-				WWN:         strings.ToLower(*v.Wwn),
-				Shareable:   *v.Shareable,
-				CapacityGiB: int64(*v.Size),
-				State:       *v.State,
-			}, nil
-		}
-	}
-	return nil, ErrNotFound
+	return p.findDisk(func(n string) bool { return strings.HasPrefix(n, namePrefix) })
 }
 
 func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
@@ -308,6 +291,10 @@ func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 		}
 		return nil, err
 	}
+	return volumeToDisk(v), nil
+}
+
+func volumeToDisk(v *models.Volume) *Disk {
 	return &Disk{
 		Name:        *v.Name,
 		DiskType:    v.DiskType,
@@ -316,7 +303,19 @@ func (p *powerVSCloud) GetDiskByID(volumeID string) (disk *Disk, err error) {
 		Shareable:   *v.Shareable,
 		CapacityGiB: int64(*v.Size),
 		State:       v.State,
-	}, nil
+	}
+}
+
+func volumeRefToDisk(v *models.VolumeReference) *Disk {
+	return &Disk{
+		Name:        *v.Name,
+		VolumeID:    *v.VolumeID,
+		DiskType:    *v.DiskType,
+		WWN:         strings.ToLower(*v.Wwn),
+		Shareable:   *v.Shareable,
+		CapacityGiB: int64(*v.Size),
+		State:       *v.State,
+	}
 }
 
 func readCredentials() (string, error) {

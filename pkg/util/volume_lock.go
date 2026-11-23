@@ -18,8 +18,6 @@ package util
 
 import (
 	"sync"
-
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
@@ -29,13 +27,13 @@ const (
 // VolumeLocks implements a map with atomic operations. It stores a set of all volume IDs
 // with an ongoing operation.
 type VolumeLocks struct {
-	locks sets.Set[string]
+	locks map[string]struct{}
 	mux   sync.Mutex
 }
 
 func NewVolumeLocks() *VolumeLocks {
 	return &VolumeLocks{
-		locks: sets.New[string](),
+		locks: make(map[string]struct{}),
 	}
 }
 
@@ -44,15 +42,16 @@ func NewVolumeLocks() *VolumeLocks {
 func (vl *VolumeLocks) TryAcquire(volumeID string) bool {
 	vl.mux.Lock()
 	defer vl.mux.Unlock()
-	if vl.locks.Has(volumeID) {
+	if _, exists := vl.locks[volumeID]; exists {
 		return false
 	}
-	vl.locks.Insert(volumeID)
+	vl.locks[volumeID] = struct{}{}
 	return true
 }
 
+// Release releases the lock for volumeID.
 func (vl *VolumeLocks) Release(volumeID string) {
 	vl.mux.Lock()
 	defer vl.mux.Unlock()
-	vl.locks.Delete(volumeID)
+	delete(vl.locks, volumeID)
 }

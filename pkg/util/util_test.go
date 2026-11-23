@@ -16,6 +16,8 @@ package util
 import (
 	"errors"
 	"reflect"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	csi "github.com/container-storage-interface/spec/lib/go/csi"
@@ -150,5 +152,41 @@ func TestGetAccessModes(t *testing.T) {
 	actualModes := GetAccessModes(testVolCap)
 	if !reflect.DeepEqual(expectedModes, *actualModes) {
 		t.Fatalf("Wrong values returned for volume capabilities. Expected %v, got %v", expectedModes, actualModes)
+	}
+}
+
+func TestVolumeLocks(t *testing.T) {
+	vl := NewVolumeLocks()
+	volID := "volume-test-1"
+
+	// Testcase 1 - Validate basic serial behavior
+	if !vl.TryAcquire(volID) {
+		t.Fatalf("expected to acquire lock on %s", volID)
+	}
+	if vl.TryAcquire(volID) {
+		t.Fatalf("expected failed acquisition on already locked %s", volID)
+	}
+	vl.Release(volID)
+	if !vl.TryAcquire(volID) {
+		t.Fatalf("expected to re-acquire lock on %s after release", volID)
+	}
+	vl.Release(volID)
+
+	// Testcase 2 - Validate concurrent thread-safety under heavy contention
+	const goroutines = 10
+	var successCount int32
+	var wg sync.WaitGroup
+
+	for range goroutines {
+		wg.Go(func() {
+			if vl.TryAcquire(volID) {
+				atomic.AddInt32(&successCount, 1)
+			}
+		})
+	}
+	wg.Wait()
+
+	if successCount != 1 {
+		t.Fatalf("expected exactly 1 successful acquisition out of %d concurrent attempts, got %d", goroutines, successCount)
 	}
 }

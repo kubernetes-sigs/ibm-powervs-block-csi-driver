@@ -29,7 +29,7 @@ spec:
           image: registry.k8s.io/cloud-provider-ibm/ibm-powervs-block-csi-driver:main
           imagePullPolicy: Always
           args:
-            # - {all,controller,node} # specify the driver mode
+            - controller
             - --endpoint=$(CSI_ENDPOINT)
             - --logtostderr
             - --v=2

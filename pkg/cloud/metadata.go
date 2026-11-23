@@ -87,6 +87,6 @@ func NewMetadataService(k8sAPIClient KubernetesAPIClient, kubeconfig string) (Me
 		klog.Errorf("error creating Kubernetes API client: %v", err)
 		return nil, fmt.Errorf("an error occurred during creation of k8s API client: %w", err)
 	}
-	klog.Info("kubernetes API is available")
+	klog.Info("Kubernetes API client initialised")
 	return KubernetesAPIInstanceInfo(clientset)
 }
