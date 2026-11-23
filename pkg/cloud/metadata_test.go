@@ -2,6 +2,8 @@ package cloud
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -12,6 +14,15 @@ import (
 	"github.com/go-playground/assert/v2"
 	"github.com/stretchr/testify/require"
 )
+
+// stubPowerVSMetadata replaces powerVSMetadataNewFunc for the duration of a test,
+// restoring it on cleanup so parallel tests are not affected.
+func stubPowerVSMetadata(t *testing.T, svc MetadataService, err error) {
+	t.Helper()
+	orig := powerVSMetadataNewFunc
+	powerVSMetadataNewFunc = func() (MetadataService, error) { return svc, err }
+	t.Cleanup(func() { powerVSMetadataNewFunc = orig })
+}
 
 func TestNewMetadataService(t *testing.T) {
 	tests := []struct {
@@ -55,11 +66,11 @@ func TestNewMetadataService(t *testing.T) {
 			expectedError: "CSI_NODE_NAME env var not set",
 		},
 		{
-			name:           "empty ProviderID",
+			name:           "empty ProviderID - PowerVS metadata service fallback fails",
 			nodeName:       "test-node",
 			providerID:     "",
-			ProvideIDError: "ProviderID is empty",
-			expectedError:  "ProviderID is empty",
+			ProvideIDError: "PowerVS metadata service unavailable",
+			expectedError:  "PowerVS metadata service fallback failed",
 		},
 		{
 			name:           "invalid providerID format",
@@ -72,6 +83,13 @@ func TestNewMetadataService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Stub the PowerVS metadata service so we never make real network calls.
+			if tt.ProvideIDError != "" {
+				stubPowerVSMetadata(t, nil, errors.New(tt.ProvideIDError))
+			} else {
+				stubPowerVSMetadata(t, nil, errors.New("PowerVS metadata service should not be reached"))
+			}
+
 			// Set CSI_NODE_NAME if provided
 			if tt.nodeName != "" {
 				t.Setenv("CSI_NODE_NAME", tt.nodeName)
@@ -138,10 +156,21 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 			expectedError: "nodes \"missing-node\" not found",
 		},
 		{
-			name:          "Node exists but ProviderID is empty",
+			name:          "Node exists but ProviderID is empty - PowerVS metadata service fallback fails",
 			nodeName:      "test-node",
 			node:          newNode("test-node", ""),
-			expectedError: "ProviderID is empty",
+			expectedError: "PowerVS metadata service fallback failed",
+		},
+		{
+			name:     "Node exists but ProviderID is empty - PowerVS metadata service fallback succeeds",
+			nodeName: "test-node",
+			node:     newNode("test-node", ""),
+			expectedMetadata: &Metadata{
+				region:          "osa",
+				zone:            "osa21",
+				cloudInstanceId: "svc-abc",
+				pvmInstanceId:   "vm-xyz",
+			},
 		},
 		{
 			name:          "Invalid ProviderID Length",
@@ -186,6 +215,13 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 		},
 	}
 
+	powerVSMetadataResult := &Metadata{
+		region:          "osa",
+		zone:            "osa21",
+		cloudInstanceId: "svc-abc",
+		pvmInstanceId:   "vm-xyz",
+	}
+
 	run := func(tc struct {
 		name             string
 		nodeName         string
@@ -193,6 +229,16 @@ func TestKubernetesAPIInstanceInfo(t *testing.T) {
 		expectedError    string
 		expectedMetadata *Metadata
 	}) {
+		// Stub the PowerVS metadata service based on what the test expects.
+		switch {
+		case tc.expectedError == "PowerVS metadata service fallback failed":
+			stubPowerVSMetadata(t, nil, errors.New("PowerVS metadata service unavailable"))
+		case tc.node != nil && tc.node.Spec.ProviderID == "" && tc.expectedMetadata != nil:
+			stubPowerVSMetadata(t, powerVSMetadataResult, nil)
+		default:
+			stubPowerVSMetadata(t, nil, errors.New("PowerVS metadata service should not be reached"))
+		}
+
 		t.Setenv("CSI_NODE_NAME", tc.nodeName)
 
 		clientset := fake.NewSimpleClientset()
@@ -245,4 +291,146 @@ func TestGetZone(t *testing.T) {
 		zone: "us-south-1",
 	}
 	assert.Equal(t, "us-south-1", metadata.GetZone())
+}
+
+func TestNewPowerVSMetadataService(t *testing.T) {
+	tests := []struct {
+		name          string
+		tokenStatus   int
+		tokenBody     string
+		instStatus    int
+		instBody      string
+		expectedError string
+	}{
+		{
+			name:        "successful metadata retrieval",
+			tokenStatus: http.StatusOK,
+			tokenBody:   `{"access_token":"fake-token"}`,
+			instStatus:  http.StatusOK,
+			instBody:    `{"pvmInstanceID":"vm-123","cloudResourceName":{"serviceInstance":"svc-456","location":"osa21"}}`,
+		},
+		{
+			name:          "token endpoint returns non-200 status",
+			tokenStatus:   http.StatusInternalServerError,
+			tokenBody:     `internal server error`,
+			expectedError: "PowerVS metadata token request: unexpected status 500",
+		},
+		{
+			name:          "instance endpoint returns non-200 status",
+			tokenStatus:   http.StatusOK,
+			tokenBody:     `{"access_token":"fake-token"}`,
+			instStatus:    http.StatusNotFound,
+			instBody:      `not found`,
+			expectedError: "PowerVS metadata instance request: unexpected status 404",
+		},
+		{
+			name:          "missing pvmInstanceID",
+			tokenStatus:   http.StatusOK,
+			tokenBody:     `{"access_token":"fake-token"}`,
+			instStatus:    http.StatusOK,
+			instBody:      `{"cloudResourceName":{"serviceInstance":"svc-456","location":"osa21"}}`,
+			expectedError: "PowerVS metadata response missing pvmInstanceID",
+		},
+		{
+			name:          "missing serviceInstance",
+			tokenStatus:   http.StatusOK,
+			tokenBody:     `{"access_token":"fake-token"}`,
+			instStatus:    http.StatusOK,
+			instBody:      `{"pvmInstanceID":"vm-123","cloudResourceName":{"location":"osa21"}}`,
+			expectedError: "PowerVS metadata response missing cloudResourceName.serviceInstance",
+		},
+		{
+			name:          "missing location",
+			tokenStatus:   http.StatusOK,
+			tokenBody:     `{"access_token":"fake-token"}`,
+			instStatus:    http.StatusOK,
+			instBody:      `{"pvmInstanceID":"vm-123","cloudResourceName":{"serviceInstance":"svc-456"}}`,
+			expectedError: "PowerVS metadata response missing cloudResourceName.location",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case tokenPath:
+					w.WriteHeader(tt.tokenStatus)
+					_, _ = w.Write([]byte(tt.tokenBody))
+				case instancePath:
+					w.WriteHeader(tt.instStatus)
+					_, _ = w.Write([]byte(tt.instBody))
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+
+			origURL := metadataBaseURL
+			metadataBaseURL = server.URL
+			defer func() { metadataBaseURL = origURL }()
+
+			svc, err := NewPowerVSMetadataService()
+			if tt.expectedError != "" {
+				require.ErrorContains(t, err, tt.expectedError)
+				require.Nil(t, svc)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, "vm-123", svc.GetPvmInstanceId())
+				require.Equal(t, "svc-456", svc.GetCloudInstanceId())
+				require.Equal(t, "osa21", svc.GetZone())
+				require.Equal(t, "osa", svc.GetRegion())
+			}
+		})
+	}
+}
+
+func TestPowerVSMetadataService_Getters(t *testing.T) {
+	svc := &PowerVSMetadataService{
+		meta: powerVSInstanceResponse{
+			PvmInstanceID: "vm-pvm-999",
+			CloudResourceName: struct {
+				ServiceInstance string `json:"serviceInstance"`
+				Location        string `json:"location"`
+			}{
+				ServiceInstance: "svc-inst-888",
+				Location:        "us-south-1",
+			},
+		},
+	}
+
+	assert.Equal(t, "vm-pvm-999", svc.GetPvmInstanceId())
+	assert.Equal(t, "svc-inst-888", svc.GetCloudInstanceId())
+	assert.Equal(t, "us-south-1", svc.GetZone())
+	assert.Equal(t, "us-south", svc.GetRegion())
+}
+
+func TestPowerVSMetadataService_GetRegion(t *testing.T) {
+	testCases := []struct {
+		location       string
+		expectedRegion string
+	}{
+		{"osa21", "osa"},
+		{"us-south-1", "us-south"},
+		{"eu-de-1", "eu-de"},
+		{"syd05", "syd"},
+		{"lon04", "lon"},
+		{"tok04", "tok"},
+		{"mon01", "mon"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.location, func(t *testing.T) {
+			svc := &PowerVSMetadataService{
+				meta: powerVSInstanceResponse{
+					CloudResourceName: struct {
+						ServiceInstance string `json:"serviceInstance"`
+						Location        string `json:"location"`
+					}{
+						Location: tc.location,
+					},
+				},
+			}
+			assert.Equal(t, tc.expectedRegion, svc.GetRegion())
+		})
+	}
 }

@@ -8,4 +8,6 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["get"]
+    # "patch" is the minimum RBAC verb for writing node fields; the driver
+    # only writes spec.providerID and only when it is unset.
+    verbs: ["get", "patch"]
