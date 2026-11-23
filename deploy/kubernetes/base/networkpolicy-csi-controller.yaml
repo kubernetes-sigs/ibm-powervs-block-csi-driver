@@ -1,0 +1,30 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: powervs-csi-controller
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: ibm-powervs-block-csi-driver
+spec:
+  podSelector:
+    matchLabels:
+      app: powervs-csi-controller
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 9808
+        - protocol: TCP
+          port: 8082
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 8081
