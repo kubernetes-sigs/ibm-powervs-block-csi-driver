@@ -29,13 +29,16 @@ import (
 )
 
 const (
+	tokenPath      = "/identity/v1/token"
+	instancePath   = "/metadata/v1/instance"
+	metadataFlavor = "ibm"
+)
+
+var (
 	// metadataBaseURL is the link-local endpoint for the PowerVS metadata service.
 	// It is only reachable from within a PowerVS VSI that has the metadata service enabled.
 	// Ref: https://www.ibm.com/docs/en/power-virtual-server?topic=deploying-configuring-managing-metadata-service-power-virtual-server
 	metadataBaseURL = "https://api.metadata.power-iaas.cloud.ibm.com"
-	tokenPath       = "/identity/v1/token"
-	instancePath    = "/metadata/v1/instance"
-	metadataFlavor  = "ibm"
 )
 
 // powerVSTokenResponse is the response body from PUT /identity/v1/token.
@@ -127,6 +130,9 @@ func NewPowerVSMetadataService() (MetadataService, error) {
 	}
 	if instanceResp.CloudResourceName.ServiceInstance == "" {
 		return nil, fmt.Errorf("PowerVS metadata response missing cloudResourceName.serviceInstance")
+	}
+	if instanceResp.CloudResourceName.Location == "" {
+		return nil, fmt.Errorf("PowerVS metadata response missing cloudResourceName.location")
 	}
 
 	return &PowerVSMetadataService{meta: instanceResp}, nil
