@@ -187,7 +187,6 @@ func TestCreateVolume(t *testing.T) {
 				mockCloud.EXPECT().GetDiskByNamePrefix(gomock.Eq("clone-"+req.Name)).Return(nil, nil)
 				mockCloud.EXPECT().GetDiskByID(gomock.Eq(mockSrcDisk.VolumeID)).Return(mockSrcDisk, nil)
 				mockCloud.EXPECT().CloneDisk(gomock.Eq(mockSrcDisk.VolumeID), gomock.Eq(req.Name)).Return(mockDisk, nil)
-				mockCloud.EXPECT().GetDiskByID(gomock.Eq(mockDisk.VolumeID)).Return(mockDisk, nil)
 
 				powervsDriver := controllerService{
 					cloud:         mockCloud,

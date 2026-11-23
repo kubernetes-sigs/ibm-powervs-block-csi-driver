@@ -537,13 +537,9 @@ func handleClone(cloud cloud.Cloud, req *csi.CreateVolumeRequest, volName string
 			if err = verifyVolumeDetails(opts, diskDetails); err != nil {
 				return nil, err
 			}
-			diskFromSourceVolume, err := cloud.CloneDisk(srcVolumeID, volName)
+			diskDetails, err = cloud.CloneDisk(srcVolumeID, volName)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not clone volume %q: %v", volName, err)
-			}
-			diskDetails, err = cloud.GetDiskByID(diskFromSourceVolume.VolumeID)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get volume %q after clone: %v", volName, err)
 			}
 		}
 		return newCreateVolumeResponse(diskDetails, req.VolumeContentSource), nil
